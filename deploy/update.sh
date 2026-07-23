@@ -1,19 +1,19 @@
 #!/bin/bash
-# Auto-update script for the marinetraffic backend.
+# Auto-update script for the fintraffic backend.
 # Runs every 5 min via cron. Checks ghcr.io for a new image and redeploys.
 # (Watchtower is not used — it is incompatible with rootless Podman on RHEL.)
 set -euo pipefail
 
-LOG=/home/opc/marinetraffic/update.log
-IMAGE=ghcr.io/saavuori/marinetraffic:latest
-COMPOSE_DIR=/home/opc/marinetraffic
+LOG=/home/opc/fintraffic/update.log
+IMAGE=ghcr.io/saavuori/fintraffic:latest
+COMPOSE_DIR=/home/opc/fintraffic
 
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Checking for updates..." >> $LOG
 
 podman pull $IMAGE >> $LOG 2>&1
 
 NEW_ID=$(podman inspect $IMAGE --format '{{.Id}}')
-RUNNING_ID=$(podman inspect marinetraffic-backend --format '{{.Image}}' 2>/dev/null || echo '')
+RUNNING_ID=$(podman inspect fintraffic-backend --format '{{.Image}}' 2>/dev/null || echo '')
 
 if [ "$RUNNING_ID" = "$NEW_ID" ]; then
   echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Already up to date." >> $LOG

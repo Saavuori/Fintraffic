@@ -1079,3 +1079,53 @@ body {
     display: none;
   }
 }
+
+/* ---------- Mode switcher (Meri / Raide / Tie) ---------- */
+
+.mode-switcher {
+  position: absolute;
+  z-index: 12;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-glow);
+  border-radius: 10px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+}
+
+.mode-switcher__btn {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.mode-switcher__btn:hover:not(:disabled):not(.mode-switcher__btn--active) {
+  background: var(--bg-button-hover);
+  color: var(--text-primary);
+}
+
+.mode-switcher__btn--active {
+  background: var(--bg-card);
+  border-color: var(--border-focus);
+  color: var(--accent-teal);
+}
+
+.mode-switcher__btn:disabled {
+  color: var(--text-muted);
+  opacity: 0.45;
+  cursor: default;
+}

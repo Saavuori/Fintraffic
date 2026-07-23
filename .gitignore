@@ -1,9 +1,9 @@
 # Backend
-backend/marinetraffic
-backend/internal/api/dist/*.js
-backend/internal/api/dist/*.css
-backend/internal/api/dist/assets/
-!backend/internal/api/dist/index.html
+backend/fintraffic
+backend/internal/core/server/dist/*.js
+backend/internal/core/server/dist/*.css
+backend/internal/core/server/dist/assets/
+!backend/internal/core/server/dist/index.html
 *.log
 
 # Frontend

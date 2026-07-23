@@ -1,6 +1,13 @@
-# Meriliikenne Changelog
+# Fintraffic Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
+
+## [v0.3.0] - 2026-07-24
+
+### Changed
+- **Fintraffic consolidation, phase 1**: The repo is now **Fintraffic** — one app with Meri / Raide / Tie traffic modes (Raide and Tie land in later phases). The backend is split into a mode-agnostic `internal/core` (Redis cache with per-mode namespaces, config, generic Digitraffic client with cached singleflight proxying, router + embedded SPA) and `internal/meri` (AIS ingest, trail store, WebSocket hub, REST handlers) behind a `server.Mode` interface. Meri endpoints moved from `/api/v1/*` to `/api/meri/*` (WebSocket: `/api/meri/stream`); `/api/health` and `/api/version` are now global, with health aggregating per-mode status under `modes.meri.*`. The frontend gained a Meri/Raide/Tie mode switcher shell (`src/App.tsx`) with the vessel map now living in `src/modes/meri/` and shared pieces in `src/shared/`.
+
+---
 
 ## [v0.2.0] - 2026-07-23
 
