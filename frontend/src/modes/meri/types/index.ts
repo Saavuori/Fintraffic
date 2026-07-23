@@ -134,9 +134,3 @@ export interface AtonFaultFeature {
 export interface AtonFaultsResponse {
   features: AtonFaultFeature[];
 }
-
-export interface VersionResponse {
-  version: string;
-  build_date: string;
-  git_sha: string;
-}

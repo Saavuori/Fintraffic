@@ -1,12 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { fetchVersionInfo } from '../lib/api';
-import type { VersionResponse } from '../types';
+
+interface VersionResponse {
+  version: string;
+  build_date: string;
+  git_sha: string;
+}
 
 export const VersionBadge: React.FC = () => {
   const [info, setInfo] = useState<VersionResponse | null>(null);
 
   useEffect(() => {
-    fetchVersionInfo()
+    fetch('/api/version')
+      .then((res) => {
+        if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+        return res.json() as Promise<VersionResponse>;
+      })
       .then(setInfo)
       .catch((err) => console.error('Failed to load version:', err));
   }, []);
@@ -20,7 +28,7 @@ export const VersionBadge: React.FC = () => {
   return (
     <a
       className="version-badge"
-      href="https://saavuori.github.io/Marinetraffic/"
+      href="https://saavuori.github.io/Fintraffic/"
       target="_blank"
       rel="noopener noreferrer"
       title="View changelog"

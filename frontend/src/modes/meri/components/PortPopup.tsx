@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { X, ChevronRight, Anchor, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
-import { useCollapsiblePanel, stopPanelClick } from '../hooks/useCollapsiblePanel';
+import { useCollapsiblePanel, stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { fetchPortCalls } from '../lib/api';
 import type { Port, PortCall } from '../types';
 
@@ -117,7 +117,7 @@ export const PortPopup: React.FC<PortPopupProps> = ({
           <div className="filter-section-title">Arrivals &amp; departures</div>
 
           <div className="port-calls-list">
-            {rows === null && !error && <div className="panel-note">Loading…</div>}
+            {rows === null && !error && <div className="panel-note">Loadingâ€¦</div>}
             {error && <div className="panel-note">{error}</div>}
             {rows !== null && rows.length === 0 && (
               <div className="panel-note">No port calls in the next 36 h.</div>

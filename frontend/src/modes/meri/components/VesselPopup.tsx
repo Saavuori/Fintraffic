@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { X, ChevronRight, Navigation, Anchor as AnchorIcon } from 'lucide-react';
-import { useCollapsiblePanel, stopPanelClick } from '../hooks/useCollapsiblePanel';
+import { useCollapsiblePanel, stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { categorize, CATEGORY_COLORS, CATEGORY_LABELS, shipTypeText, navStatText } from '../lib/shipTypes';
 import { fetchVesselDetails } from '../lib/api';
 import type { Vessel, VesselDetailsResponse } from '../types';
@@ -71,7 +71,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
             <div className="detail-title">
               <h3>{vessel.name || `MMSI ${vessel.mmsi}`}</h3>
               <span className="detail-subtitle" style={{ color: CATEGORY_COLORS[cat] }}>
-                {shipTypeText(vessel.shipType)} · {CATEGORY_LABELS[cat]}
+                {shipTypeText(vessel.shipType)} Â· {CATEGORY_LABELS[cat]}
               </span>
             </div>
             <button className="icon-btn" onClick={onToggleCollapse} aria-label="Collapse panel">
@@ -93,7 +93,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
               <span className="telemetry-label">Course</span>
               <span className="telemetry-value">
                 {Math.round(vessel.cog)}
-                <small>°</small>
+                <small>Â°</small>
               </span>
             </div>
             <div className="telemetry-item">
@@ -102,10 +102,10 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
                 {vessel.hdg != null ? (
                   <>
                     {vessel.hdg}
-                    <small>°</small>
+                    <small>Â°</small>
                   </>
                 ) : (
-                  '—'
+                  'â€”'
                 )}
               </span>
             </div>
@@ -117,7 +117,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
                     {vessel.draught.toFixed(1)} <small>m</small>
                   </>
                 ) : (
-                  '—'
+                  'â€”'
                 )}
               </span>
             </div>
@@ -166,7 +166,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
               <div className="fact-row">
                 <span>Size</span>
                 <b>
-                  {dims.length} × {dims.beam} m
+                  {dims.length} Ã— {dims.beam} m
                 </b>
               </div>
             )}

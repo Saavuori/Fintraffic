@@ -1,6 +1,6 @@
 import React from 'react';
 import { Ship, Anchor, Waves, TriangleAlert, Moon, Sun, ChevronLeft, History } from 'lucide-react';
-import { useCollapsiblePanel, stopPanelClick } from '../hooks/useCollapsiblePanel';
+import { useCollapsiblePanel, stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { ALL_CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS, type ShipCategory } from '../lib/shipTypes';
 import type { ConnectionStatus } from '../hooks/useWebSocket';
 import type { AtonFaultFeature } from '../types';
@@ -151,7 +151,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                     <div className="alert-item" key={f.properties.id}>
                       <div className="alert-title">{f.properties.aton_name_fi}</div>
                       <div className="alert-desc">
-                        {f.properties.type} · {f.properties.fairway_name_fi}
+                        {f.properties.type} Â· {f.properties.fairway_name_fi}
                       </div>
                     </div>
                   ))}

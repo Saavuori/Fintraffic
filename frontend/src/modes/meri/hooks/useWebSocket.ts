@@ -26,7 +26,7 @@ export function useWebSocket({ onMessage }: UseWebSocketOptions) {
     setStatus('connecting');
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/api/v1/stream`;
+    const wsUrl = `${protocol}//${host}/api/meri/stream`;
 
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
