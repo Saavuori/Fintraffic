@@ -88,6 +88,64 @@ func TestTrackRoundTrip(t *testing.T) {
 	}
 }
 
+func TestFleetTrack(t *testing.T) {
+	s := openTestStore(t, 60)
+	flushNow(t, s, []input{
+		{mmsi: 42, ts: 1000, lat: 60.1, lng: 24.9, sog: 12, cog: 180},
+		{mmsi: 42, ts: 1060, lat: 60.2, lng: 24.95, sog: 11, cog: 185},
+		{mmsi: 99, ts: 1000, lat: 59.0, lng: 22.0, sog: 5, cog: 90},
+		{mmsi: 99, ts: 2000, lat: 59.5, lng: 22.5, sog: 6, cog: 95}, // outside [0,1500]
+	})
+
+	tracks, truncated, err := s.FleetTrack(context.Background(), 0, 1500, 1000, 100000)
+	if err != nil {
+		t.Fatalf("FleetTrack: %v", err)
+	}
+	if truncated {
+		t.Fatal("should not be truncated")
+	}
+	if len(tracks) != 2 {
+		t.Fatalf("expected 2 vessels, got %d", len(tracks))
+	}
+	if len(tracks[42]) != 2 {
+		t.Fatalf("vessel 42 should have 2 points, got %d", len(tracks[42]))
+	}
+	// Each vessel's sub-track must be ascending by time.
+	if tracks[42][0].Ts != 1000 || tracks[42][1].Ts != 1060 {
+		t.Fatalf("vessel 42 track not ascending: %+v", tracks[42])
+	}
+	// The window excludes vessel 99's t=2000 point.
+	if len(tracks[99]) != 1 || tracks[99][0].Ts != 1000 {
+		t.Fatalf("vessel 99 window wrong: %+v", tracks[99])
+	}
+}
+
+func TestFleetTrackTruncation(t *testing.T) {
+	s := openTestStore(t, 1)
+	pts := make([]input, 0, 10)
+	for i := 0; i < 10; i++ {
+		pts = append(pts, input{mmsi: 1, ts: int64(1000 + i), lat: 60, lng: 24, sog: 1, cog: 1})
+	}
+	flushNow(t, s, pts)
+
+	// Cap of 5 rows over 10 stored points → truncated, keeping the most recent.
+	tracks, truncated, err := s.FleetTrack(context.Background(), 0, 100000, 1000, 5)
+	if err != nil {
+		t.Fatalf("FleetTrack: %v", err)
+	}
+	if !truncated {
+		t.Fatal("expected truncated=true when the cap is exceeded")
+	}
+	got := tracks[1]
+	if len(got) != 5 {
+		t.Fatalf("expected 5 kept points, got %d", len(got))
+	}
+	// Most recent points are kept, still ascending.
+	if got[0].Ts != 1005 || got[len(got)-1].Ts != 1009 {
+		t.Fatalf("truncation kept wrong window: %+v", got)
+	}
+}
+
 func TestPrune(t *testing.T) {
 	s := openTestStore(t, 60)
 	flushNow(t, s, []input{

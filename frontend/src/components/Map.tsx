@@ -5,7 +5,7 @@ import type { Feature } from 'geojson';
 import { lerpAngle } from '../lib/lerp';
 import { deadReckon } from '../lib/geo';
 import { categorize, CATEGORY_COLORS, isStationary, ALL_CATEGORIES } from '../lib/shipTypes';
-import type { Vessel, Port, SeaStateFeature, AtonFaultFeature } from '../types';
+import type { Vessel, Port, SeaStateFeature, AtonFaultFeature, ReplayPoint } from '../types';
 
 const STYLE_URLS = {
   dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
@@ -22,6 +22,84 @@ const MAX_PROJECT_SECONDS = 180;
 const SMOOTHING_TAU_MS = 600;
 // setData at most ~30fps — 700+ features every frame is wasted work at 60fps
 const SET_DATA_INTERVAL_MS = 33;
+
+// Replay: teal used for every playback marker (history has no ship type).
+const REPLAY_COLOR = '#2dd4bf';
+// Consecutive fixes further apart than this (seconds) are treated as a coverage
+// gap — the vessel vanishes rather than sliding along a fabricated straight
+// line. Recording is ~1/min, so this only trips when AIS was lost.
+const REPLAY_MAX_GAP_SEC = 20 * 60;
+// How long a marker lingers at the last/first fix of a gap or of its whole
+// track, so vessels fade in/out at edges instead of blinking.
+const REPLAY_EDGE_HOLD_SEC = 5 * 60;
+// Report the playhead to React at most this often (the rAF loop advances it
+// every frame, but the transport bar doesn't need 60 updates/sec).
+const REPLAY_PROGRESS_INTERVAL_MS = 150;
+
+/** Everything Map needs to drive the fleet playback overlay. */
+interface ReplayControl {
+  data: Record<string, ReplayPoint[]>;
+  from: number; // window start, epoch seconds
+  to: number; // window end, epoch seconds
+  playing: boolean;
+  speed: number; // playback multiplier vs. wall-clock
+  seekNonce: number; // bump to force the playhead to seekTs
+  seekTs: number; // target playhead when seekNonce changes
+  onProgress: (ts: number) => void;
+  onEnded: () => void;
+}
+
+interface ReplayPose {
+  lng: number;
+  lat: number;
+  hdg: number;
+}
+
+/**
+ * Interpolates a vessel's position at time t (epoch seconds) from its recorded,
+ * ascending-by-time track. Returns null when the vessel isn't present at t —
+ * before its first fix, after its last (past the edge hold), or inside a
+ * coverage gap — so the caller can drop the marker entirely.
+ */
+function poseAt(pts: ReplayPoint[], t: number): ReplayPose | null {
+  const n = pts.length;
+  if (n === 0) return null;
+  const first = pts[0];
+  const last = pts[n - 1];
+  if (t < first[2]) return null;
+  if (t > last[2]) {
+    return t - last[2] <= REPLAY_EDGE_HOLD_SEC
+      ? { lng: last[0], lat: last[1], hdg: last[3] }
+      : null;
+  }
+
+  // Binary search for the segment [i, i+1] straddling t.
+  let lo = 0;
+  let hi = n - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (pts[mid][2] <= t) lo = mid;
+    else hi = mid;
+  }
+  const a = pts[lo];
+  const b = pts[hi];
+  const span = b[2] - a[2];
+  if (span <= 0) return { lng: a[0], lat: a[1], hdg: a[3] };
+
+  if (span > REPLAY_MAX_GAP_SEC) {
+    // Coverage gap: hold briefly at whichever fix is near, else disappear.
+    if (t - a[2] <= REPLAY_EDGE_HOLD_SEC) return { lng: a[0], lat: a[1], hdg: a[3] };
+    if (b[2] - t <= REPLAY_EDGE_HOLD_SEC) return { lng: b[0], lat: b[1], hdg: b[3] };
+    return null;
+  }
+
+  const f = (t - a[2]) / span;
+  return {
+    lng: a[0] + (b[0] - a[0]) * f,
+    lat: a[1] + (b[1] - a[1]) * f,
+    hdg: lerpAngle(a[3], b[3], f),
+  };
+}
 
 interface RenderPos {
   lat: number;
@@ -60,6 +138,7 @@ interface MapProps {
   isFollowing: boolean;
   onDisableFollowing: () => void;
   onBackgroundClick: () => void;
+  replay: ReplayControl | null;
 }
 
 /** Draws a ship-arrow marker pointing north, returns ImageData for map.addImage. */
@@ -135,6 +214,7 @@ export function Map({
   isFollowing,
   onDisableFollowing,
   onBackgroundClick,
+  replay,
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -149,6 +229,14 @@ export function Map({
   const lastFrameRef = useRef<number>(0);
   const lastSetDataRef = useRef<number>(0);
 
+  // Replay playback state read by the rAF loop. replayRef mirrors the prop;
+  // clockRef is the virtual playhead (epoch seconds) advanced every frame.
+  const replayRef = useRef<ReplayControl | null>(replay);
+  const replayClockRef = useRef<number>(0);
+  const replayLastProgressRef = useRef<number>(0);
+  const replayEndedRef = useRef<boolean>(false);
+  const replaySeekNonceRef = useRef<number>(-1);
+
   // Bumped every time a style finishes loading (initial + theme swaps) so the
   // overlay-data effects below re-apply their data to the fresh style.
   const [styleEpoch, setStyleEpoch] = useState(0);
@@ -160,6 +248,26 @@ export function Map({
   useEffect(() => {
     followRef.current = isFollowing;
   }, [isFollowing]);
+
+  // Mirror the replay control into a ref for the rAF loop, and manage the
+  // virtual clock: initialize it when replay turns on, and honor scrubs (a
+  // bumped seekNonce) whether playing or paused.
+  useEffect(() => {
+    const prev = replayRef.current;
+    replayRef.current = replay;
+    if (!replay) return;
+
+    if (!prev) {
+      // Entering replay: start the playhead at the window's beginning.
+      replayClockRef.current = replay.from;
+      replayEndedRef.current = false;
+      replaySeekNonceRef.current = replay.seekNonce;
+    } else if (replay.seekNonce !== replaySeekNonceRef.current) {
+      replayClockRef.current = replay.seekTs;
+      replayEndedRef.current = false;
+      replaySeekNonceRef.current = replay.seekNonce;
+    }
+  }, [replay]);
 
   // Ingest new vessel targets. receivedAt only advances when the fix's ts
   // changed, so dead reckoning projects from the true fix age.
@@ -209,6 +317,45 @@ export function Map({
       const now = performance.now();
       const dtMs = lastFrameRef.current ? now - lastFrameRef.current : 16;
       lastFrameRef.current = now;
+
+      // Replay mode owns the frame: advance the virtual clock and render
+      // interpolated historical positions instead of the live fleet.
+      const rp = replayRef.current;
+      if (rp) {
+        if (rp.playing && !replayEndedRef.current) {
+          replayClockRef.current += (dtMs / 1000) * rp.speed;
+          if (replayClockRef.current >= rp.to) {
+            replayClockRef.current = rp.to;
+            replayEndedRef.current = true;
+            rp.onProgress(rp.to);
+            rp.onEnded();
+          }
+        }
+
+        const t = replayClockRef.current;
+        if (rp.playing && now - replayLastProgressRef.current >= REPLAY_PROGRESS_INTERVAL_MS) {
+          replayLastProgressRef.current = now;
+          rp.onProgress(t);
+        }
+
+        if (now - lastSetDataRef.current < SET_DATA_INTERVAL_MS) return;
+        lastSetDataRef.current = now;
+
+        const replaySource = map.getSource('replay') as maplibregl.GeoJSONSource | undefined;
+        if (!replaySource) return;
+        const feats: Feature[] = [];
+        for (const [id, pts] of Object.entries(rp.data)) {
+          const pose = poseAt(pts, t);
+          if (!pose) continue;
+          feats.push({
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [pose.lng, pose.lat] },
+            properties: { mmsi: Number(id), hdg: pose.hdg },
+          });
+        }
+        replaySource.setData({ type: 'FeatureCollection', features: feats });
+        return;
+      }
 
       if (now - lastSetDataRef.current < SET_DATA_INTERVAL_MS) return;
       lastSetDataRef.current = now;
@@ -381,6 +528,9 @@ export function Map({
     if (!map.hasImage('aton-warning')) {
       map.addImage('aton-warning', makeWarningImage());
     }
+    if (!map.hasImage('vessel-replay')) {
+      map.addImage('vessel-replay', makeVesselImage(REPLAY_COLOR));
+    }
 
     const empty = { type: 'FeatureCollection' as const, features: [] };
     if (!map.getSource('vessels')) map.addSource('vessels', { type: 'geojson', data: empty });
@@ -390,6 +540,7 @@ export function Map({
     // lineMetrics enables line-progress, which the trail gradient uses to fade
     // the oldest end of the track.
     if (!map.getSource('trail')) map.addSource('trail', { type: 'geojson', lineMetrics: true, data: empty });
+    if (!map.getSource('replay')) map.addSource('replay', { type: 'geojson', data: empty });
 
     const dark = document.documentElement.getAttribute('data-theme') !== 'light';
     const labelColor = dark ? '#cbd5e1' : '#334155';
@@ -524,6 +675,25 @@ export function Map({
       });
     }
 
+    // Replay markers: hidden until playback starts (toggled by the visibility
+    // effect). Single teal arrow rotated by the interpolated heading.
+    if (!map.getLayer('replay-vessels')) {
+      map.addLayer({
+        id: 'replay-vessels',
+        type: 'symbol',
+        source: 'replay',
+        layout: {
+          visibility: 'none',
+          'icon-image': 'vessel-replay',
+          'icon-rotate': ['get', 'hdg'],
+          'icon-rotation-alignment': 'map',
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+          'icon-size': ['interpolate', ['linear'], ['zoom'], 4, 0.45, 9, 0.75, 14, 1.1],
+        },
+      });
+    }
+
     if (!map.getLayer('vessel-labels')) {
       map.addLayer({
         id: 'vessel-labels',
@@ -646,6 +816,26 @@ export function Map({
     vis('buoys-layer', showBuoys);
     vis('aton-layer', showAton);
   }, [showPorts, showBuoys, showAton, styleEpoch]);
+
+  // Replay mode swaps the live fleet (and its trail) for the playback overlay.
+  const replayActive = replay !== null;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || styleEpoch === 0) return;
+    const vis = (layer: string, on: boolean) => {
+      if (map.getLayer(layer)) {
+        map.setLayoutProperty(layer, 'visibility', on ? 'visible' : 'none');
+      }
+    };
+    for (const l of ['vessels-moving', 'vessels-stationary', 'vessel-labels', 'vessel-selection', 'trail-line']) {
+      vis(l, !replayActive);
+    }
+    vis('replay-vessels', replayActive);
+    if (!replayActive) {
+      const src = map.getSource('replay') as maplibregl.GeoJSONSource | undefined;
+      src?.setData({ type: 'FeatureCollection', features: [] });
+    }
+  }, [replayActive, styleEpoch]);
 
   // Fly to a selected port
   useEffect(() => {

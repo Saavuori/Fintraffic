@@ -1,5 +1,5 @@
 import React from 'react';
-import { Ship, Anchor, Waves, TriangleAlert, Moon, Sun, ChevronLeft } from 'lucide-react';
+import { Ship, Anchor, Waves, TriangleAlert, Moon, Sun, ChevronLeft, History } from 'lucide-react';
 import { useCollapsiblePanel, stopPanelClick } from '../hooks/useCollapsiblePanel';
 import { ALL_CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS, type ShipCategory } from '../lib/shipTypes';
 import type { ConnectionStatus } from '../hooks/useWebSocket';
@@ -23,6 +23,8 @@ interface FilterPanelProps {
   showAton: boolean;
   setShowAton: (v: boolean) => void;
   atonFaults: AtonFaultFeature[];
+  replayActive: boolean;
+  onEnterReplay: () => void;
 }
 
 export const FilterPanel: React.FC<FilterPanelProps> = ({
@@ -43,6 +45,8 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   showAton,
   setShowAton,
   atonFaults,
+  replayActive,
+  onEnterReplay,
 }) => {
   const { className: collapsedClass, ...collapsibleProps } = useCollapsiblePanel(
     isCollapsed,
@@ -125,6 +129,14 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               >
                 {mapTheme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
                 <span>{mapTheme === 'dark' ? 'Light map' : 'Dark map'}</span>
+              </button>
+              <button
+                className={`layer-toggle ${replayActive ? 'on' : ''}`}
+                onClick={onEnterReplay}
+                title="Replay recorded vessel movement"
+              >
+                <History size={14} />
+                <span>Replay</span>
               </button>
             </div>
 

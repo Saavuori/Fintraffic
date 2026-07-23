@@ -61,7 +61,14 @@ CREATE TABLE IF NOT EXISTS trail (
 	sog  INTEGER NOT NULL, -- knots   * 10
 	cog  INTEGER NOT NULL, -- degrees * 10
 	PRIMARY KEY (mmsi, ts)
-) WITHOUT ROWID;`
+) WITHOUT ROWID;
+
+-- The primary key clusters by (mmsi, ts), so a per-vessel Track query is a
+-- direct range scan. A fleet-wide replay filters by ts across ALL vessels,
+-- which the PK can't serve without a full scan — this index makes the time
+-- window the leading term. Points come out time-ordered, which FleetTrack
+-- relies on to build each vessel's ascending sub-track.
+CREATE INDEX IF NOT EXISTS idx_trail_ts ON trail (ts, mmsi);`
 
 // Open creates/opens the trail database at path and starts the background
 // writer. intervalSec is the minimum spacing between recorded points per
@@ -233,6 +240,78 @@ func (s *Store) Track(ctx context.Context, mmsi int, from, to int64, maxPoints i
 	}
 
 	return decimate(all, maxPoints), nil
+}
+
+// FleetTrack returns recorded points for ALL vessels in [from, to] (epoch
+// seconds), grouped by mmsi. Each vessel's track is ascending by time and
+// independently decimated to at most perVesselMax points. Vessels with no
+// point in the window are absent from the result.
+//
+// This backs the fleet replay: one query streams the whole window in time
+// order (via idx_trail_ts) and is bucketed per vessel here. totalCap bounds
+// the number of rows scanned so a wide window can't exhaust memory; when the
+// window holds more points than that, the oldest are dropped and truncated is
+// reported true so the caller can surface it.
+func (s *Store) FleetTrack(ctx context.Context, from, to int64, perVesselMax, totalCap int) (tracks map[int][]Point, truncated bool, err error) {
+	if s == nil {
+		return nil, false, nil
+	}
+	if perVesselMax < 2 {
+		perVesselMax = 2
+	}
+	if totalCap < 1 {
+		totalCap = 1
+	}
+
+	// One extra row past the cap tells us the window was truncated. Ordering by
+	// ts DESC keeps the most RECENT points when we hit the cap, then each
+	// vessel's slice is reversed back to ascending below.
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT mmsi, ts, lat, lng, sog, cog FROM trail WHERE ts >= ? AND ts <= ? ORDER BY ts DESC LIMIT ?`,
+		from, to, totalCap+1)
+	if err != nil {
+		return nil, false, err
+	}
+	defer rows.Close()
+
+	grouped := make(map[int][]Point)
+	n := 0
+	for rows.Next() {
+		n++
+		if n > totalCap {
+			truncated = true
+			break
+		}
+		var mmsi int
+		var ts, lat, lng, sog, cog int64
+		if err := rows.Scan(&mmsi, &ts, &lat, &lng, &sog, &cog); err != nil {
+			return nil, false, err
+		}
+		grouped[mmsi] = append(grouped[mmsi], Point{
+			Ts:  ts,
+			Lat: float64(lat) / 1e6,
+			Lng: float64(lng) / 1e6,
+			Sog: float64(sog) / 10,
+			Cog: float64(cog) / 10,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, err
+	}
+
+	// Each slice is currently ts-descending; reverse to ascending and decimate.
+	for mmsi, pts := range grouped {
+		reverse(pts)
+		grouped[mmsi] = decimate(pts, perVesselMax)
+	}
+	return grouped, truncated, nil
+}
+
+// reverse flips pts in place.
+func reverse(pts []Point) {
+	for i, j := 0, len(pts)-1; i < j; i, j = i+1, j-1 {
+		pts[i], pts[j] = pts[j], pts[i]
+	}
 }
 
 // decimate evenly strides pts down to at most maxPoints, always keeping the

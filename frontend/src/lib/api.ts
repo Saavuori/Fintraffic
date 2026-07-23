@@ -6,6 +6,7 @@ import type {
   AtonFaultsResponse,
   VersionResponse,
   VesselTrailResponse,
+  FleetReplayResponse,
 } from '../types';
 
 async function getJSON<T>(url: string): Promise<T> {
@@ -38,6 +39,17 @@ export function fetchVesselTrail(
     maxPoints: String(maxPoints),
   });
   return getJSON(`/api/v1/vessel/${mmsi}/trail?${params.toString()}`);
+}
+
+export function fetchFleetReplay(
+  fromSec: number,
+  toSec: number
+): Promise<FleetReplayResponse> {
+  const params = new URLSearchParams({
+    from: String(Math.floor(fromSec)),
+    to: String(Math.floor(toSec)),
+  });
+  return getJSON(`/api/v1/replay?${params.toString()}`);
 }
 
 export function fetchSeaState(): Promise<SeaStateResponse> {

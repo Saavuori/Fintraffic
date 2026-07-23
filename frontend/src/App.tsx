@@ -2,12 +2,14 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useVesselData } from './hooks/useVesselData';
 import { useVesselTrail } from './hooks/useVesselTrail';
+import { useFleetReplay } from './hooks/useFleetReplay';
 import { useSwipeGestures } from './hooks/useSwipeGestures';
 import { Map } from './components/Map';
 import { FilterPanel } from './components/FilterPanel';
 import { VesselPopup } from './components/VesselPopup';
 import { VesselCard } from './components/VesselCard';
 import { PortPopup } from './components/PortPopup';
+import { ReplayBar } from './components/ReplayBar';
 import { VersionBadge } from './components/VersionBadge';
 import { fetchPorts, fetchSeaState, fetchAtonFaults } from './lib/api';
 import { categorize, type ShipCategory } from './lib/shipTypes';
@@ -84,6 +86,9 @@ function App() {
   }, [trailWindowSec]);
 
   const trailPoints = useVesselTrail(selectedMmsi, showTrail, trailWindowSec);
+
+  // Fleet-wide animated replay of recorded tracks.
+  const replay = useFleetReplay();
 
   // Panel collapse state
   const [isDetailCollapsed, setIsDetailCollapsed] = useState<boolean>(false);
@@ -164,6 +169,16 @@ function App() {
 
   const liveVessel = selectedMmsi !== null ? vessels[String(selectedMmsi)] ?? null : null;
 
+  // Entering replay clears the live selection so its card/popup don't linger
+  // over the historical overlay.
+  const replayEnter = replay.enter;
+  const handleEnterReplay = useCallback(() => {
+    setSelectedMmsi(null);
+    setSelectedPort(null);
+    setIsFollowing(false);
+    replayEnter(3 * 3600);
+  }, [replayEnter]);
+
   const toggleTrail = useCallback(() => setShowTrail((v) => !v), []);
   const toggleFilterCollapsed = useCallback(() => setIsFilterCollapsed((v) => !v), []);
   const toggleDetailCollapsed = useCallback(() => setIsDetailCollapsed((v) => !v), []);
@@ -194,6 +209,7 @@ function App() {
         isFollowing={isFollowing}
         onDisableFollowing={disableFollowing}
         onBackgroundClick={handleBackgroundClick}
+        replay={replay.control}
       />
 
       <FilterPanel
@@ -214,6 +230,8 @@ function App() {
         showAton={showAton}
         setShowAton={setShowAton}
         atonFaults={atonFaults}
+        replayActive={replay.active}
+        onEnterReplay={handleEnterReplay}
       />
 
       {liveVessel && (
@@ -247,6 +265,8 @@ function App() {
           onSelectVessel={handleSelectVessel}
         />
       )}
+
+      {replay.visible && <ReplayBar replay={replay} />}
 
       <VersionBadge />
     </div>
