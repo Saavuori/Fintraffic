@@ -748,19 +748,47 @@ body {
 .version-badge {
   position: absolute;
   z-index: 9;
-  bottom: 6px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: calc(8px + env(safe-area-inset-bottom));
+  left: 8px;
   display: flex;
-  gap: 6px;
-  font-size: 0.62rem;
+  align-items: center;
+  gap: 5px;
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
   color: var(--text-muted);
+  text-decoration: none;
   background: var(--bg-panel);
   border: 1px solid var(--border-faint);
-  border-radius: 8px;
-  padding: 2px 8px;
+  border-radius: 6px;
+  padding: 4px 8px;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: opacity 0.2s, border-color 0.2s;
+}
+
+.version-badge:hover {
+  opacity: 0.9;
+  border-color: var(--scrollbar-thumb);
+}
+
+.version-badge__tag {
+  color: var(--accent-teal);
+  font-weight: 700;
+}
+
+.version-badge__sha {
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+}
+
+.version-badge__date {
+  color: var(--text-muted);
+}
+
+.version-badge__sep {
+  color: rgba(255, 255, 255, 0.2);
+  user-select: none;
 }
 
 /* ---------- MapLibre popup (buoys / AtoN) ---------- */
