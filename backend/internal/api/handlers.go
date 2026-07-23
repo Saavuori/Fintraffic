@@ -90,6 +90,11 @@ type HealthResponse struct {
 	RedisConnected bool   `json:"redis_connected"`
 	ActiveVessels  int    `json:"active_vessels"`
 	UptimeSeconds  int64  `json:"uptime_seconds"`
+	// Trail-recording visibility, so a silently-disabled store is diagnosable
+	// from a health check instead of only the startup log.
+	TrailEnabled     bool  `json:"trail_enabled"`
+	TrailPoints      int64 `json:"trail_points"`
+	TrailNewestTsAge int64 `json:"trail_newest_ts_age_sec"` // seconds since newest point; -1 when none
 }
 
 func (h *Handlers) Health(w http.ResponseWriter, r *http.Request) {
@@ -101,12 +106,29 @@ func (h *Handlers) Health(w http.ResponseWriter, r *http.Request) {
 		activeVessels = len(positions)
 	}
 
+	// A nil trail store means recording is disabled (empty path or open failed).
+	trailEnabled := h.trail != nil
+	var trailPoints, trailAge int64 = 0, -1
+	if trailEnabled {
+		if count, newest, err := h.trail.Stats(r.Context()); err != nil {
+			log.Printf("Trail stats error: %v\n", err)
+		} else {
+			trailPoints = count
+			if newest > 0 {
+				trailAge = time.Now().Unix() - newest
+			}
+		}
+	}
+
 	res := HealthResponse{
-		Status:         "healthy",
-		MQTTConnected:  mqttConnected,
-		RedisConnected: redisConnected,
-		ActiveVessels:  activeVessels,
-		UptimeSeconds:  int64(time.Since(startTime).Seconds()),
+		Status:           "healthy",
+		MQTTConnected:    mqttConnected,
+		RedisConnected:   redisConnected,
+		ActiveVessels:    activeVessels,
+		UptimeSeconds:    int64(time.Since(startTime).Seconds()),
+		TrailEnabled:     trailEnabled,
+		TrailPoints:      trailPoints,
+		TrailNewestTsAge: trailAge,
 	}
 
 	if !redisConnected || !mqttConnected {

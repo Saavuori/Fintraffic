@@ -344,6 +344,26 @@ func (s *Store) Prune(ctx context.Context, before int64) (int64, error) {
 	return res.RowsAffected()
 }
 
+// Stats reports the number of recorded points and the newest recorded
+// timestamp (epoch seconds, 0 when empty). A nil store reports (0, 0, nil) —
+// callers distinguish "recording disabled" by checking the store for nil
+// themselves. Cheap enough for a health check: COUNT/MAX over the (ts, mmsi)
+// index.
+func (s *Store) Stats(ctx context.Context) (count int64, newestTs int64, err error) {
+	if s == nil {
+		return 0, 0, nil
+	}
+	var newest sql.NullInt64
+	row := s.db.QueryRowContext(ctx, `SELECT COUNT(*), MAX(ts) FROM trail`)
+	if err := row.Scan(&count, &newest); err != nil {
+		return 0, 0, err
+	}
+	if newest.Valid {
+		newestTs = newest.Int64
+	}
+	return count, newestTs, nil
+}
+
 // Close stops the writer, flushing any queued points, and closes the database.
 func (s *Store) Close() error {
 	if s == nil {
