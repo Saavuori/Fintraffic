@@ -1,15 +1,19 @@
-# Production stack for marinetraffic (rootless Podman on the Oracle host).
+# Production stack for fintraffic (rootless Podman on the Oracle host).
 #
 # TLS termination is NOT here: the Caddy container from the ratikka stack owns
-# :80/:443 on this host and proxies meriliikenne.duckdns.org to this backend
+# :80/:443 on this host and proxies fintraffic.duckdns.org to this backend
 # over the shared external `web-proxy` network.
+#
+# Migration note: this stack replaces the standalone marinetraffic stack. To
+# keep the recorded vessel trail history, copy the old `marinetraffic-trail`
+# volume's trail.db into `fintraffic-trail` before first start.
 services:
-  marinetraffic-backend:
-    image: ghcr.io/saavuori/marinetraffic:latest
-    container_name: marinetraffic-backend
+  fintraffic-backend:
+    image: ghcr.io/saavuori/fintraffic:latest
+    container_name: fintraffic-backend
     restart: unless-stopped
     environment:
-      - REDIS_URL=redis://marinetraffic-cache:6379
+      - REDIS_URL=redis://fintraffic-cache:6379
       - PORT=8080
       # Vessel trail history (SQLite). 60-day retention, 1 point/min/vessel.
       - TRAIL_DB_PATH=/data/trail.db
@@ -17,16 +21,16 @@ services:
       - TRAIL_INTERVAL_SEC=60
     volumes:
       # Persist trail history across container recreation.
-      - marinetraffic-trail:/data
+      - fintraffic-trail:/data
     networks:
       - default
       - web-proxy
     depends_on:
-      - marinetraffic-cache
+      - fintraffic-cache
 
-  marinetraffic-cache:
+  fintraffic-cache:
     image: docker.io/library/redis:8-alpine
-    container_name: marinetraffic-cache
+    container_name: fintraffic-cache
     restart: unless-stopped
     command: redis-server --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
     networks:
@@ -34,7 +38,7 @@ services:
 
 volumes:
   # Named volume for the SQLite trail history DB (survives container recreation).
-  marinetraffic-trail:
+  fintraffic-trail:
 
 networks:
   # `default` must be declared explicitly: the podman-compose on the host errors
