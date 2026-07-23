@@ -1,0 +1,34 @@
+# Production stack for marinetraffic (rootless Podman on the Oracle host).
+#
+# TLS termination is NOT here: the Caddy container from the ratikka stack owns
+# :80/:443 on this host and proxies meriliikenne.duckdns.org to this backend
+# over the shared external `web-proxy` network.
+services:
+  marinetraffic-backend:
+    image: ghcr.io/saavuori/marinetraffic:latest
+    container_name: marinetraffic-backend
+    restart: unless-stopped
+    environment:
+      - REDIS_URL=redis://marinetraffic-cache:6379
+      - PORT=8080
+    networks:
+      - default
+      - web-proxy
+    depends_on:
+      - marinetraffic-cache
+
+  marinetraffic-cache:
+    image: docker.io/library/redis:8-alpine
+    container_name: marinetraffic-cache
+    restart: unless-stopped
+    command: redis-server --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
+    networks:
+      - default
+
+networks:
+  # `default` must be declared explicitly: the podman-compose on the host errors
+  # with "missing networks: default" when a service names it but the top-level
+  # networks block doesn't define it.
+  default:
+  web-proxy:
+    external: true

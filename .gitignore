@@ -1,0 +1,19 @@
+# Backend
+backend/marinetraffic
+backend/internal/api/dist/*.js
+backend/internal/api/dist/*.css
+backend/internal/api/dist/assets/
+!backend/internal/api/dist/index.html
+*.log
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Env
+.env
+*.env.local
+
+# OS / editor
+.DS_Store
+Thumbs.db

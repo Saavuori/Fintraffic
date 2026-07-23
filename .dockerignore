@@ -1,0 +1,9 @@
+.git
+.github
+.claude
+docs
+scripts
+frontend/node_modules
+frontend/dist
+backend/internal/api/dist
+*.md

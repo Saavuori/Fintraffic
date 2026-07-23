@@ -1,0 +1,852 @@
+:root {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: #f0f7fa;
+  background-color: #020b17;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Marine glass design tokens (structure shared with the ratikka sibling app) */
+  --bg-panel: hsla(210, 78%, 5%, 0.85);
+  --bg-panel-hover: hsla(210, 78%, 9%, 0.95);
+  --border-glow: hsla(200, 40%, 34%, 0.5);
+  --border-focus: hsla(174, 72%, 46%, 0.6);
+  --accent-teal: #2dd4bf;
+  --accent-blue: #38bdf8;
+  --accent-coral: #ff7a6b;
+  --accent-gold: #fdcb6e;
+  --bg-card: hsla(206, 42%, 17%, 0.4);
+
+  --text-primary: #f0f7fa;
+  --text-strong: #f1f8fb;
+  --text-body: #c6d8e2;
+  --text-secondary: #8fa8b8;
+  --text-muted: #7690a1;
+  --bg-button: rgba(23, 42, 58, 0.35);
+  --bg-button-hover: rgba(23, 42, 58, 0.6);
+  --border-button: rgba(255, 255, 255, 0.04);
+  --border-button-hover: rgba(255, 255, 255, 0.15);
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-faint: rgba(255, 255, 255, 0.04);
+  --surface-raised: rgba(23, 42, 58, 0.6);
+  --surface-faint: rgba(255, 255, 255, 0.02);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.15);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
+  --app-bg: #020b17;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  color: #16323f;
+  background-color: #f5f9fb;
+
+  --bg-panel: rgba(255, 255, 255, 0.88);
+  --bg-panel-hover: rgba(255, 255, 255, 0.96);
+  --border-glow: rgba(130, 165, 184, 0.35);
+  --border-focus: rgba(20, 184, 166, 0.6);
+  --bg-card: rgba(236, 244, 248, 0.6);
+
+  --text-primary: #16323f;
+  --text-strong: #0c2430;
+  --text-body: #2a4a58;
+  --text-secondary: #4d6b7a;
+  --text-muted: #5f7c8c;
+  --bg-button: rgba(130, 165, 184, 0.12);
+  --bg-button-hover: rgba(130, 165, 184, 0.22);
+  --border-button: rgba(130, 165, 184, 0.15);
+  --border-button-hover: rgba(130, 165, 184, 0.3);
+
+  --border-subtle: rgba(12, 36, 48, 0.12);
+  --border-faint: rgba(12, 36, 48, 0.06);
+  --surface-raised: rgba(130, 165, 184, 0.16);
+  --surface-faint: rgba(12, 36, 48, 0.03);
+  --scrollbar-thumb: rgba(12, 36, 48, 0.2);
+  --scrollbar-thumb-hover: rgba(12, 36, 48, 0.35);
+  --app-bg: #f5f9fb;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background-color: var(--app-bg);
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+.dashboard-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background-color: var(--app-bg);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Map drag shouldn't select text, but panel content is real content. */
+.glass-panel,
+.vessel-card-overlay,
+.version-badge {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.map-container {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---------- Glass panels ---------- */
+
+.glass-panel {
+  position: absolute;
+  z-index: 10;
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glow);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
+  color: var(--text-primary);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Left filter panel */
+.filter-panel {
+  top: 80px;
+  left: 0;
+  width: 210px;
+  height: calc(100vh - 160px);
+  height: calc(100dvh - 160px);
+  padding: 12px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0 12px 12px 0;
+  border-left: none;
+}
+
+.filter-panel.collapsed {
+  transform: translateX(calc(-100% + 16px)) !important;
+  cursor: pointer;
+}
+
+.filter-panel.collapsed:hover {
+  background: var(--bg-panel-hover);
+}
+
+.filter-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 6px;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--accent-teal);
+  letter-spacing: 0.02em;
+}
+
+.panel-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0 10px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.conn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.conn-dot.connected {
+  background: var(--accent-teal);
+  box-shadow: 0 0 6px var(--accent-teal);
+}
+
+.conn-dot.connecting {
+  background: var(--accent-gold);
+}
+
+.conn-dot.disconnected {
+  background: var(--accent-coral);
+}
+
+.clear-filters-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--accent-teal);
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0;
+  font-family: inherit;
+  font-size: 0.75rem;
+  transition: opacity 0.2s;
+}
+
+.clear-filters-btn:hover {
+  opacity: 0.8;
+}
+
+.filter-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  margin-top: 2px;
+  padding-right: 2px;
+}
+
+.filter-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
+}
+
+/* Ship category filter rows */
+.category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.category-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--bg-button);
+  border: 1px solid var(--border-button);
+  border-radius: 8px;
+  color: var(--text-body);
+  font-family: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s, border-color 0.15s;
+  text-align: left;
+}
+
+.category-row:hover {
+  background: var(--bg-button-hover);
+  border-color: var(--border-button-hover);
+}
+
+.category-row.inactive {
+  opacity: 0.35;
+}
+
+.category-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.category-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+/* Layer toggle buttons */
+.layer-toggles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.layer-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px;
+  background: var(--bg-button);
+  border: 1px solid var(--border-button);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.layer-toggle:hover {
+  background: var(--bg-button-hover);
+  border-color: var(--border-button-hover);
+}
+
+.layer-toggle.on {
+  color: var(--accent-teal);
+  border-color: var(--border-focus);
+  background: rgba(45, 212, 191, 0.08);
+}
+
+/* Alerts (AtoN faults) list */
+.alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.alert-item {
+  padding: 7px 9px;
+  background: rgba(245, 158, 11, 0.07);
+  border: 1px solid rgba(245, 158, 11, 0.22);
+  border-radius: 8px;
+}
+
+.alert-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.alert-desc {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* ---------- Right detail panel ---------- */
+
+.detail-popup {
+  top: 80px;
+  right: 0;
+  width: 320px;
+  max-height: calc(100vh - 96px);
+  max-height: calc(100dvh - 96px);
+  padding: 18px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 12px 0 0 12px;
+  border-right: none;
+}
+
+.detail-popup.collapsed {
+  transform: translateX(calc(100% - 16px)) !important;
+  cursor: pointer;
+  min-height: 120px;
+}
+
+.detail-popup.collapsed:hover {
+  background: var(--bg-panel-hover);
+}
+
+.detail-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.detail-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.vessel-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(45, 212, 191, 0.12);
+  border: 1.5px solid var(--accent-teal);
+  color: var(--accent-teal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vessel-badge.port-badge {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.detail-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-title h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-subtitle {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.icon-btn {
+  background: var(--bg-button);
+  border: 1px solid var(--border-button);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.icon-btn:hover {
+  background: var(--bg-button-hover);
+  color: var(--text-primary);
+}
+
+/* Telemetry grid */
+.telemetry-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.telemetry-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-faint);
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.telemetry-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.telemetry-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.telemetry-value small {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.status-callout {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(45, 212, 191, 0.07);
+  border: 1px solid rgba(45, 212, 191, 0.25);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.status-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.status-value {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent-teal);
+}
+
+.destination-callout {
+  background: rgba(56, 189, 248, 0.07);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dest-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.dest-row span {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.dest-row b {
+  font-size: 0.8rem;
+  color: var(--text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-facts {
+  display: flex;
+  flex-direction: column;
+}
+
+.fact-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 2px;
+  border-bottom: 1px solid var(--border-faint);
+  gap: 8px;
+}
+
+.fact-row:last-child {
+  border-bottom: none;
+}
+
+.fact-row span {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.fact-row b {
+  font-size: 0.78rem;
+  color: var(--text-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.panel-note {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  padding: 8px 2px;
+}
+
+/* Port calls board */
+.port-calls-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.port-call-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  background: var(--bg-button);
+  border: 1px solid var(--border-button);
+  border-radius: 8px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-body);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.port-call-row:hover:not(:disabled) {
+  background: var(--bg-button-hover);
+  border-color: var(--border-button-hover);
+}
+
+.port-call-row:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.call-kind {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.call-kind.arrival {
+  color: var(--accent-teal);
+  background: rgba(45, 212, 191, 0.12);
+}
+
+.call-kind.departure {
+  color: var(--accent-blue);
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.call-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.call-vessel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.call-berth {
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.call-time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.call-time.actual {
+  color: var(--accent-teal);
+}
+
+.call-time small {
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* ---------- Floating vessel card ---------- */
+
+.vessel-card-overlay {
+  position: absolute;
+  z-index: 11;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glow);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
+  padding: 8px 12px;
+  max-width: min(92vw, 560px);
+}
+
+.vessel-card-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.vessel-card-name {
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vessel-card-stat {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.vessel-card-dest {
+  font-size: 0.75rem;
+  color: var(--accent-blue);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.follow-btn.active {
+  color: var(--accent-teal);
+  border-color: var(--border-focus);
+  background: rgba(45, 212, 191, 0.12);
+}
+
+/* ---------- Version badge ---------- */
+
+.version-badge {
+  position: absolute;
+  z-index: 9;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-faint);
+  border-radius: 8px;
+  padding: 2px 8px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ---------- MapLibre popup (buoys / AtoN) ---------- */
+
+.maplibregl-popup-content {
+  background: var(--bg-panel) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glow);
+  border-radius: 12px !important;
+  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7) !important;
+  color: var(--text-primary);
+  padding: 12px 14px !important;
+  font-family: inherit;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: var(--border-glow) !important;
+  border-bottom-color: var(--border-glow) !important;
+}
+
+.marine-popup h4 {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: var(--text-strong);
+}
+
+.marine-popup div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 0.75rem;
+  padding: 2px 0;
+}
+
+.marine-popup div span {
+  color: var(--text-secondary);
+}
+
+.marine-popup small {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+}
+
+/* ---------- Scrollbars ---------- */
+
+.filter-scroll-area::-webkit-scrollbar,
+.detail-content::-webkit-scrollbar,
+.port-calls-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.filter-scroll-area::-webkit-scrollbar-thumb,
+.detail-content::-webkit-scrollbar-thumb,
+.port-calls-list::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+.filter-scroll-area::-webkit-scrollbar-thumb:hover,
+.detail-content::-webkit-scrollbar-thumb:hover,
+.port-calls-list::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* ---------- Mobile ---------- */
+
+@media (max-width: 768px) {
+  .filter-panel {
+    top: 66px;
+    height: calc(100vh - 132px);
+    height: calc(100dvh - 132px);
+  }
+
+  .detail-popup {
+    top: 66px;
+    width: min(320px, 88vw);
+    max-height: calc(100vh - 82px);
+    max-height: calc(100dvh - 82px - env(safe-area-inset-bottom));
+  }
+
+  .vessel-card-overlay {
+    top: 10px;
+    max-width: 94vw;
+    padding: 6px 10px;
+  }
+
+  .vessel-card-dest {
+    display: none;
+  }
+}
