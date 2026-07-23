@@ -106,9 +106,13 @@ body {
   -webkit-user-select: text;
 }
 
+/* MapLibre sets this element's own position to "relative" when it
+   initializes, so it can't be sized via position:absolute + inset here —
+   percentage sizing against the dashboard-container's explicit height works
+   regardless of what MapLibre does to the position value. */
 .map-container {
-  position: absolute;
-  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 /* ---------- Glass panels ---------- */
