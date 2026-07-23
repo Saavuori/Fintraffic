@@ -16,6 +16,7 @@ func NewRouter(h *Handlers, hub *ws.Hub) *http.ServeMux {
 	mux.HandleFunc("GET /api/v1/ports", h.Ports)
 	mux.HandleFunc("GET /api/v1/port-calls/{locode}", h.PortCalls)
 	mux.HandleFunc("GET /api/v1/vessel/{mmsi}", h.Vessel)
+	mux.HandleFunc("GET /api/v1/vessel/{mmsi}/trail", h.VesselTrail)
 	mux.HandleFunc("GET /api/v1/sea-state", h.SeaState)
 	mux.HandleFunc("GET /api/v1/aton-faults", h.AtonFaults)
 

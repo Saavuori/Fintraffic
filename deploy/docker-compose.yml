@@ -11,6 +11,13 @@ services:
     environment:
       - REDIS_URL=redis://marinetraffic-cache:6379
       - PORT=8080
+      # Vessel trail history (SQLite). 60-day retention, 1 point/min/vessel.
+      - TRAIL_DB_PATH=/data/trail.db
+      - TRAIL_RETENTION_DAYS=60
+      - TRAIL_INTERVAL_SEC=60
+    volumes:
+      # Persist trail history across container recreation.
+      - marinetraffic-trail:/data
     networks:
       - default
       - web-proxy
@@ -24,6 +31,10 @@ services:
     command: redis-server --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
     networks:
       - default
+
+volumes:
+  # Named volume for the SQLite trail history DB (survives container recreation).
+  marinetraffic-trail:
 
 networks:
   # `default` must be declared explicitly: the podman-compose on the host errors

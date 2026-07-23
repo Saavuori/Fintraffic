@@ -47,6 +47,7 @@ interface MapProps {
   vessels: Record<string, Vessel>;
   selectedMmsi: number | null;
   onSelectVessel: (mmsi: number | null) => void;
+  trailPoints: [number, number][];
   ports: Port[];
   showPorts: boolean;
   selectedPortLocode: string | null;
@@ -121,6 +122,7 @@ export function Map({
   vessels,
   selectedMmsi,
   onSelectVessel,
+  trailPoints,
   ports,
   showPorts,
   selectedPortLocode,
@@ -385,6 +387,9 @@ export function Map({
     if (!map.getSource('ports')) map.addSource('ports', { type: 'geojson', data: empty });
     if (!map.getSource('buoys')) map.addSource('buoys', { type: 'geojson', data: empty });
     if (!map.getSource('aton')) map.addSource('aton', { type: 'geojson', data: empty });
+    // lineMetrics enables line-progress, which the trail gradient uses to fade
+    // the oldest end of the track.
+    if (!map.getSource('trail')) map.addSource('trail', { type: 'geojson', lineMetrics: true, data: empty });
 
     const dark = document.documentElement.getAttribute('data-theme') !== 'light';
     const labelColor = dark ? '#cbd5e1' : '#334155';
@@ -445,6 +450,28 @@ export function Map({
           'icon-image': 'aton-warning',
           'icon-size': ['interpolate', ['linear'], ['zoom'], 5, 0.4, 10, 0.7],
           'icon-allow-overlap': true,
+        },
+      });
+    }
+
+    // Trail sits beneath the vessel markers. line-gradient fades the tail
+    // (oldest) to transparent and the head (most recent) to solid teal.
+    if (!map.getLayer('trail-line')) {
+      map.addLayer({
+        id: 'trail-line',
+        type: 'line',
+        source: 'trail',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-width': ['interpolate', ['linear'], ['zoom'], 5, 1.5, 12, 3.5],
+          'line-gradient': [
+            'interpolate',
+            ['linear'],
+            ['line-progress'],
+            0, 'rgba(45, 212, 191, 0)',
+            0.4, 'rgba(45, 212, 191, 0.35)',
+            1, 'rgba(45, 212, 191, 0.9)',
+          ],
         },
       });
     }
@@ -550,6 +577,23 @@ export function Map({
       })),
     });
   }, [ports, styleEpoch]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || styleEpoch === 0) return;
+    const source = map.getSource('trail') as maplibregl.GeoJSONSource | undefined;
+    if (!source) return;
+    // A LineString needs at least two points; otherwise clear the trail.
+    source.setData(
+      trailPoints.length >= 2
+        ? {
+            type: 'Feature',
+            geometry: { type: 'LineString', coordinates: trailPoints },
+            properties: {},
+          }
+        : { type: 'FeatureCollection', features: [] }
+    );
+  }, [trailPoints, styleEpoch]);
 
   useEffect(() => {
     const map = mapRef.current;
