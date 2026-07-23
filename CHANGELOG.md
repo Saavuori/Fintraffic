@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [v0.2.0] - 2026-07-23
 
+### Changed
+- **Vessel trail styling**: The single-vessel track is now a **dotted line drawn in the selected vessel's category colour** (matching its marker) instead of a thin, fixed-teal line that faded to transparent — the old gradient tail was nearly invisible on the dark basemap. (MapLibre disables `line-gradient` when `line-dasharray` is set, so the fade is dropped in favour of a solid, more legible dotted line.)
+
 ### Added
 - **Fleet Replay (animated history playback)**: A new "Replay" mode plays back the recorded movement of *all* vessels over a recent time window, not just one selection. A bottom transport bar provides window presets (`1h / 3h / 6h`), play/pause, a `30× / 60× / 120× / 300×` speed selector, and a scrubbable timeline with a live clock. A virtual playback clock drives the existing per-frame interpolation loop, easing every vessel between its recorded fixes; markers fade in and out at track edges and vanish across AIS coverage gaps (> 20 min) rather than drawing fabricated straight lines. Playback markers render in a single teal (the trail store has no ship-type), rotated by interpolated course. New endpoint: `GET /api/v1/replay?from&to` returns all vessels' server-decimated `[lng, lat, ts, cog]` tracks for the window (clamped to 24h, per-vessel and total point caps, `truncated` flag when the window is capped), backed by a new `(ts, mmsi)` index so the time-range scan doesn't hit the whole table.
 

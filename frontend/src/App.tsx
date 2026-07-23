@@ -12,7 +12,7 @@ import { PortPopup } from './components/PortPopup';
 import { ReplayBar } from './components/ReplayBar';
 import { VersionBadge } from './components/VersionBadge';
 import { fetchPorts, fetchSeaState, fetchAtonFaults } from './lib/api';
-import { categorize, type ShipCategory } from './lib/shipTypes';
+import { categorize, CATEGORY_COLORS, type ShipCategory } from './lib/shipTypes';
 import type { Port, SeaStateFeature, AtonFaultFeature } from './types';
 
 function App() {
@@ -169,6 +169,9 @@ function App() {
 
   const liveVessel = selectedMmsi !== null ? vessels[String(selectedMmsi)] ?? null : null;
 
+  // The trail is drawn in the selected vessel's category colour.
+  const trailColor = liveVessel ? CATEGORY_COLORS[categorize(liveVessel.shipType)] : '#2dd4bf';
+
   // Entering replay clears the live selection so its card/popup don't linger
   // over the historical overlay.
   const replayEnter = replay.enter;
@@ -197,6 +200,7 @@ function App() {
         selectedMmsi={selectedMmsi}
         onSelectVessel={handleSelectVessel}
         trailPoints={trailPoints}
+        trailColor={trailColor}
         ports={ports}
         showPorts={showPorts}
         selectedPortLocode={selectedPort?.locode ?? null}

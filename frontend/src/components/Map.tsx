@@ -25,6 +25,8 @@ const SET_DATA_INTERVAL_MS = 33;
 
 // Replay: teal used for every playback marker (history has no ship type).
 const REPLAY_COLOR = '#2dd4bf';
+// Trail colour before a vessel is selected / as a fallback.
+const DEFAULT_TRAIL_COLOR = '#2dd4bf';
 // Consecutive fixes further apart than this (seconds) are treated as a coverage
 // gap — the vessel vanishes rather than sliding along a fabricated straight
 // line. Recording is ~1/min, so this only trips when AIS was lost.
@@ -126,6 +128,7 @@ interface MapProps {
   selectedMmsi: number | null;
   onSelectVessel: (mmsi: number | null) => void;
   trailPoints: [number, number][];
+  trailColor: string;
   ports: Port[];
   showPorts: boolean;
   selectedPortLocode: string | null;
@@ -202,6 +205,7 @@ export function Map({
   selectedMmsi,
   onSelectVessel,
   trailPoints,
+  trailColor,
   ports,
   showPorts,
   selectedPortLocode,
@@ -537,9 +541,7 @@ export function Map({
     if (!map.getSource('ports')) map.addSource('ports', { type: 'geojson', data: empty });
     if (!map.getSource('buoys')) map.addSource('buoys', { type: 'geojson', data: empty });
     if (!map.getSource('aton')) map.addSource('aton', { type: 'geojson', data: empty });
-    // lineMetrics enables line-progress, which the trail gradient uses to fade
-    // the oldest end of the track.
-    if (!map.getSource('trail')) map.addSource('trail', { type: 'geojson', lineMetrics: true, data: empty });
+    if (!map.getSource('trail')) map.addSource('trail', { type: 'geojson', data: empty });
     if (!map.getSource('replay')) map.addSource('replay', { type: 'geojson', data: empty });
 
     const dark = document.documentElement.getAttribute('data-theme') !== 'light';
@@ -605,8 +607,11 @@ export function Map({
       });
     }
 
-    // Trail sits beneath the vessel markers. line-gradient fades the tail
-    // (oldest) to transparent and the head (most recent) to solid teal.
+    // Trail sits beneath the vessel markers: a dotted line in the selected
+    // vessel's category colour (applied per-selection by the trailColor
+    // effect). Round caps + a zero-length dash render the segments as dots.
+    // NB: line-dasharray disables line-gradient in MapLibre, so the trail is a
+    // single solid colour rather than a fade.
     if (!map.getLayer('trail-line')) {
       map.addLayer({
         id: 'trail-line',
@@ -614,15 +619,9 @@ export function Map({
         source: 'trail',
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
-          'line-width': ['interpolate', ['linear'], ['zoom'], 5, 1.5, 12, 3.5],
-          'line-gradient': [
-            'interpolate',
-            ['linear'],
-            ['line-progress'],
-            0, 'rgba(45, 212, 191, 0)',
-            0.4, 'rgba(45, 212, 191, 0.35)',
-            1, 'rgba(45, 212, 191, 0.9)',
-          ],
+          'line-color': DEFAULT_TRAIL_COLOR,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 5, 2, 12, 4],
+          'line-dasharray': [0, 2],
         },
       });
     }
@@ -764,6 +763,15 @@ export function Map({
         : { type: 'FeatureCollection', features: [] }
     );
   }, [trailPoints, styleEpoch]);
+
+  // Tint the trail to the selected vessel's category colour.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || styleEpoch === 0) return;
+    if (map.getLayer('trail-line')) {
+      map.setPaintProperty('trail-line', 'line-color', trailColor);
+    }
+  }, [trailColor, styleEpoch]);
 
   useEffect(() => {
     const map = mapRef.current;
