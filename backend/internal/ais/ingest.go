@@ -13,6 +13,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/prometheus/client_golang/prometheus"
 	"marinetraffic/internal/cache"
+	"marinetraffic/internal/trail"
 )
 
 var (
@@ -35,6 +36,7 @@ func init() {
 type IngestionWorker struct {
 	client mqtt.Client
 	cache  cache.Cache
+	trail  *trail.Store // nil when trail recording is disabled; all uses are nil-safe
 	broker string
 
 	// meta and lastPos are shared between MQTT callbacks and hydration;
@@ -51,6 +53,12 @@ func NewIngestionWorker(broker string, cache cache.Cache) *IngestionWorker {
 		meta:    make(map[int]VesselMetadata),
 		lastPos: make(map[int]VesselPosition),
 	}
+}
+
+// SetTrailStore attaches a trail store so location fixes are also recorded to
+// history. Passing nil (or never calling this) leaves recording disabled.
+func (w *IngestionWorker) SetTrailStore(s *trail.Store) {
+	w.trail = s
 }
 
 func (w *IngestionWorker) Start(ctx context.Context) error {
@@ -170,6 +178,8 @@ func (w *IngestionWorker) handleLocation(mmsi int, payload []byte) {
 	w.mu.Unlock()
 
 	w.writePosition(pos)
+	// Record to trail history (nil-safe, downsampled inside Add).
+	w.trail.Add(pos.MMSI, pos.Ts, pos.Lat, pos.Lng, pos.Sog, pos.Cog)
 }
 
 func (w *IngestionWorker) handleMetadata(mmsi int, payload []byte) {

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **Vessel Track History ("trail")**: Every location fix is now recorded to a persistent, on-disk SQLite store (`modernc.org/sqlite`, pure-Go — no CGO), downsampled to one point per minute per vessel. Selecting a vessel and toggling the track button draws where it has been as a teal polyline that fades from transparent (oldest) to solid (most recent), with `1h / 24h / 7d / 60d` window presets. History is pruned daily to a 60-day retention window (~1 GB on disk for ~700 vessels) and survives container restarts via a named volume. New endpoint: `GET /api/v1/vessel/{mmsi}/trail?from&to&maxPoints` returns server-decimated `[lng, lat, ts]` tuples. Configurable via `TRAIL_DB_PATH`, `TRAIL_RETENTION_DAYS`, `TRAIL_INTERVAL_SEC` (set `TRAIL_DB_PATH=""` to disable). Writes are batched off the MQTT ingest path so recording never stalls live streaming.
+
+---
+
 ## [v0.0.2] - 2026-07-23
 
 ### Fixed

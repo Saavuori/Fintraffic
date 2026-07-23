@@ -15,6 +15,7 @@ import (
 	"marinetraffic/internal/api"
 	"marinetraffic/internal/cache"
 	"marinetraffic/internal/config"
+	"marinetraffic/internal/trail"
 	"marinetraffic/internal/ws"
 )
 
@@ -46,9 +47,27 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// 3b. Initialize the trail history store (vessel track persistence).
+	var trailStore *trail.Store
+	if cfg.TrailDBPath == "" {
+		log.Println("Trail recording disabled (TRAIL_DB_PATH is empty).")
+	} else {
+		log.Printf("Opening trail store at %s (retention %dd, interval %ds)...\n",
+			cfg.TrailDBPath, cfg.TrailRetentionDays, cfg.TrailIntervalSec)
+		var err error
+		trailStore, err = trail.Open(cfg.TrailDBPath, cfg.TrailIntervalSec)
+		if err != nil {
+			log.Printf("WARNING: trail store open failed: %v. Trail recording disabled.\n", err)
+			trailStore = nil
+		} else {
+			defer trailStore.Close()
+		}
+	}
+
 	// 4. Initialize AIS ingestion worker (MQTT over WSS)
 	log.Printf("Starting AIS ingestion from broker: %s...\n", cfg.MQTTBroker)
 	aisWorker := ais.NewIngestionWorker(cfg.MQTTBroker, liveCache)
+	aisWorker.SetTrailStore(trailStore)
 	if err := aisWorker.Start(ctx); err != nil {
 		log.Printf("ERROR starting AIS worker: %v\n", err)
 	}
@@ -77,9 +96,38 @@ func main() {
 		}
 	}()
 
+	// Background trail retention: prune points older than the retention window,
+	// once at startup and then daily.
+	go func() {
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+		prune := func() {
+			if trailStore == nil {
+				return
+			}
+			before := time.Now().AddDate(0, 0, -cfg.TrailRetentionDays).Unix()
+			pruneCtx, pruneCancel := context.WithTimeout(ctx, 5*time.Minute)
+			defer pruneCancel()
+			if n, err := trailStore.Prune(pruneCtx, before); err != nil {
+				log.Printf("Trail prune error: %v\n", err)
+			} else if n > 0 {
+				log.Printf("Trail: pruned %d points older than %d days\n", n, cfg.TrailRetentionDays)
+			}
+		}
+		prune()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				prune()
+			}
+		}
+	}()
+
 	// 7. Setup REST handlers and Digitraffic proxy client
 	dtClient := api.NewDigitrafficClient()
-	handlers := api.NewHandlers(liveCache, dtClient, aisWorker)
+	handlers := api.NewHandlers(liveCache, dtClient, aisWorker, trailStore)
 
 	// 8. Setup router
 	router := api.NewRouter(handlers, wsHub)

@@ -32,6 +32,15 @@ export interface Port {
   lng: number;
 }
 
+// Recorded vessel track history. Each point is [lng, lat, ts] — lng-first so it
+// drops straight into a GeoJSON LineString.
+export type TrailPoint = [number, number, number];
+
+export interface VesselTrailResponse {
+  mmsi: number;
+  points: TrailPoint[];
+}
+
 export interface PortCall {
   portCallId: number;
   portCallTimestamp: string;

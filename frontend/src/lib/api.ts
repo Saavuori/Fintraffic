@@ -5,6 +5,7 @@ import type {
   SeaStateResponse,
   AtonFaultsResponse,
   VersionResponse,
+  VesselTrailResponse,
 } from '../types';
 
 async function getJSON<T>(url: string): Promise<T> {
@@ -25,6 +26,18 @@ export function fetchPortCalls(locode: string): Promise<PortCallsResponse> {
 
 export function fetchVesselDetails(mmsi: number): Promise<VesselDetailsResponse> {
   return getJSON(`/api/v1/vessel/${mmsi}`);
+}
+
+export function fetchVesselTrail(
+  mmsi: number,
+  fromSec: number,
+  maxPoints = 2000
+): Promise<VesselTrailResponse> {
+  const params = new URLSearchParams({
+    from: String(Math.floor(fromSec)),
+    maxPoints: String(maxPoints),
+  });
+  return getJSON(`/api/v1/vessel/${mmsi}/trail?${params.toString()}`);
 }
 
 export function fetchSeaState(): Promise<SeaStateResponse> {

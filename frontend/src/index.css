@@ -737,7 +737,37 @@ body {
   text-overflow: ellipsis;
 }
 
-.follow-btn.active {
+.follow-btn.active,
+.trail-btn.active {
+  color: var(--accent-teal);
+  border-color: var(--border-focus);
+  background: rgba(45, 212, 191, 0.12);
+}
+
+.trail-window {
+  display: inline-flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.trail-window-btn {
+  background: var(--bg-button);
+  border: 1px solid var(--border-button);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 7px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.trail-window-btn:hover {
+  background: var(--bg-button-hover);
+  color: var(--text-primary);
+}
+
+.trail-window-btn.active {
   color: var(--accent-teal);
   border-color: var(--border-focus);
   background: rgba(45, 212, 191, 0.12);

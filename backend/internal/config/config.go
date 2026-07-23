@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -16,6 +17,23 @@ type Config struct {
 	MQTTBroker string
 	Port       string
 	NoRedis    bool
+
+	// Trail history (vessel track persistence). Recording is disabled when
+	// TrailDBPath is empty.
+	TrailDBPath        string
+	TrailRetentionDays int
+	TrailIntervalSec   int64
+}
+
+// envInt reads an integer env var, falling back to def when unset or unparseable.
+func envInt(key string, def int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+		log.Printf("Invalid %s=%q, using default %d\n", key, v, def)
+	}
+	return def
 }
 
 // loadDotEnv tries to find and parse a .env file from common locations and sets env vars
@@ -74,6 +92,15 @@ func LoadConfig() *Config {
 	if cfg.Port == "" {
 		cfg.Port = "8080"
 	}
+
+	// Trail defaults: 60-day retention, one point per minute per vessel, DB on
+	// a mounted volume. Set TRAIL_DB_PATH="" to disable trail recording.
+	cfg.TrailDBPath = "/data/trail.db"
+	if v, ok := os.LookupEnv("TRAIL_DB_PATH"); ok {
+		cfg.TrailDBPath = v
+	}
+	cfg.TrailRetentionDays = envInt("TRAIL_RETENTION_DAYS", 60)
+	cfg.TrailIntervalSec = int64(envInt("TRAIL_INTERVAL_SEC", 60))
 
 	fs := flag.NewFlagSet("marinetraffic", flag.ContinueOnError)
 	noRedisFlag := fs.Bool("no-redis", false, "Use in-memory map instead of Redis")

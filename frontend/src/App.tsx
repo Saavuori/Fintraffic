@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useVesselData } from './hooks/useVesselData';
+import { useVesselTrail } from './hooks/useVesselTrail';
 import { useSwipeGestures } from './hooks/useSwipeGestures';
 import { Map } from './components/Map';
 import { FilterPanel } from './components/FilterPanel';
@@ -68,6 +69,21 @@ function App() {
   const [selectedPort, setSelectedPort] = useState<Port | null>(null);
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [selectedCategories, setSelectedCategories] = useState<ShipCategory[]>([]);
+
+  // Trail (vessel track history) display, persisted across sessions.
+  const [showTrail, setShowTrail] = useState<boolean>(() => localStorage.getItem('showTrail') === 'true');
+  const [trailWindowSec, setTrailWindowSec] = useState<number>(() => {
+    const v = Number(localStorage.getItem('trailWindowSec'));
+    return v > 0 ? v : 24 * 3600;
+  });
+  useEffect(() => {
+    localStorage.setItem('showTrail', String(showTrail));
+  }, [showTrail]);
+  useEffect(() => {
+    localStorage.setItem('trailWindowSec', String(trailWindowSec));
+  }, [trailWindowSec]);
+
+  const trailPoints = useVesselTrail(selectedMmsi, showTrail, trailWindowSec);
 
   // Panel collapse state
   const [isDetailCollapsed, setIsDetailCollapsed] = useState<boolean>(false);
@@ -148,6 +164,7 @@ function App() {
 
   const liveVessel = selectedMmsi !== null ? vessels[String(selectedMmsi)] ?? null : null;
 
+  const toggleTrail = useCallback(() => setShowTrail((v) => !v), []);
   const toggleFilterCollapsed = useCallback(() => setIsFilterCollapsed((v) => !v), []);
   const toggleDetailCollapsed = useCallback(() => setIsDetailCollapsed((v) => !v), []);
   const toggleFollowing = useCallback(() => setIsFollowing((v) => !v), []);
@@ -164,6 +181,7 @@ function App() {
         vessels={displayedVessels}
         selectedMmsi={selectedMmsi}
         onSelectVessel={handleSelectVessel}
+        trailPoints={trailPoints}
         ports={ports}
         showPorts={showPorts}
         selectedPortLocode={selectedPort?.locode ?? null}
@@ -204,6 +222,10 @@ function App() {
           onClose={handleCloseVessel}
           isFollowing={isFollowing}
           onToggleFollow={toggleFollowing}
+          showTrail={showTrail}
+          onToggleTrail={toggleTrail}
+          trailWindowSec={trailWindowSec}
+          onSetTrailWindow={setTrailWindowSec}
         />
       )}
 

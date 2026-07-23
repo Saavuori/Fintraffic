@@ -12,6 +12,7 @@ import (
 
 	"golang.org/x/sync/singleflight"
 	"marinetraffic/internal/cache"
+	"marinetraffic/internal/trail"
 )
 
 var (
@@ -65,16 +66,18 @@ type Handlers struct {
 	mqtt  interface {
 		IsConnected() bool
 	}
+	trail *trail.Store // nil when trail recording is disabled; nil-safe
 
 	apiCache *ResponseCache
 	sfGroup  *singleflight.Group
 }
 
-func NewHandlers(c cache.Cache, dt *DigitrafficClient, mqtt interface{ IsConnected() bool }) *Handlers {
+func NewHandlers(c cache.Cache, dt *DigitrafficClient, mqtt interface{ IsConnected() bool }, tr *trail.Store) *Handlers {
 	return &Handlers{
 		cache:    c,
 		dt:       dt,
 		mqtt:     mqtt,
+		trail:    tr,
 		apiCache: NewResponseCache(),
 		sfGroup:  &singleflight.Group{},
 	}
@@ -275,6 +278,54 @@ func (h *Handlers) Vessel(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, `{"metadata":%s,"position":%s}`, metadata, position)
+}
+
+// VesselTrail returns the recorded position history for one vessel as an array
+// of [lng, lat, ts] tuples (ascending by time), ready to drop into a GeoJSON
+// LineString. Query params: from, to (epoch seconds), maxPoints.
+func (h *Handlers) VesselTrail(w http.ResponseWriter, r *http.Request) {
+	mmsi, err := strconv.Atoi(r.PathValue("mmsi"))
+	if err != nil {
+		http.Error(w, `{"error":"invalid mmsi"}`, http.StatusBadRequest)
+		return
+	}
+
+	now := time.Now().Unix()
+	from := now - 24*3600 // default: last 24h
+	to := now
+	q := r.URL.Query()
+	if v, err := strconv.ParseInt(q.Get("from"), 10, 64); err == nil && v > 0 {
+		from = v
+	}
+	if v, err := strconv.ParseInt(q.Get("to"), 10, 64); err == nil && v > 0 {
+		to = v
+	}
+	maxPoints := 1000
+	if v, err := strconv.Atoi(q.Get("maxPoints")); err == nil && v > 0 {
+		if v > 20000 {
+			v = 20000
+		}
+		maxPoints = v
+	}
+
+	points, err := h.trail.Track(r.Context(), mmsi, from, to, maxPoints)
+	if err != nil {
+		log.Printf("Trail query error for %d: %v\n", mmsi, err)
+		http.Error(w, `{"error":"trail query failed"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Compact [lng, lat, ts] tuples.
+	coords := make([][3]float64, 0, len(points))
+	for _, p := range points {
+		coords = append(coords, [3]float64{p.Lng, p.Lat, float64(p.Ts)})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(struct {
+		MMSI   int          `json:"mmsi"`
+		Points [][3]float64 `json:"points"`
+	}{MMSI: mmsi, Points: coords})
 }
 
 // SeaState proxies the sea state estimation (buoy) measurements.
