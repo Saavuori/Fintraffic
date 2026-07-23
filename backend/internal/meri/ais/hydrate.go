@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"marinetraffic/internal/config"
+	"fintraffic/internal/core/config"
 )
 
 const restBase = "https://meri.digitraffic.fi"

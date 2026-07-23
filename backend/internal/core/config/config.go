@@ -10,7 +10,7 @@ import (
 )
 
 // DigitrafficUserAgent identifies this app to Digitraffic per their API etiquette.
-const DigitrafficUserAgent = "Saavuori/Marinetraffic 1.0"
+const DigitrafficUserAgent = "Saavuori/Fintraffic 1.0"
 
 type Config struct {
 	RedisURL   string
@@ -84,7 +84,7 @@ func LoadConfig() *Config {
 	}
 
 	if cfg.RedisURL == "" {
-		cfg.RedisURL = "redis://marinetraffic-cache:6379"
+		cfg.RedisURL = "redis://fintraffic-cache:6379"
 	}
 	if cfg.MQTTBroker == "" {
 		cfg.MQTTBroker = "wss://meri.digitraffic.fi:443/mqtt"
@@ -102,7 +102,7 @@ func LoadConfig() *Config {
 	cfg.TrailRetentionDays = envInt("TRAIL_RETENTION_DAYS", 60)
 	cfg.TrailIntervalSec = int64(envInt("TRAIL_INTERVAL_SEC", 60))
 
-	fs := flag.NewFlagSet("marinetraffic", flag.ContinueOnError)
+	fs := flag.NewFlagSet("fintraffic", flag.ContinueOnError)
 	noRedisFlag := fs.Bool("no-redis", false, "Use in-memory map instead of Redis")
 
 	var args []string

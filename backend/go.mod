@@ -1,4 +1,4 @@
-module marinetraffic
+module fintraffic
 
 go 1.26
 

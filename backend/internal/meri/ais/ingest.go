@@ -12,18 +12,18 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/prometheus/client_golang/prometheus"
-	"marinetraffic/internal/cache"
-	"marinetraffic/internal/trail"
+	"fintraffic/internal/core/cache"
+	"fintraffic/internal/meri/trail"
 )
 
 var (
 	MessagesReceivedCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: "marinetraffic_mqtt_messages_received_total",
+		Name: "fintraffic_meri_mqtt_messages_received_total",
 		Help: "Total number of MQTT messages received from the Digitraffic broker.",
 	}, []string{"topic_type"})
 
 	ParseErrorsCounter = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "marinetraffic_mqtt_parse_errors_total",
+		Name: "fintraffic_meri_mqtt_parse_errors_total",
 		Help: "Total number of MQTT messages that failed to unmarshal.",
 	})
 )
@@ -64,7 +64,7 @@ func (w *IngestionWorker) SetTrailStore(s *trail.Store) {
 func (w *IngestionWorker) Start(ctx context.Context) error {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(w.broker)
-	opts.SetClientID(fmt.Sprintf("marinetraffic-backend-%d", time.Now().UnixNano()))
+	opts.SetClientID(fmt.Sprintf("fintraffic-meri-%d", time.Now().UnixNano()))
 	opts.SetCleanSession(true)
 	opts.SetAutoReconnect(true)
 	opts.SetConnectTimeout(10 * time.Second)

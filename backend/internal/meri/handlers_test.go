@@ -1,4 +1,4 @@
-package api
+package meri
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"marinetraffic/internal/trail"
+	"fintraffic/internal/meri/trail"
 )
 
 // seedTrailStore opens a trail store on disk, records points, and flushes them
@@ -50,7 +50,7 @@ func TestFleetReplayHandler(t *testing.T) {
 	})
 	h := &Handlers{trail: store}
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/replay?from=1&to=2000", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/meri/replay?from=1&to=2000", nil)
 	rec := httptest.NewRecorder()
 	h.FleetReplay(rec, req)
 
@@ -85,7 +85,7 @@ func TestFleetReplayHandler(t *testing.T) {
 
 func TestFleetReplayHandlerRejectsBadWindow(t *testing.T) {
 	h := &Handlers{trail: seedTrailStore(t, nil)}
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/replay?from=2000&to=1000", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/meri/replay?from=2000&to=1000", nil)
 	rec := httptest.NewRecorder()
 	h.FleetReplay(rec, req)
 	if rec.Code != http.StatusBadRequest {

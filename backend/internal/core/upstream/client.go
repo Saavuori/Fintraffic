@@ -1,4 +1,4 @@
-package api
+package upstream
 
 import (
 	"context"
@@ -7,28 +7,27 @@ import (
 	"net/http"
 	"time"
 
-	"marinetraffic/internal/config"
+	"fintraffic/internal/core/config"
 )
 
-const digitrafficBase = "https://meri.digitraffic.fi"
-
-// DigitrafficClient is a thin JSON GET client for the Digitraffic marine REST
-// API. It sets the Digitraffic-User header per the API etiquette; Go's default
-// transport handles gzip transparently.
-type DigitrafficClient struct {
+// Client is a thin JSON GET client for a Digitraffic REST API host. It sets
+// the Digitraffic-User header per the API etiquette; Go's default transport
+// handles gzip transparently. Each mode constructs one against its own base
+// URL (meri/rata/tie .digitraffic.fi).
+type Client struct {
 	httpClient *http.Client
 	baseURL    string
 }
 
-func NewDigitrafficClient() *DigitrafficClient {
-	return &DigitrafficClient{
+func NewClient(baseURL string) *Client {
+	return &Client{
 		httpClient: &http.Client{Timeout: 30 * time.Second},
-		baseURL:    digitrafficBase,
+		baseURL:    baseURL,
 	}
 }
 
 // Get fetches baseURL+path and returns the raw response body.
-func (c *DigitrafficClient) Get(ctx context.Context, path string) ([]byte, error) {
+func (c *Client) Get(ctx context.Context, path string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
 		return nil, err

@@ -8,13 +8,14 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const RedisKey = "marinetraffic:positions"
-
 type RedisCache struct {
 	client *redis.Client
+	key    string
 }
 
-func NewRedisCache(redisURL string) (*RedisCache, error) {
+// NewRedisCache connects to Redis and stores all positions in one hash under
+// hashKey, giving each mode its own namespace (e.g. "fintraffic:meri:positions").
+func NewRedisCache(redisURL, hashKey string) (*RedisCache, error) {
 	opts, err := redis.ParseURL(redisURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse redis URL: %w", err)
@@ -28,15 +29,15 @@ func NewRedisCache(redisURL string) (*RedisCache, error) {
 		return nil, fmt.Errorf("failed to ping redis: %w", err)
 	}
 
-	return &RedisCache{client: client}, nil
+	return &RedisCache{client: client, key: hashKey}, nil
 }
 
 func (r *RedisCache) SetPosition(ctx context.Context, mmsi string, payload []byte) error {
-	return r.client.HSet(ctx, RedisKey, mmsi, payload).Err()
+	return r.client.HSet(ctx, r.key, mmsi, payload).Err()
 }
 
 func (r *RedisCache) GetAllPositions(ctx context.Context) (map[string][]byte, error) {
-	results, err := r.client.HGetAll(ctx, RedisKey).Result()
+	results, err := r.client.HGetAll(ctx, r.key).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +50,7 @@ func (r *RedisCache) GetAllPositions(ctx context.Context) (map[string][]byte, er
 }
 
 func (r *RedisCache) DeletePosition(ctx context.Context, mmsi string) error {
-	return r.client.HDel(ctx, RedisKey, mmsi).Err()
+	return r.client.HDel(ctx, r.key, mmsi).Err()
 }
 
 func (r *RedisCache) Ping(ctx context.Context) error {

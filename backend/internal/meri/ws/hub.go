@@ -10,12 +10,12 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/prometheus/client_golang/prometheus"
-	"marinetraffic/internal/cache"
+	"fintraffic/internal/core/cache"
 )
 
 var (
 	ActiveClientsGauge = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "marinetraffic_active_websocket_clients",
+		Name: "fintraffic_meri_active_websocket_clients",
 		Help: "Number of active WebSocket clients connected to the hub.",
 	})
 )
