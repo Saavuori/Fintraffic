@@ -76,10 +76,17 @@ export const PortPopup: React.FC<PortPopupProps> = ({
   );
   const [rows, setRows] = useState<CallRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadedLocode, setLoadedLocode] = useState(port.locode);
 
-  useEffect(() => {
+  // Reset immediately when the selected port changes (adjust state during
+  // render, per React docs — not synchronously inside the effect).
+  if (loadedLocode !== port.locode) {
+    setLoadedLocode(port.locode);
     setRows(null);
     setError(null);
+  }
+
+  useEffect(() => {
     let active = true;
     fetchPortCalls(port.locode)
       .then((data) => {

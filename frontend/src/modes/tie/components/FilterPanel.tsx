@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Activity,
+  CarFront,
   Gauge,
   Construction,
   TriangleAlert,
@@ -54,8 +54,8 @@ function legendItems(key: LayerKey, theme: Theme): LegendItem[] {
     case 'stations': {
       const c = congestionColors(theme);
       return [
-        { label: 'Free flow (â‰¥85% of baseline)', color: c.free },
-        { label: 'Slowing (60â€“85% of baseline)', color: c.moderate },
+        { label: 'Free flow (≥85% of baseline)', color: c.free },
+        { label: 'Slowing (60–85% of baseline)', color: c.moderate },
         { label: 'Heavy slowdown (<60%)', color: c.heavy },
         { label: 'No data', color: c.unknown },
       ];
@@ -108,7 +108,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     <div className={`glass-panel filter-panel ${collapsedClass}`} {...collapsibleProps}>
       <div className="panel-header" onClick={isCollapsed ? undefined : stopPanelClick}>
         <div className="panel-title">
-          <Activity size={16} />
+          <CarFront size={16} />
           <span>Tieliikenne</span>
         </div>
         {!isCollapsed && (
@@ -128,8 +128,8 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       {!isCollapsed && (
         <div className="filter-content" onClick={stopPanelClick}>
           <div className="panel-stats">
-            <span className="conn-dot" title="Live Â· Digitraffic" />
-            <span>Live Â· Digitraffic</span>
+            <span className="conn-dot" title="Live · Digitraffic" />
+            <span>Live · Digitraffic</span>
           </div>
 
           <div className="filter-scroll-area">
