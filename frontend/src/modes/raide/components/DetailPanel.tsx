@@ -54,7 +54,7 @@ function TrainDetail({ train }: { train: Train }) {
         <div className="telemetry-item">
           <span className="telemetry-label">Delay</span>
           <span className={`telemetry-value ${train.hasDelay ? delayClass(train.delayMin) : ''}`}>
-            {train.hasDelay ? delayText(train.delayMin, train.hasDelay) : 'â€”'}
+            {train.hasDelay ? delayText(train.delayMin, train.hasDelay) : '—'}
           </span>
         </div>
       </div>
@@ -73,7 +73,7 @@ function TrainDetail({ train }: { train: Train }) {
             <div className="dest-row">
               <span>Schedule</span>
               <b>
-                {formatTime(train.departTime)} â€“ {formatTime(train.arriveTime)}
+                {formatTime(train.departTime)} – {formatTime(train.arriveTime)}
               </b>
             </div>
           )}
@@ -108,7 +108,7 @@ function TrainDetail({ train }: { train: Train }) {
                 <span>{stop.name}</span>
                 <b>
                   {formatTime(stop.estimateTime || stop.scheduledTime)}
-                  {stop.track ? ` Â· tr ${stop.track}` : ''}
+                  {stop.track ? ` · tr ${stop.track}` : ''}
                 </b>
               </div>
             ))}
@@ -154,7 +154,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
 
   const title = train ? trainTitle(train) : station?.name ?? '';
   const subtitle = train
-    ? `${train.category}${train.commuterLine ? ` Â· Line ${train.commuterLine}` : ''}`
+    ? `${train.category}${train.commuterLine ? ` · Line ${train.commuterLine}` : ''}`
     : station?.code ?? '';
 
   return (

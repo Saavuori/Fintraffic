@@ -34,9 +34,19 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
     'Open vessel details'
   );
   const [details, setDetails] = useState<VesselDetailsResponse | null>(null);
+  const [loadedMmsi, setLoadedMmsi] = useState(vessel.mmsi);
+  // Ticking clock (ms) so the fix-age display stays current without reading
+  // Date.now() during render, which is impure.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  // Reset immediately when the selected vessel changes (adjust state during
+  // render, per React docs — not synchronously inside the effect).
+  if (loadedMmsi !== vessel.mmsi) {
+    setLoadedMmsi(vessel.mmsi);
+    setDetails(null);
+  }
 
   useEffect(() => {
-    setDetails(null);
     let active = true;
     fetchVesselDetails(vessel.mmsi)
       .then((d) => {
@@ -48,6 +58,11 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
     };
   }, [vessel.mmsi]);
 
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const cat = categorize(vessel.shipType);
   const dims =
     details?.metadata?.referencePointA != null && details?.metadata?.referencePointB != null
@@ -58,7 +73,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
       : null;
 
   const etaText = formatEta(vessel.eta);
-  const fixAge = Math.max(0, Math.round(Date.now() / 1000 - vessel.ts));
+  const fixAge = Math.max(0, Math.round(nowMs / 1000 - vessel.ts));
 
   return (
     <div className={`glass-panel detail-popup ${collapsedClass}`} {...collapsibleProps}>
@@ -71,7 +86,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
             <div className="detail-title">
               <h3>{vessel.name || `MMSI ${vessel.mmsi}`}</h3>
               <span className="detail-subtitle" style={{ color: CATEGORY_COLORS[cat] }}>
-                {shipTypeText(vessel.shipType)} Â· {CATEGORY_LABELS[cat]}
+                {shipTypeText(vessel.shipType)} · {CATEGORY_LABELS[cat]}
               </span>
             </div>
             <button className="icon-btn" onClick={onToggleCollapse} aria-label="Collapse panel">
@@ -105,7 +120,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
                     <small>Â°</small>
                   </>
                 ) : (
-                  'â€”'
+                  '—'
                 )}
               </span>
             </div>
@@ -117,7 +132,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
                     {vessel.draught.toFixed(1)} <small>m</small>
                   </>
                 ) : (
-                  'â€”'
+                  '—'
                 )}
               </span>
             </div>
@@ -166,7 +181,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
               <div className="fact-row">
                 <span>Size</span>
                 <b>
-                  {dims.length} Ã— {dims.beam} m
+                  {dims.length} × {dims.beam} m
                 </b>
               </div>
             )}

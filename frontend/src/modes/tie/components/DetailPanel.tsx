@@ -41,13 +41,13 @@ function StationDetail({ station, theme }: { station: Station; theme: Theme }) {
         <div className="telemetry-item">
           <span className="telemetry-label">Direction 1</span>
           <span className="telemetry-value" style={{ color: colors[dir1.level] }}>
-            {dir1.speed != null ? Math.round(dir1.speed) : 'â€”'} <small>km/h</small>
+            {dir1.speed != null ? Math.round(dir1.speed) : '—'} <small>km/h</small>
           </span>
         </div>
         <div className="telemetry-item">
           <span className="telemetry-label">Direction 2</span>
           <span className="telemetry-value" style={{ color: colors[dir2.level] }}>
-            {dir2.speed != null ? Math.round(dir2.speed) : 'â€”'} <small>km/h</small>
+            {dir2.speed != null ? Math.round(dir2.speed) : '—'} <small>km/h</small>
           </span>
         </div>
       </div>
@@ -101,13 +101,13 @@ function ParkingDetail({ facility }: { facility: ParkingFacility }) {
         <div className="telemetry-item">
           <span className="telemetry-label">Available</span>
           <span className="telemetry-value">
-            {facility.spacesAvailable ?? 'â€”'} <small>/ {facility.capacity}</small>
+            {facility.spacesAvailable ?? '—'} <small>/ {facility.capacity}</small>
           </span>
         </div>
         <div className="telemetry-item">
           <span className="telemetry-label">Open now</span>
           <span className="telemetry-value">
-            {facility.openNow == null ? 'â€”' : facility.openNow ? 'Yes' : 'No'}
+            {facility.openNow == null ? '—' : facility.openNow ? 'Yes' : 'No'}
           </span>
         </div>
       </div>
@@ -197,7 +197,7 @@ function CameraDetail({ camera }: { camera: WeathercamStation }) {
       {camera.weather && (
         <>
           <div className="section-label">
-            Weather Â· {camera.weather.stationName} ({camera.weather.distanceKm} km)
+            Weather · {camera.weather.stationName} ({camera.weather.distanceKm} km)
           </div>
           <div className="detail-facts">
             {camera.weather.readings.map(reading => (
@@ -235,7 +235,7 @@ function ChargerDetail({ charger }: { charger: ChargingStation }) {
         <div className="telemetry-item">
           <span className="telemetry-label">Max power</span>
           <span className="telemetry-value">
-            {charger.maxPowerKw >= 1 ? Math.round(charger.maxPowerKw) : 'â€”'} <small>kW</small>
+            {charger.maxPowerKw >= 1 ? Math.round(charger.maxPowerKw) : '—'} <small>kW</small>
           </span>
         </div>
       </div>
@@ -266,7 +266,7 @@ function ChargerDetail({ charger }: { charger: ChargingStation }) {
             {charger.connectors.map((c, i) => (
               <div className="fact-row" key={`${c.standard}-${c.powerType}-${i}`}>
                 <span>{connectorLabel(c)}</span>
-                <b>{priceLabel(c) ?? 'â€”'}</b>
+                <b>{priceLabel(c) ?? '—'}</b>
               </div>
             ))}
           </div>
@@ -287,21 +287,21 @@ function header(selection: Selection): {
     case 'station':
       return {
         title: selection.station.name,
-        subtitle: `TMS station Â· ${selection.station.id}`,
+        subtitle: `TMS station · ${selection.station.id}`,
         badgeClass: '',
         Icon: Gauge,
       };
     case 'parking':
       return {
         title: selection.facility.name,
-        subtitle: `Parking Â· ${humanizeEnum(selection.facility.type)}`,
+        subtitle: `Parking · ${humanizeEnum(selection.facility.type)}`,
         badgeClass: 'parking-badge',
         Icon: SquareParking,
       };
     case 'camera':
       return {
         title: selection.camera.name,
-        subtitle: `Weather camera Â· ${selection.camera.id}`,
+        subtitle: `Weather camera · ${selection.camera.id}`,
         badgeClass: 'camera-badge',
         Icon: Camera,
       };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Ship, Anchor, Waves, TriangleAlert, Moon, Sun, ChevronLeft, History } from 'lucide-react';
+import { Ship, Anchor, Waves, TriangleAlert, Moon, Sun, ChevronLeft, History, Video } from 'lucide-react';
 import { useCollapsiblePanel, stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { ALL_CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS, type ShipCategory } from '../lib/shipTypes';
 import type { ConnectionStatus } from '../hooks/useWebSocket';
@@ -23,6 +23,8 @@ interface FilterPanelProps {
   showAton: boolean;
   setShowAton: (v: boolean) => void;
   atonFaults: AtonFaultFeature[];
+  showWebcams: boolean;
+  setShowWebcams: (v: boolean) => void;
   replayActive: boolean;
   onEnterReplay: () => void;
 }
@@ -45,6 +47,8 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   showAton,
   setShowAton,
   atonFaults,
+  showWebcams,
+  setShowWebcams,
   replayActive,
   onEnterReplay,
 }) => {
@@ -124,6 +128,13 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                 <span>AtoN faults</span>
               </button>
               <button
+                className={`layer-toggle ${showWebcams ? 'on' : ''}`}
+                onClick={() => setShowWebcams(!showWebcams)}
+              >
+                <Video size={14} />
+                <span>Webcams</span>
+              </button>
+              <button
                 className="layer-toggle"
                 onClick={() => setMapTheme(mapTheme === 'dark' ? 'light' : 'dark')}
               >
@@ -151,7 +162,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                     <div className="alert-item" key={f.properties.id}>
                       <div className="alert-title">{f.properties.aton_name_fi}</div>
                       <div className="alert-desc">
-                        {f.properties.type} Â· {f.properties.fairway_name_fi}
+                        {f.properties.type} · {f.properties.fairway_name_fi}
                       </div>
                     </div>
                   ))}

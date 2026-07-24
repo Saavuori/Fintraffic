@@ -34,7 +34,7 @@ const STATIONS_SOURCE = 'stations';
 const STATIONS_LAYER = 'stations-circles';
 const STATIONS_MAJOR_LAYER = 'stations-major';
 // The rail overlay reads from the CARTO basemap's own vector tiles (source id
-// "carto", OpenMapTiles "transportation" layer, class "rail") â€” no extra data.
+// "carto", OpenMapTiles "transportation" layer, class "rail") — no extra data.
 const BASEMAP_SOURCE = 'carto';
 const BASEMAP_TRANSPORT_LAYER = 'transportation';
 const RAIL_LAYER = 'rail-tracks';
@@ -88,7 +88,7 @@ function toStationsGeoJSON(stations: StationMeta[]): GeoJSON.FeatureCollection<G
   return {
     type: 'FeatureCollection',
     // Freight yards and technical stops would double the marker count without
-    // ever having a departure board â€” passenger stations only.
+    // ever having a departure board — passenger stations only.
     features: stations
       .filter(s => s.passenger)
       .map(station => ({
@@ -142,7 +142,7 @@ const Map: React.FC<MapProps> = ({
 
   // Swap the basemap when the theme changes. setStyle() throws away every
   // custom source and layer, so the install has to run again once the new
-  // style is ready â€” layer visibility survives via visibilityRef.
+  // style is ready — layer visibility survives via visibilityRef.
   useEffect(() => {
     themeRef.current = theme;
     const m = map.current;
@@ -203,7 +203,7 @@ const Map: React.FC<MapProps> = ({
     hoverPopupRef.current = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });
 
     // Layers are re-added after every theme swap, but map event listeners
-    // survive setStyle() â€” without this guard each swap would stack another
+    // survive setStyle() — without this guard each swap would stack another
     // copy of every handler (double popups, double flyTo).
     const boundLayers = new Set<string>();
     const bindOnce = (layerId: string, bind: () => void) => {
@@ -217,7 +217,7 @@ const Map: React.FC<MapProps> = ({
       return (
         `<strong>${trainTitle(train)}</strong><br/>` +
         route +
-        `${train.speed} km/h Â· ${delayText(train.delayMin, train.hasDelay)}`
+        `${train.speed} km/h · ${delayText(train.delayMin, train.hasDelay)}`
       );
     };
 
@@ -330,7 +330,7 @@ const Map: React.FC<MapProps> = ({
     const fetchStations = async () => {
       try {
         const res = await fetch('/api/raide/stations');
-        if (!res.ok) return; // cold backend â€” the next poll will have it
+        if (!res.ok) return; // cold backend — the next poll will have it
         const stations: StationMeta[] = await res.json();
 
         stationsByCode.current = new globalThis.Map(stations.map(s => [s.code, s]));
@@ -423,7 +423,7 @@ const Map: React.FC<MapProps> = ({
               'circle-opacity': ['case', ['==', ['get', 'hasDelay'], false], 0.45, 0.9],
             },
           });
-          // Delay ring: only drawn once a train is running late enough to flag â€”
+          // Delay ring: only drawn once a train is running late enough to flag —
           // an on-time train doesn't need a badge.
           m.addLayer({
             id: ring,
@@ -530,7 +530,7 @@ const Map: React.FC<MapProps> = ({
       styleReadyRef.current = true;
       installLayers();
 
-      // Registered once â€” a theme swap reinstalls layers, not timers.
+      // Registered once — a theme swap reinstalls layers, not timers.
       intervalIds.push(setInterval(fetchTrains, 10000));
       // The station register changes a few times a year; this refresh exists
       // mostly to recover from a cold backend at first load.
