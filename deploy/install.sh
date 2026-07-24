@@ -3,11 +3,12 @@
 # install / update the fintraffic stack.
 #
 # Idempotent: run it for a first install or to apply an update. It writes
-# docker-compose.yml, ensures the shared proxy network and the trail-history
-# volume exist, pulls the latest image, recreates the containers, and then
-# verifies that trail recording actually came up (the failure mode that made
-# trail + replay show nothing was a compose missing the /data volume, which
-# silently disabled recording).
+# docker-compose.yml and update.sh, ensures the shared proxy network and the
+# trail-history volume exist, registers the auto-update cron (every 5 min),
+# pulls the latest image, recreates the containers, and then verifies that
+# trail recording actually came up (the failure mode that made trail + replay
+# show nothing was a compose missing the /data volume, which silently disabled
+# recording).
 #
 # TLS is expected to be terminated by an external reverse proxy (e.g. Caddy)
 # attached to the shared external `web-proxy` network — this stack only exposes
@@ -21,7 +22,8 @@
 #
 # The domain is only used for the post-deploy health checks and must resolve to
 # the reverse proxy in front of this stack — remember to add the matching vhost
-# to your Caddy/nginx config on the `web-proxy` network.
+# to your Caddy/nginx config on the `web-proxy` network AND reload the proxy
+# (Caddy only picks up a Caddyfile edit on `caddy reload`).
 #
 set -euo pipefail
 
@@ -97,6 +99,60 @@ networks:
     external: true
 YAML
 echo "wrote $APP_DIR/docker-compose.yml"
+
+# --- write the auto-update script + register its cron -----------------------
+cat > update.sh <<'SH'
+#!/usr/bin/env bash
+# Auto-update script for the fintraffic stack. Managed by install.sh, which
+# registers a cron entry that runs it every 5 minutes. It checks ghcr.io for a
+# new image and redeploys when one appears.
+# (Watchtower is not used — it is incompatible with rootless Podman on RHEL.)
+set -euo pipefail
+
+COMPOSE_DIR="$(cd "$(dirname "$0")" && pwd)"
+LOG="$COMPOSE_DIR/update.log"
+IMAGE="${IMAGE:-ghcr.io/saavuori/fintraffic:latest}"
+
+if command -v podman-compose >/dev/null 2>&1; then
+  ENGINE="podman"; COMPOSE="podman-compose"
+elif command -v podman >/dev/null 2>&1 && podman compose version >/dev/null 2>&1; then
+  ENGINE="podman"; COMPOSE="podman compose"
+elif command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+  ENGINE="docker"; COMPOSE="docker compose"
+else
+  ENGINE="docker"; COMPOSE="docker-compose"
+fi
+
+echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Checking for updates..." >> "$LOG"
+
+$ENGINE pull "$IMAGE" >> "$LOG" 2>&1
+
+NEW_ID=$($ENGINE inspect "$IMAGE" --format '{{.Id}}')
+RUNNING_ID=$($ENGINE inspect fintraffic-backend --format '{{.Image}}' 2>/dev/null || echo '')
+
+if [ "$RUNNING_ID" = "$NEW_ID" ]; then
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Already up to date." >> "$LOG"
+  exit 0
+fi
+
+echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] New image detected! Redeploying..." >> "$LOG"
+
+# Full down/up — the only reliable way with rootless Podman
+cd "$COMPOSE_DIR"
+$COMPOSE down >> "$LOG" 2>&1 || true
+$COMPOSE up -d >> "$LOG" 2>&1
+
+echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Redeploy complete." >> "$LOG"
+SH
+chmod +x update.sh
+echo "wrote $APP_DIR/update.sh"
+
+if crontab -l 2>/dev/null | grep -qF "$APP_DIR/update.sh"; then
+  echo "auto-update cron already registered"
+else
+  ( crontab -l 2>/dev/null || true; echo "*/5 * * * * $APP_DIR/update.sh" ) | crontab -
+  echo "registered auto-update cron: */5 * * * * $APP_DIR/update.sh"
+fi
 
 # --- ensure the shared external proxy network exists ------------------------
 if ! $ENGINE network exists web-proxy >/dev/null 2>&1; then
