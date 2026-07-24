@@ -70,6 +70,43 @@ Modes implement the `server.Mode` interface (`Name`, `Register`, `Health`); the 
 * **Variable speed-limit signs** (1 min), **parking availability** (2 min), **EV charging (AFIR)** locations with live per-EVSE availability (5 min), and **weather cameras** enriched with the nearest road-weather-station observations (3 min).
 * Locate-me control, per-layer toggles (7 layers), camera thumbnails loaded straight from `weathercam.digitraffic.fi`.
 
+---
+
+## Data Sources
+
+All data comes from [Digitraffic](https://www.digitraffic.fi/en/) and other Fintraffic open APIs — public, keyless, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The backend identifies itself with a `Digitraffic-User` header per the API etiquette.
+
+### 🚢 Meri — `meri.digitraffic.fi`
+
+| Feed | Endpoint | Used for |
+|---|---|---|
+| AIS positions & metadata | MQTT `wss://meri.digitraffic.fi:443/mqtt`, topic `vessels-v2/#` | Live vessel stream (positions, metadata, nav status) |
+| AIS REST | `/api/ais/v1/vessels`, `/api/ais/v1/locations` | Fleet hydration on boot + per-vessel details |
+| Port calls (Portnet) | `/api/port-call/v1/ports`, `/api/port-call/v1/port-calls` | Finnish ports layer + arrivals/departures |
+| Sea state estimation | `/api/sse/v1/measurements` | Smart-buoy wave/sea-state layer |
+| Aids to navigation | `/api/aton/v1/faults` | AtoN fault warnings layer |
+
+### 🚆 Raide — `rata.digitraffic.fi`
+
+| Feed | Endpoint | Used for |
+|---|---|---|
+| Train locations | `/api/v1/train-locations/latest` (10 s poll) | Live train GPS positions |
+| Live trains | `/api/v1/live-trains` (60 s poll) | Timetables, delays, categories, station boards |
+| Station metadata | `/api/v1/metadata/stations` (6 h poll) | Station register (names, coordinates) |
+
+### 🚗 Tie — `tie.digitraffic.fi` + friends
+
+| Feed | Endpoint | Used for |
+|---|---|---|
+| TMS stations | `tie.digitraffic.fi/api/tms/v1/stations[/data]` (1 min poll) | Traffic measurement stations layer |
+| TMS constants & sensors | `tie.digitraffic.fi/api/tms/v1/stations/sensor-constants`, `/api/tms/v1/sensors` (6 h) | Free-flow speed baselines, road bearings, sensor descriptions |
+| Traffic messages | `tie.digitraffic.fi/api/traffic-message/v2/roadworks`, `/traffic-announcements` (2 min) | Road works + incidents layers |
+| Variable signs | `tie.digitraffic.fi/api/variable-sign/v1/signs` (1 min) | Variable speed-limit layer |
+| Road weather | `tie.digitraffic.fi/api/weather/v1/stations[/data]` (3 min) | Weather readings embedded in camera popups |
+| Weather cameras | `tie.digitraffic.fi/api/weathercam/v1/stations` (3 min) + images from `weathercam.digitraffic.fi` | Weather camera layer + thumbnails |
+| Parking | `parking.fintraffic.fi/api/v1/facilities`, `/utilizations` (2 min) | Parking availability layer |
+| EV charging (AFIR) | `afir.digitraffic.fi/api/charging-network/v1/locations[/statuses]` (5 min) | EV charging layer with per-EVSE availability |
+
 ## HTTP API
 
 Global endpoints (`/api/health`, `/api/version`, `/metrics`) plus per-mode routes under `/api/meri/`, `/api/raide/` and `/api/tie/`. The full endpoint reference — paths, query parameters, response shapes and caching/poll cadences — lives in **[docs/API.md](docs/API.md)**.
