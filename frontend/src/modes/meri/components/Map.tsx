@@ -5,7 +5,9 @@ import type { Feature } from 'geojson';
 import { lerpAngle } from '../lib/lerp';
 import { deadReckon } from '../lib/geo';
 import { categorize, CATEGORY_COLORS, isStationary, ALL_CATEGORIES } from '../lib/shipTypes';
+import { LocateControl } from '../../../shared/components/LocateControl';
 import type { Vessel, Port, SeaStateFeature, AtonFaultFeature, ReplayPoint } from '../types';
+import type { Webcam } from '../lib/webcams';
 
 const STYLE_URLS = {
   dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
@@ -138,6 +140,9 @@ interface MapProps {
   showBuoys: boolean;
   atonFaults: AtonFaultFeature[];
   showAton: boolean;
+  webcams: Webcam[];
+  showWebcams: boolean;
+  onSelectWebcam: (webcam: Webcam) => void;
   mapTheme: 'light' | 'dark';
   isFollowing: boolean;
   onDisableFollowing: () => void;
@@ -204,6 +209,43 @@ function makeWarningImage(): ImageData {
   return ctx.getImageData(0, 0, size, size);
 }
 
+/** Small camera glyph for webcam markers (rounded body + lens). */
+function makeCameraImage(): ImageData {
+  const size = 36;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  ctx.beginPath();
+  ctx.arc(18, 18, 15, 0, Math.PI * 2);
+  ctx.fillStyle = '#a855f7';
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(2, 11, 23, 0.85)';
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.roundRect(9, 13, 14, 10, 2);
+  ctx.fillStyle = '#0b1220';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(23, 16);
+  ctx.lineTo(28, 13);
+  ctx.lineTo(28, 23);
+  ctx.lineTo(23, 20);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(14, 18, 2.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#a855f7';
+  ctx.fill();
+
+  return ctx.getImageData(0, 0, size, size);
+}
+
 export function Map({
   vessels,
   selectedMmsi,
@@ -218,6 +260,9 @@ export function Map({
   showBuoys,
   atonFaults,
   showAton,
+  webcams,
+  showWebcams,
+  onSelectWebcam,
   mapTheme,
   isFollowing,
   onDisableFollowing,
@@ -449,7 +494,9 @@ export function Map({
       style: STYLE_URLS[mapTheme],
       center: INITIAL_CENTER,
       zoom: INITIAL_ZOOM,
-      attributionControl: { compact: true },
+      // Default attribution lives bottom-right; we add our own compact one
+      // bottom-left instead so it tucks beside the version badge.
+      attributionControl: false,
     });
     mapRef.current = map;
 
@@ -457,11 +504,7 @@ export function Map({
       (window as unknown as { __map?: maplibregl.Map }).__map = map;
     }
 
-    map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
-    map.addControl(
-      new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true } }),
-      'top-right'
-    );
+    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
     map.on('load', () => {
       setupMapContent(map);
@@ -483,19 +526,23 @@ export function Map({
   const onDisableFollowingRef = useRef(onDisableFollowing);
   const onSelectVesselRef = useRef(onSelectVessel);
   const onSelectPortRef = useRef(onSelectPort);
+  const onSelectWebcamRef = useRef(onSelectWebcam);
   const onBackgroundClickRef = useRef(onBackgroundClick);
+  const webcamsRef = useRef(webcams);
   useEffect(() => {
     onDisableFollowingRef.current = onDisableFollowing;
     onSelectVesselRef.current = onSelectVessel;
     onSelectPortRef.current = onSelectPort;
+    onSelectWebcamRef.current = onSelectWebcam;
     onBackgroundClickRef.current = onBackgroundClick;
-  }, [onDisableFollowing, onSelectVessel, onSelectPort, onBackgroundClick]);
+    webcamsRef.current = webcams;
+  }, [onDisableFollowing, onSelectVessel, onSelectPort, onSelectWebcam, onBackgroundClick, webcams]);
 
   const buoyPopupRef = useRef<maplibregl.Popup | null>(null);
 
   /** Click + hover wiring. Registered once; guards against missing layers. */
   function registerInteractions(map: maplibregl.Map) {
-    const interactive = ['vessels-moving', 'vessels-stationary', 'replay-vessels', 'ports-layer', 'buoys-layer', 'aton-layer'];
+    const interactive = ['vessels-moving', 'vessels-stationary', 'replay-vessels', 'ports-layer', 'buoys-layer', 'aton-layer', 'cameras-layer'];
 
     map.on('click', (e) => {
       const layers = interactive.filter((l) => map.getLayer(l));
@@ -531,6 +578,11 @@ export function Map({
             .addTo(map);
           break;
         }
+        case 'cameras-layer': {
+          const webcam = webcamsRef.current.find((w) => w.id === props.id);
+          if (webcam) onSelectWebcamRef.current(webcam);
+          break;
+        }
       }
     });
 
@@ -555,12 +607,16 @@ export function Map({
     if (!map.hasImage('vessel-replay')) {
       map.addImage('vessel-replay', makeVesselImage(REPLAY_COLOR));
     }
+    if (!map.hasImage('camera-icon')) {
+      map.addImage('camera-icon', makeCameraImage());
+    }
 
     const empty = { type: 'FeatureCollection' as const, features: [] };
     if (!map.getSource('vessels')) map.addSource('vessels', { type: 'geojson', data: empty });
     if (!map.getSource('ports')) map.addSource('ports', { type: 'geojson', data: empty });
     if (!map.getSource('buoys')) map.addSource('buoys', { type: 'geojson', data: empty });
     if (!map.getSource('aton')) map.addSource('aton', { type: 'geojson', data: empty });
+    if (!map.getSource('cameras')) map.addSource('cameras', { type: 'geojson', data: empty });
     if (!map.getSource('trail')) map.addSource('trail', { type: 'geojson', data: empty });
     if (!map.getSource('replay')) map.addSource('replay', { type: 'geojson', data: empty });
 
@@ -622,6 +678,19 @@ export function Map({
         layout: {
           'icon-image': 'aton-warning',
           'icon-size': ['interpolate', ['linear'], ['zoom'], 5, 0.4, 10, 0.7],
+          'icon-allow-overlap': true,
+        },
+      });
+    }
+
+    if (!map.getLayer('cameras-layer')) {
+      map.addLayer({
+        id: 'cameras-layer',
+        type: 'symbol',
+        source: 'cameras',
+        layout: {
+          'icon-image': 'camera-icon',
+          'icon-size': ['interpolate', ['linear'], ['zoom'], 5, 0.5, 10, 0.85],
           'icon-allow-overlap': true,
         },
       });
@@ -874,6 +943,21 @@ export function Map({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || styleEpoch === 0) return;
+    const source = map.getSource('cameras') as maplibregl.GeoJSONSource | undefined;
+    if (!source) return;
+    source.setData({
+      type: 'FeatureCollection',
+      features: webcams.map((w) => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [w.lng, w.lat] },
+        properties: { id: w.id, name: w.name },
+      })),
+    });
+  }, [webcams, styleEpoch]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || styleEpoch === 0) return;
     const vis = (layer: string, on: boolean) => {
       if (map.getLayer(layer)) {
         map.setLayoutProperty(layer, 'visibility', on ? 'visible' : 'none');
@@ -883,7 +967,8 @@ export function Map({
     vis('ports-labels', showPorts);
     vis('buoys-layer', showBuoys);
     vis('aton-layer', showAton);
-  }, [showPorts, showBuoys, showAton, styleEpoch]);
+    vis('cameras-layer', showWebcams);
+  }, [showPorts, showBuoys, showAton, showWebcams, styleEpoch]);
 
   // Replay mode swaps the live fleet (and its trail) for the playback overlay.
   const replayActive = replay !== null;
@@ -929,7 +1014,12 @@ export function Map({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFollowing]);
 
-  return <div ref={containerRef} className="map-container" />;
+  return (
+    <>
+      <div ref={containerRef} className="map-container" />
+      <LocateControl getMap={() => mapRef.current} />
+    </>
+  );
 }
 
 function esc(s: string): string {

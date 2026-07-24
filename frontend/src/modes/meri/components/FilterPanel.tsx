@@ -1,5 +1,5 @@
 import React from 'react';
-import { Ship, Anchor, Waves, TriangleAlert, Moon, Sun, ChevronLeft, History } from 'lucide-react';
+import { Ship, Anchor, Waves, TriangleAlert, Moon, Sun, ChevronLeft, History, Video } from 'lucide-react';
 import { useCollapsiblePanel, stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { ALL_CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS, type ShipCategory } from '../lib/shipTypes';
 import type { ConnectionStatus } from '../hooks/useWebSocket';
@@ -23,6 +23,8 @@ interface FilterPanelProps {
   showAton: boolean;
   setShowAton: (v: boolean) => void;
   atonFaults: AtonFaultFeature[];
+  showWebcams: boolean;
+  setShowWebcams: (v: boolean) => void;
   replayActive: boolean;
   onEnterReplay: () => void;
 }
@@ -45,6 +47,8 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   showAton,
   setShowAton,
   atonFaults,
+  showWebcams,
+  setShowWebcams,
   replayActive,
   onEnterReplay,
 }) => {
@@ -122,6 +126,13 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               <button className={`layer-toggle ${showAton ? 'on' : ''}`} onClick={() => setShowAton(!showAton)}>
                 <TriangleAlert size={14} />
                 <span>AtoN faults</span>
+              </button>
+              <button
+                className={`layer-toggle ${showWebcams ? 'on' : ''}`}
+                onClick={() => setShowWebcams(!showWebcams)}
+              >
+                <Video size={14} />
+                <span>Webcams</span>
               </button>
               <button
                 className="layer-toggle"

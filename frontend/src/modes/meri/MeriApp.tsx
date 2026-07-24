@@ -9,9 +9,12 @@ import { FilterPanel } from './components/FilterPanel';
 import { VesselPopup } from './components/VesselPopup';
 import { VesselCard } from './components/VesselCard';
 import { PortPopup } from './components/PortPopup';
+import { WebcamPopup } from './components/WebcamPopup';
 import { ReplayBar } from './components/ReplayBar';
 import { fetchPorts, fetchSeaState, fetchAtonFaults } from './lib/api';
 import { categorize, CATEGORY_COLORS, type ShipCategory } from './lib/shipTypes';
+import { WEBCAMS } from './lib/webcams';
+import type { Webcam } from './lib/webcams';
 import type { Port, SeaStateFeature, AtonFaultFeature } from './types';
 
 interface MeriAppProps {
@@ -52,6 +55,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   const [showPorts, setShowPorts] = useState<boolean>(() => localStorage.getItem('showPorts') !== 'false');
   const [showBuoys, setShowBuoys] = useState<boolean>(() => localStorage.getItem('showBuoys') === 'true');
   const [showAton, setShowAton] = useState<boolean>(() => localStorage.getItem('showAton') === 'true');
+  const [showWebcams, setShowWebcams] = useState<boolean>(() => localStorage.getItem('showWebcams') !== 'false');
 
   useEffect(() => {
     localStorage.setItem('showPorts', String(showPorts));
@@ -62,10 +66,14 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   useEffect(() => {
     localStorage.setItem('showAton', String(showAton));
   }, [showAton]);
+  useEffect(() => {
+    localStorage.setItem('showWebcams', String(showWebcams));
+  }, [showWebcams]);
 
   // Selection state
   const [selectedMmsi, setSelectedMmsi] = useState<number | null>(null);
   const [selectedPort, setSelectedPort] = useState<Port | null>(null);
+  const [selectedWebcam, setSelectedWebcam] = useState<Webcam | null>(null);
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [selectedCategories, setSelectedCategories] = useState<ShipCategory[]>([]);
 
@@ -110,6 +118,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   const handleSelectVessel = useCallback(
     (mmsi: number | null) => {
       setSelectedPort(null);
+      setSelectedWebcam(null);
       setSelectedMmsi(mmsi);
       setIsFollowing(false);
       if (mmsi !== null) onSelectionMade();
@@ -120,8 +129,20 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   const handleSelectPort = useCallback(
     (port: Port) => {
       setSelectedMmsi(null);
+      setSelectedWebcam(null);
       setIsFollowing(false);
       setSelectedPort(port);
+      onSelectionMade();
+    },
+    [onSelectionMade]
+  );
+
+  const handleSelectWebcam = useCallback(
+    (webcam: Webcam) => {
+      setSelectedMmsi(null);
+      setSelectedPort(null);
+      setIsFollowing(false);
+      setSelectedWebcam(webcam);
       onSelectionMade();
     },
     [onSelectionMade]
@@ -130,6 +151,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   const handleBackgroundClick = useCallback(() => {
     setSelectedMmsi(null);
     setSelectedPort(null);
+    setSelectedWebcam(null);
     setIsFollowing(false);
   }, []);
 
@@ -199,6 +221,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
     setIsFollowing(false);
   }, []);
   const handleClosePort = useCallback(() => setSelectedPort(null), []);
+  const handleCloseWebcam = useCallback(() => setSelectedWebcam(null), []);
 
   return (
     <div className="dashboard-container">
@@ -216,6 +239,9 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         showBuoys={showBuoys}
         atonFaults={atonFaults}
         showAton={showAton}
+        webcams={WEBCAMS}
+        showWebcams={showWebcams}
+        onSelectWebcam={handleSelectWebcam}
         mapTheme={mapTheme}
         isFollowing={isFollowing}
         onDisableFollowing={disableFollowing}
@@ -242,6 +268,8 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         showAton={showAton}
         setShowAton={setShowAton}
         atonFaults={atonFaults}
+        showWebcams={showWebcams}
+        setShowWebcams={setShowWebcams}
         replayActive={replay.active}
         onEnterReplay={handleEnterReplay}
       />
@@ -276,6 +304,15 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
           isCollapsed={isDetailCollapsed}
           onToggleCollapse={toggleDetailCollapsed}
           onSelectVessel={handleSelectVessel}
+        />
+      )}
+
+      {selectedWebcam && (
+        <WebcamPopup
+          webcam={selectedWebcam}
+          onClose={handleCloseWebcam}
+          isCollapsed={isDetailCollapsed}
+          onToggleCollapse={toggleDetailCollapsed}
         />
       )}
 
