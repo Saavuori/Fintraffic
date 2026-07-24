@@ -89,11 +89,22 @@ type thinnedPort struct {
 }
 
 // portCoordOverrides fills in coordinates for locodes Digitraffic's SSN
-// location registry lists with geometry: null. FIHEL (Helsinki, covering
-// Länsisatama/Jätkäsaari, Eteläsatama and Vuosaari) is one of these, so
-// without an override the whole port silently disappears from the map.
+// location registry lists with geometry: null. FIHEL is one of these, so
+// without an override the whole port silently disappears from the map. Its
+// pin is placed at Länsisatama/Jätkäsaari — Helsinki's main passenger/cargo
+// terminal and the busier of FIHEL's areas (the locode also covers
+// Eteläsatama; Vuosaari has its own separate locode, FIVSS) — and named
+// accordingly rather than the upstream "Helsinki (Helsingfors)", which
+// undersells what's actually a distinct, heavily-trafficked harbour.
+// Positioned at Länsiterminaali 2, Tyynenmerenkatu 14, 00180 Helsinki (the
+// Tallink Megastar berth), near the LT1/LT2 webcams (see frontend
+// webcams.ts) without sitting exactly on top of either.
 var portCoordOverrides = map[string][2]float64{
-	"FIHEL": {60.1552, 24.9074}, // Länsisatama, Helsinki's main passenger/cargo terminal
+	"FIHEL": {60.14964, 24.91420},
+}
+
+var portNameOverrides = map[string]string{
+	"FIHEL": "Länsisatama",
 }
 
 func thinPorts(body []byte) ([]byte, error) {
@@ -129,9 +140,13 @@ func thinPorts(body []byte) ([]byte, error) {
 		if !ok {
 			continue
 		}
+		name := f.Properties.LocationName
+		if n, has := portNameOverrides[f.Locode]; has {
+			name = n
+		}
 		ports = append(ports, thinnedPort{
 			Locode: f.Locode,
-			Name:   f.Properties.LocationName,
+			Name:   name,
 			Lat:    lat,
 			Lng:    lng,
 		})
