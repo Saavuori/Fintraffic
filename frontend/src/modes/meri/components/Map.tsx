@@ -5,7 +5,6 @@ import type { Feature } from 'geojson';
 import { lerpAngle } from '../lib/lerp';
 import { deadReckon } from '../lib/geo';
 import { categorize, CATEGORY_COLORS, isStationary, ALL_CATEGORIES } from '../lib/shipTypes';
-import { LocateControl } from '../../../shared/components/LocateControl';
 import type { Vessel, Port, SeaStateFeature, AtonFaultFeature, ReplayPoint } from '../types';
 import type { Webcam } from '../lib/webcams';
 
@@ -1014,12 +1013,7 @@ export function Map({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFollowing]);
 
-  return (
-    <>
-      <div ref={containerRef} className="map-container" />
-      <LocateControl getMap={() => mapRef.current} />
-    </>
-  );
+  return <div ref={containerRef} className="map-container" />;
 }
 
 function esc(s: string): string {
