@@ -1,0 +1,254 @@
+/* Raide-mode styles. The shared index.css owns the glass chrome (panels,
+   category rows, telemetry grid, scrollbars, version badge); this file adds
+   the railway accent tokens and the train-specific pieces. Everything is
+   scoped under .mode-raide (the RaideApp root) or uses raide-unique class
+   names, so nothing leaks into the other modes. */
+
+/* The primary accent stays railway green — the train markers are liveried
+   green/purple/amber, so a teal chrome would clash. */
+.mode-raide {
+  --accent: #2ecc71;
+  --popup-bg: hsla(210, 24%, 8%, 0.92);
+}
+
+:root[data-theme='light'] .mode-raide {
+  --accent: #0e8a48;
+  --popup-bg: rgba(255, 255, 255, 0.95);
+}
+
+/* Railway-green chrome accents where the shared styles use teal. */
+.mode-raide .panel-title {
+  color: var(--accent);
+}
+
+.mode-raide .conn-dot {
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+
+.mode-raide .clear-filters-btn {
+  color: var(--accent);
+}
+
+.mode-raide .layer-toggle.on {
+  color: var(--accent);
+  border-color: var(--border-focus);
+  background: rgba(46, 204, 113, 0.08);
+}
+
+:root[data-theme='light'] .mode-raide .layer-toggle.on {
+  background: rgba(14, 138, 72, 0.1);
+}
+
+.mode-raide .panel-subtitle {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  padding: 2px 0 8px;
+  line-height: 1.35;
+}
+
+.mode-raide .legend-hint {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 10px;
+}
+
+.mode-raide .section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 12px 0 6px;
+}
+
+.mode-raide .detail-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(46, 204, 113, 0.12);
+  border: 1.5px solid var(--accent);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mode-raide .detail-badge.station-badge {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  background: rgba(90, 182, 232, 0.12);
+}
+
+/* ---------- Station departure/arrival boards ---------- */
+
+.mode-raide .board-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  padding: 0.28rem 2px;
+  border-bottom: 1px solid var(--border-faint);
+}
+
+.mode-raide .board-row:last-child {
+  border-bottom: none;
+}
+
+.mode-raide .board-time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.mode-raide .board-live {
+  font-weight: 600;
+}
+
+.mode-raide .board-train {
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 2.4rem;
+}
+
+.mode-raide .board-terminus {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mode-raide .board-track {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.mode-raide .board-cancelled .board-time,
+.mode-raide .board-cancelled .board-terminus {
+  text-decoration: line-through;
+}
+
+.mode-raide .board-cancelled .board-track {
+  color: var(--accent-coral);
+}
+
+/* ---------- Floating selected-train card ---------- */
+
+.mode-raide .train-card-overlay {
+  position: absolute;
+  z-index: 11;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glow);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
+  padding: 8px 12px;
+  max-width: min(92vw, 560px);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.mode-raide .train-card-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mode-raide .train-card-name {
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mode-raide .train-card-stat {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mode-raide .train-card-dest {
+  font-size: 0.75rem;
+  color: var(--accent-blue);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Delay coloring (shared by card + boards) ---------- */
+
+.mode-raide .delay-ok {
+  color: #2ecc71;
+}
+
+.mode-raide .delay-warn {
+  color: #f1c40f;
+}
+
+.mode-raide .delay-bad {
+  color: #e74c3c;
+}
+
+:root[data-theme='light'] .mode-raide .delay-ok {
+  color: #0e8a48;
+}
+
+:root[data-theme='light'] .mode-raide .delay-warn {
+  color: #b8860b;
+}
+
+:root[data-theme='light'] .mode-raide .delay-bad {
+  color: #c0392b;
+}
+
+/* ---------- Map hover popup ---------- */
+
+.mode-raide .maplibregl-popup .maplibregl-popup-content {
+  background: var(--popup-bg);
+  font-size: 0.8rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+}
+
+.mode-raide .maplibregl-popup .maplibregl-popup-close-button {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  padding: 0 0.4rem;
+}
+
+.mode-raide .popup-desc {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  white-space: pre-line;
+}
+
+/* ---------- Mobile ---------- */
+
+@media (max-width: 768px) {
+  .mode-raide .train-card-overlay {
+    top: 10px;
+    max-width: 94vw;
+    padding: 6px 10px;
+  }
+
+  .mode-raide .train-card-dest {
+    display: none;
+  }
+}

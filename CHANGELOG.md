@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.4.0] - 2026-07-24
+
+### Added
+- **Raide mode (consolidation phase 2)**: The railway app is now the second Fintraffic mode. The backend gained `internal/raide` — REST polling of `rata.digitraffic.fi` (train GPS every 10 s, timetables every 60 s, the station register every 6 h), the GPS↔timetable merge with per-train delay ("delay at the last station passed"), and on-demand station departure/arrival boards — mounted under `/api/raide/*` behind the same `server.Mode` interface as meri, with cold-start visibility in `/api/health` (`modes.raide.*`). The shared core cache grew generic key/value methods (Redis `SET`/`GET` with TTL + in-memory fallback) for poll-style modes. The frontend gained `src/modes/raide/` — the railway map with liveried train categories, delay rings, station boards and the rail-track overlay — styled by the shared glass design system plus a scoped railway-green accent (`raide.css`).
+
+### Changed
+- **Theme is now shell-owned**: one dark/light toggle and one stored preference (`fintraffic-theme`, migrating the old `mapTheme` value) apply across all modes; the Vite dev proxy target is overridable via `API_PROXY`.
+
+---
+
 ## [v0.3.0] - 2026-07-24
 
 ### Changed

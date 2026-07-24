@@ -14,6 +14,7 @@ import (
 	"fintraffic/internal/core/config"
 	"fintraffic/internal/core/server"
 	"fintraffic/internal/meri"
+	"fintraffic/internal/raide"
 )
 
 func main() {
@@ -44,16 +45,21 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// 4. Wire and start the traffic modes. Phase 1 ships meri only; raide and
-	// tie mount here as they are ported.
+	// 4. Wire and start the traffic modes. Tie mounts here when it is ported.
 	meriService := meri.NewService(cfg, liveCache)
 	if err := meriService.Start(ctx); err != nil {
 		log.Printf("ERROR starting meri mode: %v\n", err)
 	}
 	defer meriService.Stop()
 
+	raideService := raide.NewService(liveCache)
+	if err := raideService.Start(ctx); err != nil {
+		log.Printf("ERROR starting raide mode: %v\n", err)
+	}
+	defer raideService.Stop()
+
 	// 5. Assemble the shared router: global endpoints + each mode's routes.
-	handlers := server.NewHandlers(liveCache, meriService)
+	handlers := server.NewHandlers(liveCache, meriService, raideService)
 	router := server.NewRouter(handlers)
 
 	srv := &http.Server{

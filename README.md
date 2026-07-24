@@ -10,7 +10,7 @@ One live map for **Finnish sea, rail and road traffic**, built on Digitraffic's 
 | Mode | Source app | Status |
 |---|---|---|
 | 🚢 **Meri** | [Marinetraffic](https://github.com/Saavuori/Marinetraffic) | ✅ Ported (phase 1) |
-| 🚆 **Raide** | [railway](https://github.com/Saavuori/railway) | ⏳ Planned (phase 2) |
+| 🚆 **Raide** | [railway](https://github.com/Saavuori/railway) | ✅ Ported (phase 2) |
 | 🚗 **Tie** | [tieliikenne](https://github.com/Saavuori/tieliikenne) | ⏳ Planned (phase 3) |
 
 ---
@@ -29,14 +29,18 @@ Fintraffic/
 │       │   ├── config/          # env/.env config loading
 │       │   ├── server/          # router, embedded SPA, /api/health, /api/version
 │       │   └── upstream/        # Digitraffic HTTP client + cached singleflight proxy
-│       └── meri/                # marine mode: AIS ingest (MQTT), trail store (SQLite),
-│           │                    #   WebSocket hub, REST handlers
-│           ├── ais/  trail/  ws/
+│       ├── meri/                # marine mode: AIS ingest (MQTT), trail store (SQLite),
+│       │   │                    #   WebSocket hub, REST handlers
+│       │   ├── ais/  trail/  ws/
+│       └── raide/               # railway mode: rata.digitraffic.fi polling,
+│                                #   GPS/timetable merge, station boards
 ├── frontend/
 │   └── src/
-│       ├── App.tsx              # shell: Meri/Raide/Tie mode switcher
+│       ├── App.tsx              # shell: mode switcher + shared theme
 │       ├── shared/              # mode-agnostic hooks + components
-│       └── modes/meri/          # the marine map app
+│       └── modes/
+│           ├── meri/            # the marine map app
+│           └── raide/           # the railway map app
 ├── scripts/                     # CHANGELOG.md -> changelog site generator
 ├── .github/workflows/           # Multi-arch image build + Pages deploy
 ├── deploy/                      # Production docker-compose.yml + update.sh
@@ -55,6 +59,14 @@ Modes implement the `server.Mode` interface (`Name`, `Register`, `Health`); the 
 * **Fleet replay** — animated playback of all vessels' recorded tracks with play/pause/scrub/speed transport.
 * **Ports & port calls, sea state buoys, AtoN faults** as toggleable layers.
 * **Ship-type categorization** with colour-coded markers and live per-category counts.
+
+## ✨ Raide mode (railway traffic)
+
+* **Live train positions** polled from `rata.digitraffic.fi` every 10 s and merged with timetables (60 s) and the station register (6 h); trains without GPS are dropped, positions without timetables still render.
+* **Liveried categories** — green long-distance, purple commuter (labelled by line letter), amber cargo — with delay rings (warn/bad) and cancelled badges.
+* **Station departure/arrival boards** computed on demand from the cached live-trains snapshot; delay minutes, live estimates and track numbers per row.
+* **Rail track overlay** drawn from the basemap's own vector tiles so the network reads clearly under the markers.
+* Cold start returns 503, shown as a loading state; the shared cache serves last-good data through Redis outages.
 
 ## HTTP API
 
@@ -79,6 +91,14 @@ Meri mode (`/api/meri`):
 | `GET` | `/api/meri/sea-state` | Smart-buoy sea state measurements |
 | `GET` | `/api/meri/aton-faults` | Active aids-to-navigation faults |
 | `GET` | `/api/meri/stream` | WebSocket stream of live vessel positions (snapshot + delta) |
+
+Raide mode (`/api/raide`):
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/raide/trains` | Live train positions merged with timetable metadata |
+| `GET` | `/api/raide/stations` | Station register (code, name, coordinates, passenger/major flags) |
+| `GET` | `/api/raide/departures/{shortCode}` | Departure/arrival board for one station |
 
 ---
 

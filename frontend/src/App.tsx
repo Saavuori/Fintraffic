@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import MeriApp from './modes/meri/MeriApp';
+import RaideApp from './modes/raide/RaideApp';
 import { VersionBadge } from './shared/components/VersionBadge';
 
 export type ModeId = 'meri' | 'raide' | 'tie';
+export type Theme = 'dark' | 'light';
 
-// The traffic modes of the consolidated Fintraffic app. Raide and tie flip to
-// enabled as their apps (railway, tieliikenne) are ported in.
+// The traffic modes of the consolidated Fintraffic app. Tie flips to enabled
+// when tieliikenne is ported in.
 const MODES: { id: ModeId; label: string; enabled: boolean }[] = [
   { id: 'meri', label: 'Meri', enabled: true },
-  { id: 'raide', label: 'Raide', enabled: false },
+  { id: 'raide', label: 'Raide', enabled: true },
   { id: 'tie', label: 'Tie', enabled: false },
 ];
 
@@ -21,6 +23,24 @@ function App() {
   useEffect(() => {
     localStorage.setItem('fintraffic-mode', mode);
   }, [mode]);
+
+  // Theme is shell-owned so every mode shares one toggle and one preference.
+  // The CSS tokens and each mode's basemap key off the data-theme attribute.
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved =
+      localStorage.getItem('fintraffic-theme') ?? localStorage.getItem('mapTheme');
+    return saved === 'light' ? 'light' : 'dark';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('fintraffic-theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(
+    () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')),
+    []
+  );
 
   return (
     <>
@@ -38,7 +58,8 @@ function App() {
         ))}
       </nav>
 
-      {mode === 'meri' && <MeriApp />}
+      {mode === 'meri' && <MeriApp theme={theme} setTheme={setTheme} />}
+      {mode === 'raide' && <RaideApp theme={theme} onToggleTheme={toggleTheme} />}
 
       <VersionBadge />
     </>

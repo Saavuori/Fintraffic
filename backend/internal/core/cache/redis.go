@@ -53,6 +53,21 @@ func (r *RedisCache) DeletePosition(ctx context.Context, mmsi string) error {
 	return r.client.HDel(ctx, r.key, mmsi).Err()
 }
 
+func (r *RedisCache) SetValue(ctx context.Context, key string, payload []byte, ttl time.Duration) error {
+	return r.client.Set(ctx, key, payload, ttl).Err()
+}
+
+func (r *RedisCache) GetValue(ctx context.Context, key string) ([]byte, error) {
+	payload, err := r.client.Get(ctx, key).Bytes()
+	if err == redis.Nil {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return payload, nil
+}
+
 func (r *RedisCache) Ping(ctx context.Context) error {
 	return r.client.Ping(ctx).Err()
 }

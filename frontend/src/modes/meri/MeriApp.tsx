@@ -14,7 +14,12 @@ import { fetchPorts, fetchSeaState, fetchAtonFaults } from './lib/api';
 import { categorize, CATEGORY_COLORS, type ShipCategory } from './lib/shipTypes';
 import type { Port, SeaStateFeature, AtonFaultFeature } from './types';
 
-function MeriApp() {
+interface MeriAppProps {
+  theme: 'light' | 'dark';
+  setTheme: (theme: 'light' | 'dark') => void;
+}
+
+function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   const { vessels, handleMessage } = useVesselData();
   const { status: connectionStatus } = useWebSocket({ onMessage: handleMessage });
 
@@ -43,18 +48,11 @@ function MeriApp() {
     return () => clearInterval(interval);
   }, []);
 
-  // Settings with localStorage persistence
-  const [mapTheme, setMapTheme] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem('mapTheme') as 'light' | 'dark') || 'dark';
-  });
+  // Settings with localStorage persistence (theme is shell-owned)
   const [showPorts, setShowPorts] = useState<boolean>(() => localStorage.getItem('showPorts') !== 'false');
   const [showBuoys, setShowBuoys] = useState<boolean>(() => localStorage.getItem('showBuoys') === 'true');
   const [showAton, setShowAton] = useState<boolean>(() => localStorage.getItem('showAton') === 'true');
 
-  useEffect(() => {
-    localStorage.setItem('mapTheme', mapTheme);
-    document.documentElement.setAttribute('data-theme', mapTheme);
-  }, [mapTheme]);
   useEffect(() => {
     localStorage.setItem('showPorts', String(showPorts));
   }, [showPorts]);
