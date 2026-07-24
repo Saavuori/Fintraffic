@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import MeriApp from './modes/meri/MeriApp';
 import RaideApp from './modes/raide/RaideApp';
+import TieApp from './modes/tie/TieApp';
 import { VersionBadge } from './shared/components/VersionBadge';
 
 export type ModeId = 'meri' | 'raide' | 'tie';
 export type Theme = 'dark' | 'light';
 
-// The traffic modes of the consolidated Fintraffic app. Tie flips to enabled
-// when tieliikenne is ported in.
+// The traffic modes of the consolidated Fintraffic app.
 const MODES: { id: ModeId; label: string; enabled: boolean }[] = [
   { id: 'meri', label: 'Meri', enabled: true },
   { id: 'raide', label: 'Raide', enabled: true },
-  { id: 'tie', label: 'Tie', enabled: false },
+  { id: 'tie', label: 'Tie', enabled: true },
 ];
 
 function App() {
@@ -60,6 +60,7 @@ function App() {
 
       {mode === 'meri' && <MeriApp theme={theme} setTheme={setTheme} />}
       {mode === 'raide' && <RaideApp theme={theme} onToggleTheme={toggleTheme} />}
+      {mode === 'tie' && <TieApp theme={theme} onToggleTheme={toggleTheme} />}
 
       <VersionBadge />
     </>
