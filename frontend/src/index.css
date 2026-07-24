@@ -348,6 +348,33 @@ body {
   flex-shrink: 0;
 }
 
+/* Floating search pill over the map (mobile only — only mounted there). The
+   bottom tab bar cleared the top of the screen, so search lives up here instead
+   of being buried under the sheet's peek. Reuses the .vessel-search internals
+   but wears the full glass-panel treatment rather than the inset field look. */
+.vessel-search-overlay {
+  position: absolute;
+  z-index: 15;
+  top: calc(env(safe-area-inset-top) + 12px);
+  left: 12px;
+  right: 12px;
+}
+
+.vessel-search-overlay .vessel-search {
+  margin-bottom: 0;
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: var(--bg-panel);
+  border-color: var(--border-glow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 28px -12px rgba(0, 0, 0, 0.7);
+}
+
+.vessel-search-overlay .vessel-search-input {
+  font-size: 0.9rem;
+}
+
 .filter-scroll-area {
   flex: 1;
   overflow-y: auto;
@@ -478,6 +505,70 @@ body {
   font-size: 0.68rem;
   color: var(--text-secondary);
   margin-top: 2px;
+}
+
+/* ---------- Nearest-vessels list (mobile glanceable peek) ---------- */
+
+.nearest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 2px;
+}
+
+.nearest-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--bg-button);
+  border: 1px solid var(--border-button);
+  color: var(--text-body);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.nearest-row:hover {
+  background: var(--bg-button-hover);
+  border-color: var(--border-button-hover);
+}
+
+.nearest-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.nearest-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nearest-dist {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.nearest-speed {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  min-width: 46px;
+  text-align: right;
 }
 
 /* ---------- Right detail panel ---------- */
@@ -1310,9 +1401,21 @@ body {
   --sheet-height-filter: 0px;
   --sheet-height-detail: 0px;
   --active-sheet-height: max(var(--sheet-height-filter), var(--sheet-height-detail));
+  /* Height reserved by the mobile bottom tab bar (0 on desktop, where the
+     switcher is a floating pill). Bottom sheets rest on top of this band and
+     the floating map controls add it into their bottom offset so nothing hides
+     behind the nav. Includes the home-indicator safe area. */
+  --tabbar-height: 0px;
 }
 
 @media (max-width: 768px) {
+  /* Reserve the bottom band for the tab bar. Everything bottom-anchored below
+     adds this in, and the height here must match the rendered nav (its own
+     height is pinned to the same variable, so the two can't drift). */
+  :root {
+    --tabbar-height: calc(64px + env(safe-area-inset-bottom));
+  }
+
   /* The floating summary pills are redundant on mobile — the detail sheet is
      the single source of selection detail — so hide them (Meri's follow/trail
      actions move into the sheet header via VesselActions). */
@@ -1338,20 +1441,62 @@ body {
     margin-bottom: 12px;
   }
 
-  /* Bigger tap target, lifted clear of the active sheet. */
+  /* Category filters (Meri ship types, Raide train types) become horizontal
+     wrapped chips on phones instead of full-width rows — denser, and quicker to
+     scan/toggle with a thumb. The swatch, label and count are unchanged. */
+  .category-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .category-row {
+    width: auto;
+    min-height: 38px;
+    gap: 7px;
+    padding: 8px 12px;
+    border-radius: 999px;
+  }
+
+  .category-label {
+    flex: none;
+  }
+
+  /* The bottom tab bar already names the active mode, so the filter sheet's
+     mode title ("Meriliikenne" …) and its desktop collapse chevron are
+     redundant on phones — and they eat the most valuable row, the one visible
+     at peek. Hide the header so the peek leads with real content: the live
+     count, then the nearest list. (Detail sheets keep their header — the
+     selected vessel/train name there is not redundant.) */
+  .bottom-sheet--filter .panel-header {
+    display: none;
+  }
+
+  /* With the title gone, the live count is the sheet's summary line — give it
+     a bit more presence so the peek reads at a glance. */
+  .bottom-sheet--filter .panel-stats {
+    padding-top: 10px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-strong);
+  }
+
+  /* Bigger tap target, lifted clear of the active sheet AND the tab bar. The
+     sheet rests on the tab bar, so its top edge is (tabbar + sheet) up from the
+     bottom; --tabbar-height already carries the safe-area inset. */
   .locate-control {
     width: 44px;
     height: 44px;
-    bottom: calc(var(--active-sheet-height) + 16px + env(safe-area-inset-bottom));
+    bottom: calc(var(--active-sheet-height) + var(--tabbar-height) + 16px);
   }
 
   .locate-error {
-    bottom: calc(var(--active-sheet-height) + 68px + env(safe-area-inset-bottom));
+    bottom: calc(var(--active-sheet-height) + var(--tabbar-height) + 68px);
   }
 
   /* Keep the required attribution visible just above the active sheet. */
   .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
-    margin-bottom: calc(var(--active-sheet-height) + 8px);
+    margin-bottom: calc(var(--active-sheet-height) + var(--tabbar-height) + 8px);
   }
 
   /* Build metadata isn't useful on a phone. */
@@ -1359,16 +1504,14 @@ body {
     display: none;
   }
 
-  /* Fleet-replay transport bar clears the active sheet. */
+  /* Fleet-replay transport bar clears the active sheet and the tab bar. */
   .replay-bar {
-    bottom: calc(var(--active-sheet-height) + 12px + env(safe-area-inset-bottom));
+    bottom: calc(var(--active-sheet-height) + var(--tabbar-height) + 12px);
   }
 
-  /* The mode switcher is the primary nav — give it real tap targets. */
-  .mode-switcher__btn {
-    font-size: 0.9rem;
-    padding: 8px 16px;
-  }
+  /* The mode switcher's transformation into a bottom tab bar lives in its own
+     media block after the desktop rules below — equal-specificity overrides
+     must come later in source order to win. */
 }
 
 /* ---------- Mode switcher (Meri / Raide / Tie) ---------- */
@@ -1387,6 +1530,33 @@ body {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+  /* Active-tab accent, keyed to the current mode via data-mode. Each mode's own
+     chrome (panel titles, markers) already uses these hues, so the tab agrees
+     with the mode it selects. Consumed by the mobile bottom bar; desktop keeps
+     its teal pill below. */
+  --switch-accent: var(--accent-teal);
+}
+
+.mode-switcher[data-mode='raide'] {
+  --switch-accent: #2ecc71;
+}
+
+.mode-switcher[data-mode='tie'] {
+  --switch-accent: #38bdf8;
+}
+
+:root[data-theme='light'] .mode-switcher[data-mode='raide'] {
+  --switch-accent: #0e8a48;
+}
+
+:root[data-theme='light'] .mode-switcher[data-mode='tie'] {
+  --switch-accent: #0369a1;
+}
+
+/* The per-mode glyph is a mobile-only affordance; the desktop switcher is a
+   text pill. Hidden here, revealed in the phone bottom-bar rules. */
+.mode-switcher__icon {
+  display: none;
 }
 
 .mode-switcher__btn {
@@ -1419,4 +1589,73 @@ body {
   color: var(--text-muted);
   opacity: 0.45;
   cursor: default;
+}
+
+/* ---- Mobile: the switcher becomes the primary bottom navigation ----
+   A fixed, thumb-zone tab bar spanning the full width. Placed after the desktop
+   rules above so these equal-specificity overrides win on phones. It sits above
+   the sheets (z 12/13) so it's always reachable; the sheets rest on top of it
+   (bottom: var(--tabbar-height)) rather than under it, so nothing overlaps. */
+@media (max-width: 768px) {
+  .mode-switcher {
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    height: var(--tabbar-height);
+    box-sizing: border-box;
+    gap: 0;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    border: none;
+    border-top: 1px solid var(--border-glow);
+    border-radius: 0;
+    background: var(--bg-panel-hover);
+    box-shadow: 0 -8px 28px -12px rgba(0, 0, 0, 0.55);
+  }
+
+  .mode-switcher__btn {
+    flex: 1;
+    flex-direction: column;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 4px 0;
+    border-radius: 12px;
+    font-size: 0.68rem;
+  }
+
+  .mode-switcher__icon {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 26px;
+    border-radius: 999px;
+    transition: background 0.2s;
+  }
+
+  .mode-switcher__icon svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* Active tab: the icon pill and label take the current mode's accent, so the
+     colour and the position both say where you are. Undo the desktop pill's
+     filled background/border — on the bar only the pill behind the icon fills. */
+  .mode-switcher__btn--active {
+    background: transparent;
+    border-color: transparent;
+    color: var(--switch-accent);
+  }
+
+  .mode-switcher__btn--active .mode-switcher__icon {
+    background: color-mix(in srgb, var(--switch-accent) 15%, transparent);
+  }
+
+  .mode-switcher__btn:hover:not(:disabled):not(.mode-switcher__btn--active) {
+    background: transparent;
+    color: var(--text-primary);
+  }
 }

@@ -27,6 +27,8 @@ interface MapProps {
   /** Layer/category visibility, owned by the FilterPanel in App. */
   visibility: LayerVisibility;
   theme: Theme;
+  /** Fires (on moveend) with the viewport centre for the "nearest trains" list. */
+  onMoveEnd?: (center: { lng: number; lat: number }) => void;
 }
 
 const TRAINS_SOURCE = 'trains';
@@ -117,9 +119,16 @@ const Map: React.FC<MapProps> = ({
   onTrainsUpdate,
   visibility,
   theme,
+  onMoveEnd,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
+  // Latest onMoveEnd, read from the mount effect's moveend handler (which is
+  // registered once) so an identity change never leaves it stale.
+  const onMoveEndRef = useRef(onMoveEnd);
+  useEffect(() => {
+    onMoveEndRef.current = onMoveEnd;
+  }, [onMoveEnd]);
   const trainsByKey = useRef<globalThis.Map<string, Train>>(new globalThis.Map());
   const stationsByCode = useRef<globalThis.Map<string, StationMeta>>(new globalThis.Map());
   const hoverPopupRef = useRef<maplibregl.Popup | null>(null);
@@ -199,6 +208,15 @@ const Map: React.FC<MapProps> = ({
     m.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
     // Dev-only escape hatch for driving the map from the console / test tools.
     if (import.meta.env.DEV) (window as unknown as { __map?: maplibregl.Map }).__map = m;
+
+    // Publish the viewport centre for the "nearest trains" list — once now to
+    // seed it, then after each settled pan/zoom.
+    const emitCenter = () => {
+      const c = m.getCenter();
+      onMoveEndRef.current?.({ lng: c.lng, lat: c.lat });
+    };
+    m.on('moveend', emitCenter);
+    emitCenter();
 
     hoverPopupRef.current = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });
 

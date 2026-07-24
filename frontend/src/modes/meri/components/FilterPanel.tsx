@@ -1,12 +1,14 @@
-import React, { useMemo, useState } from 'react';
-import { Ship, Anchor, Waves, TriangleAlert, Moon, Sun, ChevronLeft, History, Video, Search, X } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Ship, Anchor, Waves, TriangleAlert, Moon, Sun, ChevronLeft, History, Video } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { BottomSheet } from '../../../shared/components/BottomSheet';
+import { VesselSearch } from './VesselSearch';
+import { nearestTo, formatDistanceKm } from '../lib/geo';
 import { ALL_CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS, categorize, type ShipCategory } from '../lib/shipTypes';
 import type { ConnectionStatus } from '../hooks/useWebSocket';
 import type { AtonFaultFeature, Vessel } from '../types';
 
-const MAX_SEARCH_RESULTS = 8;
+const NEAREST_COUNT = 5;
 
 interface FilterPanelProps {
   vessels: Record<string, Vessel>;
@@ -20,6 +22,7 @@ interface FilterPanelProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   isMobile: boolean;
+  mapCenter: { lng: number; lat: number } | null;
   mapTheme: 'light' | 'dark';
   setMapTheme: (theme: 'light' | 'dark') => void;
   showPorts: boolean;
@@ -47,6 +50,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   isCollapsed,
   onToggleCollapse,
   isMobile,
+  mapCenter,
   mapTheme,
   setMapTheme,
   showPorts,
@@ -65,22 +69,16 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   // peek); only desktop unmounts the body when collapsed.
   const bodyCollapsed = !isMobile && isCollapsed;
 
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // Search runs over the full live fleet, independent of the category filter,
-  // so finding a specific vessel doesn't require first clearing filters.
-  const searchResults = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    if (!q) return [];
-    return Object.values(vessels)
-      .filter((v) => (v.name && v.name.toLowerCase().includes(q)) || String(v.mmsi).includes(q))
-      .slice(0, MAX_SEARCH_RESULTS);
-  }, [vessels, searchTerm]);
-
-  const handlePickResult = (mmsi: number) => {
-    onSelectVessel(mmsi);
-    setSearchTerm('');
-  };
+  // Vessels nearest the viewport centre — the sheet's glanceable content. Only
+  // computed on mobile (the only place it's shown), and only once the map has
+  // reported a centre. Vessels without a fix are skipped.
+  const nearest = useMemo(() => {
+    if (!isMobile || !mapCenter) return [];
+    const located = Object.values(vessels).filter(
+      (v) => Number.isFinite(v.lat) && Number.isFinite(v.lng)
+    );
+    return nearestTo(mapCenter, located, NEAREST_COUNT);
+  }, [isMobile, mapCenter, vessels]);
 
   return (
     <BottomSheet
@@ -127,50 +125,42 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             )}
           </div>
 
-          <div className="vessel-search">
-            <Search size={14} className="vessel-search-icon" aria-hidden="true" />
-            <input
-              type="text"
-              className="vessel-search-input"
-              placeholder="Search by name or MMSI"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              aria-label="Search vessels by name or MMSI"
-            />
-            {searchTerm && (
-              <button
-                className="vessel-search-clear"
-                onClick={() => setSearchTerm('')}
-                aria-label="Clear search"
-              >
-                <X size={13} />
-              </button>
-            )}
-            {searchTerm && (
-              <div className="vessel-search-results" role="listbox">
-                {searchResults.length === 0 && <div className="panel-note">No vessels match.</div>}
-                {searchResults.map((v) => {
-                  const cat = categorize(v.shipType);
-                  return (
-                    <button
-                      key={v.mmsi}
-                      className="vessel-search-result"
-                      role="option"
-                      aria-selected="false"
-                      onClick={() => handlePickResult(v.mmsi)}
-                    >
-                      <span className="vessel-search-dot" style={{ background: CATEGORY_COLORS[cat] }} />
-                      <span className="vessel-search-name">{v.name || `MMSI ${v.mmsi}`}</span>
-                      <span className="vessel-search-mmsi">{v.mmsi}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          {/* Desktop keeps search inside the rail. On mobile it moves out to a
+              floating pill over the map (rendered by MeriApp), so it isn't
+              buried under the sheet's peek. */}
+          {!isMobile && <VesselSearch vessels={vessels} onSelectVessel={onSelectVessel} />}
 
           <div className="filter-scroll-area">
-            <div className="filter-section-title">Ship types</div>
+            {nearest.length > 0 && (
+              <>
+                <div className="filter-section-title">Nearest</div>
+                <div className="nearest-list">
+                  {nearest.map(({ item: v, km }) => (
+                    <button
+                      key={v.mmsi}
+                      className="nearest-row"
+                      onClick={() => onSelectVessel(v.mmsi)}
+                    >
+                      <span
+                        className="nearest-dot"
+                        style={{ background: CATEGORY_COLORS[categorize(v.shipType)] }}
+                      />
+                      <span className="nearest-name">{v.name || `MMSI ${v.mmsi}`}</span>
+                      <span className="nearest-dist">{formatDistanceKm(km)}</span>
+                      <span className="nearest-speed">
+                        {Number.isFinite(v.sog) ? `${v.sog!.toFixed(1)} kn` : '—'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <div className="filter-section-title" style={{ marginTop: 14 }}>
+                  Vessel categories
+                </div>
+              </>
+            )}
+            {nearest.length === 0 && (
+              <div className="filter-section-title">Vessel categories</div>
+            )}
             <div className="category-list">
               {ALL_CATEGORIES.map((cat) => {
                 const active =
@@ -190,12 +180,19 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             </div>
 
             <div className="filter-section-title" style={{ marginTop: 14 }}>
-              Layers
+              Map layers
             </div>
             <div className="layer-toggles">
               <button className={`layer-toggle ${showPorts ? 'on' : ''}`} onClick={() => setShowPorts(!showPorts)}>
                 <Anchor size={14} />
                 <span>Ports</span>
+              </button>
+              <button
+                className={`layer-toggle ${showWebcams ? 'on' : ''}`}
+                onClick={() => setShowWebcams(!showWebcams)}
+              >
+                <Video size={14} />
+                <span>Webcams</span>
               </button>
               <button className={`layer-toggle ${showBuoys ? 'on' : ''}`} onClick={() => setShowBuoys(!showBuoys)}>
                 <Waves size={14} />
@@ -205,27 +202,39 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                 <TriangleAlert size={14} />
                 <span>AtoN faults</span>
               </button>
+            </div>
+
+            <div className="filter-section-title" style={{ marginTop: 14 }}>
+              Appearance
+            </div>
+            <div className="layer-toggles">
               <button
-                className={`layer-toggle ${showWebcams ? 'on' : ''}`}
-                onClick={() => setShowWebcams(!showWebcams)}
+                className={`layer-toggle ${mapTheme === 'dark' ? 'on' : ''}`}
+                onClick={() => setMapTheme('dark')}
+                aria-pressed={mapTheme === 'dark'}
               >
-                <Video size={14} />
-                <span>Webcams</span>
+                <Moon size={14} />
+                <span>Dark</span>
               </button>
               <button
-                className="layer-toggle"
-                onClick={() => setMapTheme(mapTheme === 'dark' ? 'light' : 'dark')}
+                className={`layer-toggle ${mapTheme === 'light' ? 'on' : ''}`}
+                onClick={() => setMapTheme('light')}
+                aria-pressed={mapTheme === 'light'}
               >
-                {mapTheme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-                <span>{mapTheme === 'dark' ? 'Light map' : 'Dark map'}</span>
+                <Sun size={14} />
+                <span>Light</span>
               </button>
+            </div>
+
+            <div className="layer-toggles" style={{ marginTop: 8 }}>
               <button
                 className={`layer-toggle ${replayActive ? 'on' : ''}`}
+                style={{ gridColumn: '1 / -1' }}
                 onClick={onEnterReplay}
                 title="Replay recorded vessel movement"
               >
                 <History size={14} />
-                <span>Replay</span>
+                <span>Replay recorded movement</span>
               </button>
             </div>
 

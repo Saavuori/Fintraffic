@@ -8,12 +8,17 @@
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 0;
-    height: 88dvh;
+    /* Rest on top of the bottom tab bar rather than under it, so the peek row
+       and the nav are both visible. The tab bar owns the home-indicator safe
+       area, so the sheet's own bottom padding no longer needs it. */
+    bottom: var(--tabbar-height);
+    /* Subtract the tab-bar band so the full snap keeps the same ~12dvh gap at
+       the top as before it was raised (rather than sliding under the notch). */
+    height: calc(88dvh - var(--tabbar-height));
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    padding: 0 16px calc(14px + env(safe-area-inset-bottom));
+    padding: 0 16px 14px;
     background: var(--bg-panel);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);

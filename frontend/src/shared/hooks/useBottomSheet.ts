@@ -31,7 +31,7 @@ interface UseBottomSheetReturn {
   isDragging: boolean;
 }
 
-const PEEK_PX = 72; // handle + first content row stays visible when collapsed
+const PEEK_PX = 40; // minimized = just the grab handle; content appears on drag
 const FLING_V = 0.5; // px/ms — above this a release flings one snap step
 const RUBBER = 0.3; // resistance when dragged above the full stop
 
@@ -65,9 +65,13 @@ export function useBottomSheet({
   // Live values consulted by imperative pointer handlers (no re-render). Written
   // in effects, not during render (refs must not be mutated while rendering).
   const snapRef = useRef(snap);
+  // The last non-peek height the user settled on, so tapping the handle to
+  // re-open returns there (half or full) instead of always jumping to half.
+  const expandedSnapRef = useRef(expandedSnap);
   const onCollapsedChangeRef = useRef(onCollapsedChange);
   useEffect(() => {
     snapRef.current = snap;
+    expandedSnapRef.current = expandedSnap;
     onCollapsedChangeRef.current = onCollapsedChange;
   });
 
@@ -204,8 +208,9 @@ export function useBottomSheet({
       const onUp = () => {
         finish();
         if (!moved) {
-          // A tap on the handle toggles between peek and half.
-          settle(snapRef.current === 'peek' ? 'half' : 'peek');
+          // A tap on the handle toggles the sheet: from peek it re-opens to the
+          // last height the user chose (half or full); otherwise it collapses.
+          settle(snapRef.current === 'peek' ? expandedSnapRef.current : 'peek');
           return;
         }
         const targets = ORDER.map((s) => ({ s, t: translateFor(el, s) }));
