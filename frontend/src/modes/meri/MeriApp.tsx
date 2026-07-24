@@ -169,6 +169,16 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   // The trail is drawn in the selected vessel's category colour.
   const trailColor = liveVessel ? CATEGORY_COLORS[categorize(liveVessel.shipType)] : '#2dd4bf';
 
+  // mmsi → category icon + name for replay markers, from the *unfiltered* live
+  // fleet so category filters don't strip colours off the playback overlay.
+  const replayMeta = useMemo(() => {
+    const meta: Record<string, { icon: string; name: string }> = {};
+    for (const [id, v] of Object.entries(vessels)) {
+      meta[id] = { icon: `vessel-${categorize(v.shipType)}`, name: v.name ?? '' };
+    }
+    return meta;
+  }, [vessels]);
+
   // Entering replay clears the live selection so its card/popup don't linger
   // over the historical overlay.
   const replayEnter = replay.enter;
@@ -211,6 +221,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         onDisableFollowing={disableFollowing}
         onBackgroundClick={handleBackgroundClick}
         replay={replay.control}
+        replayMeta={replayMeta}
       />
 
       <FilterPanel
@@ -245,6 +256,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
           onToggleTrail={toggleTrail}
           trailWindowSec={trailWindowSec}
           onSetTrailWindow={setTrailWindowSec}
+          replayActive={replay.active}
         />
       )}
 

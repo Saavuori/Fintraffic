@@ -12,6 +12,9 @@ interface VesselCardProps {
   onToggleTrail: () => void;
   trailWindowSec: number;
   onSetTrailWindow: (sec: number) => void;
+  // Follow and trail act on the live layers, which are hidden during replay —
+  // hide their controls so the card is info-only while playback runs.
+  replayActive?: boolean;
 }
 
 const TRAIL_WINDOWS: { label: string; sec: number }[] = [
@@ -30,6 +33,7 @@ export const VesselCard: React.FC<VesselCardProps> = ({
   onToggleTrail,
   trailWindowSec,
   onSetTrailWindow,
+  replayActive = false,
 }) => {
   const cat = categorize(vessel.shipType);
 
@@ -42,7 +46,7 @@ export const VesselCard: React.FC<VesselCardProps> = ({
       </span>
       {vessel.dest && <span className="vessel-card-dest">→ {vessel.dest}</span>}
 
-      {showTrail && (
+      {!replayActive && showTrail && (
         <span className="trail-window" role="group" aria-label="Track history window">
           {TRAIL_WINDOWS.map((w) => (
             <button
@@ -56,22 +60,26 @@ export const VesselCard: React.FC<VesselCardProps> = ({
         </span>
       )}
 
-      <button
-        className={`icon-btn trail-btn ${showTrail ? 'active' : ''}`}
-        onClick={onToggleTrail}
-        aria-label={showTrail ? 'Hide track history' : 'Show track history'}
-        title={showTrail ? 'Hide track history' : 'Show track history'}
-      >
-        <Route size={15} />
-      </button>
-      <button
-        className={`icon-btn follow-btn ${isFollowing ? 'active' : ''}`}
-        onClick={onToggleFollow}
-        aria-label={isFollowing ? 'Stop following' : 'Follow vessel'}
-        title={isFollowing ? 'Stop following' : 'Follow vessel'}
-      >
-        <Crosshair size={15} />
-      </button>
+      {!replayActive && (
+        <>
+          <button
+            className={`icon-btn trail-btn ${showTrail ? 'active' : ''}`}
+            onClick={onToggleTrail}
+            aria-label={showTrail ? 'Hide track history' : 'Show track history'}
+            title={showTrail ? 'Hide track history' : 'Show track history'}
+          >
+            <Route size={15} />
+          </button>
+          <button
+            className={`icon-btn follow-btn ${isFollowing ? 'active' : ''}`}
+            onClick={onToggleFollow}
+            aria-label={isFollowing ? 'Stop following' : 'Follow vessel'}
+            title={isFollowing ? 'Stop following' : 'Follow vessel'}
+          >
+            <Crosshair size={15} />
+          </button>
+        </>
+      )}
       <button className="icon-btn" onClick={onClose} aria-label="Deselect vessel">
         <X size={15} />
       </button>
