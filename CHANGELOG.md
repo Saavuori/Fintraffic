@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.8.1] - 2026-07-24
+
+### Fixed
+- **Meri: Länsisatama is its own labelled port**: the FIHEL port pin (previously shown under Digitraffic's upstream "Helsinki (Helsingfors)" name) is now named and positioned as Länsisatama, pinned at the Länsiterminaali 2 passenger terminal (Tyynenmerenkatu 14) — the Tallink Megastar berth — instead of a generic Jätkäsaari coordinate that sat directly on top of the LT2 webcam marker. The LT1/LT2 webcam markers were moved in close beside the port pin to match.
+
+### Docs
+- **README: document the Länsisatama webcam feed**: the Port of Helsinki LT1/LT2 YouTube webcams (added to the map in v0.7.0 but never documented) are now listed in the Meri feature list and the Data Sources table.
+
+---
+
 ## [v0.8.0] - 2026-07-24
 
 ### Added
