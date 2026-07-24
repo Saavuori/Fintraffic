@@ -52,12 +52,27 @@ interface ReplayControl {
   seekTs: number; // target playhead when seekNonce changes
   onProgress: (ts: number) => void;
   onEnded: () => void;
+  // Reports the selected vessel's interpolated pose at the current playhead,
+  // so the detail panel can show live-updating speed/heading during replay.
+  // Called with null when the selection has no pose at this instant (before
+  // its first fix, past a coverage gap, etc.) or when nothing is selected.
+  onSelectedPose: (pose: ReplaySelectedPose | null) => void;
 }
 
 interface ReplayPose {
   lng: number;
   lat: number;
   hdg: number;
+  sog: number;
+}
+
+export interface ReplaySelectedPose {
+  mmsi: number;
+  lat: number;
+  lng: number;
+  cog: number;
+  sog: number;
+  ts: number;
 }
 
 /**
@@ -74,7 +89,7 @@ function poseAt(pts: ReplayPoint[], t: number): ReplayPose | null {
   if (t < first[2]) return null;
   if (t > last[2]) {
     return t - last[2] <= REPLAY_EDGE_HOLD_SEC
-      ? { lng: last[0], lat: last[1], hdg: last[3] }
+      ? { lng: last[0], lat: last[1], hdg: last[3], sog: last[4] }
       : null;
   }
 
@@ -89,12 +104,12 @@ function poseAt(pts: ReplayPoint[], t: number): ReplayPose | null {
   const a = pts[lo];
   const b = pts[hi];
   const span = b[2] - a[2];
-  if (span <= 0) return { lng: a[0], lat: a[1], hdg: a[3] };
+  if (span <= 0) return { lng: a[0], lat: a[1], hdg: a[3], sog: a[4] };
 
   if (span > REPLAY_MAX_GAP_SEC) {
     // Coverage gap: hold briefly at whichever fix is near, else disappear.
-    if (t - a[2] <= REPLAY_EDGE_HOLD_SEC) return { lng: a[0], lat: a[1], hdg: a[3] };
-    if (b[2] - t <= REPLAY_EDGE_HOLD_SEC) return { lng: b[0], lat: b[1], hdg: b[3] };
+    if (t - a[2] <= REPLAY_EDGE_HOLD_SEC) return { lng: a[0], lat: a[1], hdg: a[3], sog: a[4] };
+    if (b[2] - t <= REPLAY_EDGE_HOLD_SEC) return { lng: b[0], lat: b[1], hdg: b[3], sog: b[4] };
     return null;
   }
 
@@ -103,6 +118,7 @@ function poseAt(pts: ReplayPoint[], t: number): ReplayPose | null {
     lng: a[0] + (b[0] - a[0]) * f,
     lat: a[1] + (b[1] - a[1]) * f,
     hdg: lerpAngle(a[3], b[3], f),
+    sog: a[4] + (b[4] - a[4]) * f,
   };
 }
 
@@ -392,9 +408,28 @@ export function Map({
         }
 
         const t = replayClockRef.current;
-        if (rp.playing && now - replayLastProgressRef.current >= REPLAY_PROGRESS_INTERVAL_MS) {
+        const reportProgress = now - replayLastProgressRef.current >= REPLAY_PROGRESS_INTERVAL_MS;
+        if (reportProgress) {
           replayLastProgressRef.current = now;
-          rp.onProgress(t);
+          if (rp.playing) rp.onProgress(t);
+        }
+
+        const selectedInReplay = selectedRef.current;
+        if (reportProgress) {
+          const selectedPts = selectedInReplay !== null ? rp.data[String(selectedInReplay)] : undefined;
+          const selectedPose = selectedPts ? poseAt(selectedPts, t) : null;
+          rp.onSelectedPose(
+            selectedPose && selectedInReplay !== null
+              ? {
+                  mmsi: selectedInReplay,
+                  lat: selectedPose.lat,
+                  lng: selectedPose.lng,
+                  cog: selectedPose.hdg,
+                  sog: selectedPose.sog,
+                  ts: t,
+                }
+              : null
+          );
         }
 
         if (now - lastSetDataRef.current < SET_DATA_INTERVAL_MS) return;
@@ -403,7 +438,6 @@ export function Map({
         const replaySource = map.getSource('replay') as maplibregl.GeoJSONSource | undefined;
         if (!replaySource) return;
         const meta = replayMetaRef.current;
-        const selectedInReplay = selectedRef.current;
         const feats: Feature[] = [];
         for (const [id, pts] of Object.entries(rp.data)) {
           const pose = poseAt(pts, t);

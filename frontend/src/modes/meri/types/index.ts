@@ -41,9 +41,10 @@ export interface VesselTrailResponse {
   points: TrailPoint[];
 }
 
-// One recorded fix in a fleet replay: [lng, lat, ts, cog]. cog (course over
-// ground, degrees) drives the marker heading during playback.
-export type ReplayPoint = [number, number, number, number];
+// One recorded fix in a fleet replay: [lng, lat, ts, cog, sog]. cog (course
+// over ground, degrees) drives the marker heading during playback; sog (knots)
+// feeds the detail panel while a vessel is selected during replay.
+export type ReplayPoint = [number, number, number, number, number];
 
 export interface FleetReplayResponse {
   from: number; // window start, epoch seconds

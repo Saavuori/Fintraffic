@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { fetchFleetReplay } from '../lib/api';
+import type { ReplaySelectedPose } from '../components/Map';
 import type { ReplayPoint } from '../types';
 
 export interface ReplayControl {
@@ -12,6 +13,7 @@ export interface ReplayControl {
   seekTs: number;
   onProgress: (ts: number) => void;
   onEnded: () => void;
+  onSelectedPose: (pose: ReplaySelectedPose | null) => void;
 }
 
 export interface FleetReplay {
@@ -32,6 +34,10 @@ export interface FleetReplay {
   vesselCount: number;
   // The control object handed to <Map>, or null when replay is off.
   control: ReplayControl | null;
+  // The selected vessel's interpolated pose at the current playhead, kept in
+  // sync by <Map>'s rAF loop so the detail panel updates live during playback.
+  // Null when nothing is selected or the selection has no pose right now.
+  selectedPose: ReplaySelectedPose | null;
   // Actions.
   enter: (windowSec: number) => void;
   exit: () => void;
@@ -63,6 +69,7 @@ export function useFleetReplay(): FleetReplay {
   const [speed, setSpeedState] = useState(60);
   const [windowSec, setWindowSec] = useState(3 * 3600);
   const [seek, setSeek] = useState<{ nonce: number; ts: number }>({ nonce: 0, ts: 0 });
+  const [selectedPose, setSelectedPose] = useState<ReplaySelectedPose | null>(null);
 
   // Guards against a slow/stale fetch resolving after the user has moved on.
   const loadIdRef = useRef(0);
@@ -85,6 +92,7 @@ export function useFleetReplay(): FleetReplay {
         setPlaying(true);
         setActive(true);
         setLoading(false);
+        setSelectedPose(null);
       })
       .catch((err) => {
         if (id !== loadIdRef.current) return;
@@ -117,6 +125,7 @@ export function useFleetReplay(): FleetReplay {
     setData({});
     setError(null);
     setTruncated(false);
+    setSelectedPose(null);
   }, []);
 
   const togglePlay = useCallback(() => {
@@ -139,6 +148,7 @@ export function useFleetReplay(): FleetReplay {
 
   const onProgress = useCallback((ts: number) => setPlayhead(ts), []);
   const onEnded = useCallback(() => setPlaying(false), []);
+  const onSelectedPose = useCallback((pose: ReplaySelectedPose | null) => setSelectedPose(pose), []);
 
   const control: ReplayControl | null = active
     ? {
@@ -151,6 +161,7 @@ export function useFleetReplay(): FleetReplay {
         seekTs: seek.ts,
         onProgress,
         onEnded,
+        onSelectedPose,
       }
     : null;
 
@@ -168,6 +179,7 @@ export function useFleetReplay(): FleetReplay {
     windowSec,
     vesselCount: Object.keys(data).length,
     control,
+    selectedPose,
     enter,
     exit,
     setWindow,

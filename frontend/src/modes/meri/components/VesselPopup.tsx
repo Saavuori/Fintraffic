@@ -10,6 +10,9 @@ interface VesselPopupProps {
   onClose: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  // During replay the selected vessel may not be transmitting live AIS at
+  // all, so skip the live metadata fetch rather than show an unrelated ship.
+  replayActive?: boolean;
 }
 
 function formatEta(eta?: string): string | null {
@@ -27,6 +30,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
   onClose,
   isCollapsed,
   onToggleCollapse,
+  replayActive = false,
 }) => {
   const { className: collapsedClass, ...collapsibleProps } = useCollapsiblePanel(
     isCollapsed,
@@ -47,6 +51,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
   }
 
   useEffect(() => {
+    if (replayActive) return;
     let active = true;
     fetchVesselDetails(vessel.mmsi)
       .then((d) => {
@@ -56,7 +61,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
     return () => {
       active = false;
     };
-  }, [vessel.mmsi]);
+  }, [vessel.mmsi, replayActive]);
 
   useEffect(() => {
     const id = setInterval(() => setNowMs(Date.now()), 1000);
