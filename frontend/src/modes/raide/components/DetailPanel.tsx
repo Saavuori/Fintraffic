@@ -33,7 +33,7 @@ function BoardRowView({ row, direction }: { row: BoardRow; direction: 'to' | 'fr
       </span>
       <span className="board-train">{label}</span>
       <span className="board-terminus">
-        {direction === 'to' ? 'â†’ ' : 'â† '}
+        {direction === 'to' ? '→ ' : '← '}
         {row.terminus}
       </span>
       <span className="board-track">{row.cancelled ? 'CANCELLED' : row.track || ''}</span>
@@ -65,7 +65,7 @@ function TrainDetail({ train }: { train: Train }) {
             <div className="dest-row">
               <span>Route</span>
               <b>
-                {train.origin} â†’ {train.dest}
+                {train.origin} → {train.dest}
               </b>
             </div>
           )}
@@ -120,7 +120,7 @@ function TrainDetail({ train }: { train: Train }) {
 }
 
 function StationDetail({ board }: { board: Board | null }) {
-  if (!board) return <p className="panel-note">Loading timetableâ€¦</p>;
+  if (!board) return <p className="panel-note">Loading timetable…</p>;
   return (
     <>
       <div className="section-label">Departures</div>

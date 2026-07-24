@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.9.0] - 2026-07-24
+
+### Added
+- **Meri: vessel search**: the filter panel gains a search box (by name or MMSI) over the full live fleet, independent of the active category filter, showing up to 8 matches; picking a result selects that vessel the same as clicking its marker.
+
+### Fixed
+- **Mobile: touch targets, keyboard focus, and mojibake**: panel-header icon buttons (close/collapse) grow to a 44px tap target on phones, with a smaller 34px bump for the compact vessel/train/selection card so it doesn't overflow; all interactive elements now show a visible focus ring on keyboard navigation; Meri's connection-status dot gets an accessible label instead of relying on color alone; and several remaining UTF-8 mojibake artifacts (Course/Heading `°` in Meri's vessel panel, `→`/`←`/`…` in Raide's train panel and map popups) are repaired.
+- **Meri: replay "last fix" no longer misleading**: during fleet replay the detail panel's fix-age field now shows the recorded historical timestamp ("Recorded") instead of a live "Xs ago" counter, which was measuring elapsed real time against a historical position and read as a stale AIS connection rather than played-back history.
+- **Consistency: mobile breakpoint detection and swipe gestures**: Meri's one-time `window.innerWidth` check is replaced with the `matchMedia` pattern already used by Raide/Tie; Tie now also has the shared edge-swipe gesture to open/close its panels, matching Meri and Raide.
+
 ## [v0.8.1] - 2026-07-24
 
 ### Fixed

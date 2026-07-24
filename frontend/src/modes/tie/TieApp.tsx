@@ -4,6 +4,7 @@ import Map from './components/Map';
 import { FilterPanel } from './components/FilterPanel';
 import { DetailPanel, type Selection } from './components/DetailPanel';
 import { SelectedCard } from './components/SelectedCard';
+import { useSwipeGestures } from '../../shared/hooks/useSwipeGestures';
 import { type Theme } from './lib/theme';
 import type { Station } from './lib/traffic';
 import type { ParkingFacility } from './lib/parking';
@@ -29,6 +30,13 @@ function TieApp({ theme, onToggleTheme }: TieAppProps) {
     typeof window !== 'undefined' ? window.matchMedia(MOBILE_QUERY).matches : false
   );
   const [isDetailCollapsed, setIsDetailCollapsed] = useState<boolean>(false);
+
+  useSwipeGestures({
+    isFilterCollapsed,
+    isDetailCollapsed,
+    setFilterCollapsed: setIsFilterCollapsed,
+    setDetailCollapsed: setIsDetailCollapsed,
+  });
 
   const toggleLayer = useCallback(
     (key: LayerKey) => setLayerVisibility(prev => ({ ...prev, [key]: !prev[key] })),
