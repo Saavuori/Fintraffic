@@ -3,15 +3,7 @@
 [![Live Application](https://img.shields.io/badge/Live-fintraffic.duckdns.org-2dd4bf?style=for-the-badge&logo=react)](https://fintraffic.duckdns.org/)
 [![Changelog](https://img.shields.io/badge/Changelog-GitHub%20Pages-38bdf8?style=for-the-badge&logo=github)](https://saavuori.github.io/Fintraffic/)
 
-One live map for **Finnish sea, rail and road traffic**, built on Digitraffic's open data. Fintraffic consolidates three standalone apps — Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) — into a single Go backend + React frontend with a mode switcher.
-
-**Consolidation status:**
-
-| Mode | Source app | Status |
-|---|---|---|
-| 🚢 **Meri** | [Marinetraffic](https://github.com/Saavuori/Marinetraffic) | ✅ Ported (phase 1) |
-| 🚆 **Raide** | [railway](https://github.com/Saavuori/railway) | ✅ Ported (phase 2) |
-| 🚗 **Tie** | [tieliikenne](https://github.com/Saavuori/tieliikenne) | ✅ Ported (phase 3) |
+One live map for **Finnish sea, rail and road traffic**, built on Digitraffic's open data: a single Go backend + React frontend with three switchable modes — 🚢 **Meri** (vessels), 🚆 **Raide** (trains) and 🚗 **Tie** (road traffic).
 
 ---
 
@@ -80,47 +72,7 @@ Modes implement the `server.Mode` interface (`Name`, `Register`, `Health`); the 
 
 ## HTTP API
 
-Global endpoints:
-
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/api/health` | Aggregated status: redis, uptime, per-mode health (`modes.meri.*`) |
-| `GET` | `/api/version` | Build `version`, `build_date`, `git_sha` (injected via ldflags) |
-| `GET` | `/metrics` | Prometheus exposition format |
-| `GET` | `/` | Embedded React SPA (go:embed static fallback) |
-
-Meri mode (`/api/meri`):
-
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/api/meri/ports` | Finnish ports with coordinates (thinned from Portnet) |
-| `GET` | `/api/meri/port-calls/{locode}` | Arrivals/departures for a port by UN/LOCODE |
-| `GET` | `/api/meri/vessel/{mmsi}` | Vessel metadata merged with its live cached position |
-| `GET` | `/api/meri/vessel/{mmsi}/trail` | Recorded track as `[lng, lat, ts]` tuples |
-| `GET` | `/api/meri/replay` | All vessels' recorded tracks in a window (fleet replay) |
-| `GET` | `/api/meri/sea-state` | Smart-buoy sea state measurements |
-| `GET` | `/api/meri/aton-faults` | Active aids-to-navigation faults |
-| `GET` | `/api/meri/stream` | WebSocket stream of live vessel positions (snapshot + delta) |
-
-Raide mode (`/api/raide`):
-
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/api/raide/trains` | Live train positions merged with timetable metadata |
-| `GET` | `/api/raide/stations` | Station register (code, name, coordinates, passenger/major flags) |
-| `GET` | `/api/raide/departures/{shortCode}` | Departure/arrival board for one station |
-
-Tie mode (`/api/tie`):
-
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/api/tie/tms` | TMS stations with sensor data, bearing and free-flow baselines |
-| `GET` | `/api/tie/roadworks` | Road works (flattened Datex2, incl. work-zone speed limits) |
-| `GET` | `/api/tie/incidents` | Traffic incident announcements |
-| `GET` | `/api/tie/speedlimits` | Variable speed-limit signs (currently displayed limits) |
-| `GET` | `/api/tie/parking` | Parking facilities with live availability |
-| `GET` | `/api/tie/weathercams` | Weather cameras with nearest-station weather |
-| `GET` | `/api/tie/charging` | EV charging network with live per-EVSE availability |
+Global endpoints (`/api/health`, `/api/version`, `/metrics`) plus per-mode routes under `/api/meri/`, `/api/raide/` and `/api/tie/`. The full endpoint reference — paths, query parameters, response shapes and caching/poll cadences — lives in **[docs/API.md](docs/API.md)**.
 
 ---
 
@@ -185,7 +137,7 @@ curl http://localhost:8080/api/health
 
 ### Production Deployment (RHEL & Podman)
 
-Deployed behind a single shared Caddy instance on an Oracle Cloud host. The backend publishes no ports and joins the external `web-proxy` Podman network; Caddy reverse-proxies `fintraffic.duckdns.org` to it. This one stack replaces the standalone marinetraffic/railway/tieliikenne stacks (and their per-app Redis instances and domains).
+Deployed behind a single shared Caddy instance on an Oracle Cloud host. The backend publishes no ports and joins the external `web-proxy` Podman network; Caddy reverse-proxies `fintraffic.duckdns.org` to it.
 
 Two scripts in `deploy/`:
 
