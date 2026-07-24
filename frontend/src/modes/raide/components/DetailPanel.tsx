@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, ChevronRight, TrainFront, MapPin } from 'lucide-react';
-import { useCollapsiblePanel, stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
+import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
+import { BottomSheet } from '../../../shared/components/BottomSheet';
 import {
   type Train,
   type StationMeta,
@@ -19,6 +20,7 @@ interface DetailPanelProps {
   onClose: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  isMobile: boolean;
 }
 
 /** One line of a departure/arrival board. */
@@ -145,12 +147,9 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   onClose,
   isCollapsed,
   onToggleCollapse,
+  isMobile,
 }) => {
-  const { className: collapsedClass, ...collapsibleProps } = useCollapsiblePanel(
-    isCollapsed,
-    onToggleCollapse,
-    'Open details panel'
-  );
+  const bodyCollapsed = !isMobile && isCollapsed;
 
   const title = train ? trainTitle(train) : station?.name ?? '';
   const subtitle = train
@@ -158,8 +157,15 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     : station?.code ?? '';
 
   return (
-    <div className={`glass-panel detail-popup ${collapsedClass}`} {...collapsibleProps}>
-      {!isCollapsed && (
+    <BottomSheet
+      variant="detail"
+      isMobile={isMobile}
+      open
+      ariaLabel="Open details panel"
+      collapsed={isCollapsed}
+      onToggleCollapse={onToggleCollapse}
+    >
+      {!bodyCollapsed && (
         <div className="detail-content" onClick={stopPanelClick}>
           <div className="detail-header">
             <div className={`detail-badge ${station ? 'station-badge' : ''}`}>
@@ -180,6 +186,6 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
           {train ? <TrainDetail train={train} /> : <StationDetail board={board} />}
         </div>
       )}
-    </div>
+    </BottomSheet>
   );
 };

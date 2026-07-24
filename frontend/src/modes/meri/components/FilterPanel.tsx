@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Ship, Anchor, Waves, TriangleAlert, Moon, Sun, ChevronLeft, History, Video, Search, X } from 'lucide-react';
-import { useCollapsiblePanel, stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
+import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
+import { BottomSheet } from '../../../shared/components/BottomSheet';
 import { ALL_CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS, categorize, type ShipCategory } from '../lib/shipTypes';
 import type { ConnectionStatus } from '../hooks/useWebSocket';
 import type { AtonFaultFeature, Vessel } from '../types';
@@ -18,6 +19,7 @@ interface FilterPanelProps {
   connectionStatus: ConnectionStatus;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  isMobile: boolean;
   mapTheme: 'light' | 'dark';
   setMapTheme: (theme: 'light' | 'dark') => void;
   showPorts: boolean;
@@ -44,6 +46,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   connectionStatus,
   isCollapsed,
   onToggleCollapse,
+  isMobile,
   mapTheme,
   setMapTheme,
   showPorts,
@@ -58,11 +61,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   replayActive,
   onEnterReplay,
 }) => {
-  const { className: collapsedClass, ...collapsibleProps } = useCollapsiblePanel(
-    isCollapsed,
-    onToggleCollapse,
-    'Open filters panel'
-  );
+  // On mobile the sheet body stays mounted (the sheet's translateY hides it at
+  // peek); only desktop unmounts the body when collapsed.
+  const bodyCollapsed = !isMobile && isCollapsed;
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -82,13 +83,20 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   };
 
   return (
-    <div className={`glass-panel filter-panel ${collapsedClass}`} {...collapsibleProps}>
-      <div className="panel-header" onClick={isCollapsed ? undefined : stopPanelClick}>
+    <BottomSheet
+      variant="filter"
+      isMobile={isMobile}
+      open
+      ariaLabel="Open filters panel"
+      collapsed={isCollapsed}
+      onToggleCollapse={onToggleCollapse}
+    >
+      <div className="panel-header" onClick={bodyCollapsed ? undefined : stopPanelClick}>
         <div className="panel-title">
           <Ship size={16} />
           <span>Meriliikenne</span>
         </div>
-        {!isCollapsed && (
+        {!bodyCollapsed && (
           <button
             className="icon-btn"
             onClick={(e) => {
@@ -102,7 +110,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         )}
       </div>
 
-      {!isCollapsed && (
+      {!bodyCollapsed && (
         <div className="filter-content" onClick={stopPanelClick}>
           <div className="panel-stats">
             <span
@@ -242,6 +250,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </BottomSheet>
   );
 };

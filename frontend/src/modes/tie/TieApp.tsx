@@ -4,7 +4,7 @@ import Map from './components/Map';
 import { FilterPanel } from './components/FilterPanel';
 import { DetailPanel, type Selection } from './components/DetailPanel';
 import { SelectedCard } from './components/SelectedCard';
-import { useSwipeGestures } from '../../shared/hooks/useSwipeGestures';
+import { useIsMobile, MOBILE_QUERY } from '../../shared/hooks/useMediaQuery';
 import { type Theme } from './lib/theme';
 import type { Station } from './lib/traffic';
 import type { ParkingFacility } from './lib/parking';
@@ -13,14 +13,13 @@ import type { ChargingStation } from './lib/charging';
 import { type LayerKey, type LayerVisibility, DEFAULT_LAYER_VISIBILITY } from './lib/layers';
 import './tie.css';
 
-const MOBILE_QUERY = '(max-width: 768px)';
-
 interface TieAppProps {
   theme: Theme;
   onToggleTheme: () => void;
 }
 
 function TieApp({ theme, onToggleTheme }: TieAppProps) {
+  const isMobile = useIsMobile();
   const [selection, setSelection] = useState<Selection | null>(null);
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>(DEFAULT_LAYER_VISIBILITY);
 
@@ -30,13 +29,6 @@ function TieApp({ theme, onToggleTheme }: TieAppProps) {
     typeof window !== 'undefined' ? window.matchMedia(MOBILE_QUERY).matches : false
   );
   const [isDetailCollapsed, setIsDetailCollapsed] = useState<boolean>(false);
-
-  useSwipeGestures({
-    isFilterCollapsed,
-    isDetailCollapsed,
-    setFilterCollapsed: setIsFilterCollapsed,
-    setDetailCollapsed: setIsDetailCollapsed,
-  });
 
   const toggleLayer = useCallback(
     (key: LayerKey) => setLayerVisibility(prev => ({ ...prev, [key]: !prev[key] })),
@@ -88,6 +80,7 @@ function TieApp({ theme, onToggleTheme }: TieAppProps) {
         onToggleTheme={onToggleTheme}
         isCollapsed={isFilterCollapsed}
         onToggleCollapse={() => setIsFilterCollapsed(v => !v)}
+        isMobile={isMobile}
       />
 
       <button
@@ -107,6 +100,7 @@ function TieApp({ theme, onToggleTheme }: TieAppProps) {
           onClose={clearSelection}
           isCollapsed={isDetailCollapsed}
           onToggleCollapse={() => setIsDetailCollapsed(v => !v)}
+          isMobile={isMobile}
         />
       )}
     </div>
