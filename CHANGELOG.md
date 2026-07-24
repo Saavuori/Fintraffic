@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.6.1] - 2026-07-24
+
+### Fixed
+- **Deploy: auto-update is now installed by `install.sh`**: the installer writes `update.sh` into the app dir and registers its `*/5` cron idempotently — previously the update script shipped in the repo but nothing installed it, so a fresh install never auto-updated. `update.sh` no longer hardcodes `/home/opc/fintraffic`: it derives the compose dir from its own location and auto-detects the container engine, and the image is overridable via `IMAGE`.
+- **Deploy/docs: the production domain is `liikenne.duckdns.org`** — the install script's default check domain, the README live badge and deploy notes, and the changelog site's back-link all pointed at `fintraffic.duckdns.org`, which was never registered (it made the installer's post-deploy verification fail even when the stack was healthy). The domain can also be passed as the first argument: `./install.sh traffic.example.org`.
+
+---
+
 ## [v0.6.0] - 2026-07-24
 
 ### Added
