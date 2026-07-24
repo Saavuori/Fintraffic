@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.10.3] - 2026-07-24
+
+### Changed
+- **Dependency sweep across backend, frontend and CI**: `go-redis` jumps 14 minor versions (9.7.1 → 9.21.0), picking up connection-pool race and leak fixes that matter precisely when Redis goes away and comes back — the failure mode the in-memory fallback is built around — plus lifetime jitter so pooled connections don't all expire at once. `prometheus/client_golang` (1.23.2 → 1.24.1) now recovers from a panicking collector instead of taking `/metrics` down with it and exposes Go 1.26 scheduler metrics; `paho.mqtt.golang` (1.5.0 → 1.5.1) fixes CVE-2025-10543 and a panic on manual ACK; `coder/websocket` (1.8.12 → 1.8.15) drops two allocations per frame read, which the Meri delta hub pays on every frame to every client. Frontend dependencies move up within their existing ranges (React 19.2.8, Vite 8.1.5, ESLint 10.8, lucide-react 1.26).
+- **Build and CI images move to supported releases**: the runtime image is Alpine 3.23 instead of 3.21 (which reaches end of life this autumn), the frontend build stage uses Node 24 — Active LTS — instead of Node 22, and CI now runs Node 24 rather than the end-of-lifed Node 20. GitHub Actions are bumped to their current majors (`checkout` v7 everywhere — PR checks were still on v4 — `setup-go` v7, `setup-node` v7, the Pages actions, and the Docker build/login/buildx/qemu actions), taking every job off the deprecated Node 20 action runtime.
+
 ## [v0.10.2] - 2026-07-24
 
 ### Fixed
