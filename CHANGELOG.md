@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.5.0] - 2026-07-24
+
+### Added
+- **Tie mode (consolidation phase 3 — all three apps now consolidated)**: The tieliikenne road-traffic app is the third and final Fintraffic mode. The backend gained `internal/tie` — seven polled Digitraffic/Fintraffic feeds (TMS station data every 1 min with seasonal free-flow-speed baselines and road bearings refreshed 6-hourly, road works & incidents flattened from Datex2 every 2 min, variable speed-limit signs every 1 min, parking availability every 2 min, AFIR EV-charging with live per-EVSE availability every 5 min, and weather cameras enriched with nearest road-weather observations every 3 min) — mounted under `/api/tie/*` with `modes.tie.*` health reporting. The frontend gained `src/modes/tie/` — the road map with its seven toggleable layers, locate-me control and camera thumbnails — styled by the shared design system plus a scoped road-blue accent (`tie.css`). The mode switcher now offers all of Meri / Raide / Tie.
+
+---
+
 ## [v0.4.0] - 2026-07-24
 
 ### Added

@@ -2,18 +2,19 @@
 
 ## What this is
 
-Fintraffic — one live map for Finnish traffic with three modes: **Meri** (sea, ported from Marinetraffic), **Raide** (rail, ported from railway), **Tie** (road, from tieliikenne — not yet ported). Go backend + React 19/Vite/MapLibre frontend, shipped as a single container with the frontend embedded via `go:embed`.
+Fintraffic — one live map for Finnish traffic with three modes, all ported from their standalone apps: **Meri** (sea, from Marinetraffic), **Raide** (rail, from railway), **Tie** (road, from tieliikenne). Go backend + React 19/Vite/MapLibre frontend, shipped as a single container with the frontend embedded via `go:embed`.
 
 ## Architecture
 
 - One Go binary (`backend/cmd/fintraffic`). `internal/core/` is mode-agnostic: `cache` (Redis hash per mode, e.g. `fintraffic:meri:positions`, with in-memory fallback), `config`, `upstream` (Digitraffic HTTP client + TTL cache + singleflight), `server` (router, embedded SPA, global `/api/health` + `/api/version` + `/metrics`).
-- Each mode is a package (`internal/meri/`, `internal/raide/`, later `internal/tie/`) implementing `server.Mode` (`Name`, `Register`, `Health`) and mounting routes under `/api/<mode>/`. The global health endpoint aggregates every mode's `Health()` under `modes.<name>`. Poll-style modes cache snapshot blobs via the core cache's generic `SetValue`/`GetValue` (Redis with TTL + per-value in-memory fallback, see `raide.Store`).
+- Each mode is a package (`internal/meri/`, `internal/raide/`, `internal/tie/`) implementing `server.Mode` (`Name`, `Register`, `Health`) and mounting routes under `/api/<mode>/`. The global health endpoint aggregates every mode's `Health()` under `modes.<name>`. Poll-style modes cache snapshot blobs via the core cache's generic `SetValue`/`GetValue` (Redis with TTL + per-value in-memory fallback, see `raide.Store` / `tie.Store`).
+- Tie specifics: seven feeds across several hosts, so it keeps its own `fetchJSON` (full URLs, explicit gzip unwrap — tie.digitraffic.fi gzips regardless of Accept-Encoding) instead of `core/upstream`. TMS speed colouring divides by the seasonal free-flow baseline (`VVAPAAS1/2` sensor constants), never a static "speed limit"; sensor ids 5122/5125 are speed, 5116/5119 volume (shortNames are ambiguous).
 - Meri specifics: AIS over MQTT (`wss://meri.digitraffic.fi:443/mqtt`, topic `vessels-v2/#`), REST hydration on boot, snapshot+delta WebSocket hub (`/api/meri/stream`), SQLite trail store (`modernc.org/sqlite`, pure Go — keep CGO_ENABLED=0) with 60d retention and fleet replay.
 - Frontend: `src/App.tsx` is the mode-switcher shell; `src/modes/meri/` owns the vessel app; `src/shared/` holds mode-agnostic hooks/components. No router, no state library — plain hooks. New modes get `src/modes/<mode>/` and an entry in `MODES` in App.tsx.
 
-## Porting a mode (tie)
+## Adding a mode
 
-Follow the raide pattern (the reference port): backend package with a `Service` implementing `server.Mode` — pollers writing typed snapshots through a `Store` over the core cache, handlers reading only from the store; frontend module under `src/modes/<mode>/` mounted from the shell with theme passed down as props, plus a scoped `<mode>.css` for what the shared design system doesn't cover. Keep types duplicated backend/frontend in sync ("change one, change both").
+Follow the raide/tie pattern: backend package with a `Service` implementing `server.Mode` — pollers writing typed snapshots through a `Store` over the core cache, handlers reading only from the store; frontend module under `src/modes/<mode>/` mounted from the shell with theme passed down as props, plus a scoped `<mode>.css` (`.mode-<name>` on the app root) for what the shared design system doesn't cover. Keep types duplicated backend/frontend in sync ("change one, change both").
 
 ## Conventions & gotchas
 
