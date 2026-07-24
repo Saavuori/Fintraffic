@@ -11,7 +11,7 @@ One live map for **Finnish sea, rail and road traffic**, built on Digitraffic's 
 |---|---|---|
 | 🚢 **Meri** | [Marinetraffic](https://github.com/Saavuori/Marinetraffic) | ✅ Ported (phase 1) |
 | 🚆 **Raide** | [railway](https://github.com/Saavuori/railway) | ✅ Ported (phase 2) |
-| 🚗 **Tie** | [tieliikenne](https://github.com/Saavuori/tieliikenne) | ⏳ Planned (phase 3) |
+| 🚗 **Tie** | [tieliikenne](https://github.com/Saavuori/tieliikenne) | ✅ Ported (phase 3) |
 
 ---
 
@@ -32,15 +32,18 @@ Fintraffic/
 │       ├── meri/                # marine mode: AIS ingest (MQTT), trail store (SQLite),
 │       │   │                    #   WebSocket hub, REST handlers
 │       │   ├── ais/  trail/  ws/
-│       └── raide/               # railway mode: rata.digitraffic.fi polling,
-│                                #   GPS/timetable merge, station boards
+│       ├── raide/               # railway mode: rata.digitraffic.fi polling,
+│       │                        #   GPS/timetable merge, station boards
+│       └── tie/                 # road mode: TMS/traffic-message/parking/AFIR
+│                                #   polling (7 feeds), Datex2 flattening
 ├── frontend/
 │   └── src/
 │       ├── App.tsx              # shell: mode switcher + shared theme
 │       ├── shared/              # mode-agnostic hooks + components
 │       └── modes/
 │           ├── meri/            # the marine map app
-│           └── raide/           # the railway map app
+│           ├── raide/           # the railway map app
+│           └── tie/             # the road map app
 ├── scripts/                     # CHANGELOG.md -> changelog site generator
 ├── .github/workflows/           # Multi-arch image build + Pages deploy
 ├── deploy/                      # Production docker-compose.yml + update.sh
@@ -67,6 +70,13 @@ Modes implement the `server.Mode` interface (`Name`, `Register`, `Health`); the 
 * **Station departure/arrival boards** computed on demand from the cached live-trains snapshot; delay minutes, live estimates and track numbers per row.
 * **Rail track overlay** drawn from the basemap's own vector tiles so the network reads clearly under the markers.
 * Cold start returns 503, shown as a loading state; the shared cache serves last-good data through Redis outages.
+
+## ✨ Tie mode (road traffic)
+
+* **TMS traffic stations** (1-min cadence) coloured by current speed ÷ seasonal free-flow baseline — not raw km/h — with road-bearing-oriented per-direction markers.
+* **Road works & incidents** (2 min): deep Datex2 JSON flattened server-side to title/description/geometry, including work-zone speed limits.
+* **Variable speed-limit signs** (1 min), **parking availability** (2 min), **EV charging (AFIR)** locations with live per-EVSE availability (5 min), and **weather cameras** enriched with the nearest road-weather-station observations (3 min).
+* Locate-me control, per-layer toggles (7 layers), camera thumbnails loaded straight from `weathercam.digitraffic.fi`.
 
 ## HTTP API
 
@@ -99,6 +109,18 @@ Raide mode (`/api/raide`):
 | `GET` | `/api/raide/trains` | Live train positions merged with timetable metadata |
 | `GET` | `/api/raide/stations` | Station register (code, name, coordinates, passenger/major flags) |
 | `GET` | `/api/raide/departures/{shortCode}` | Departure/arrival board for one station |
+
+Tie mode (`/api/tie`):
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/tie/tms` | TMS stations with sensor data, bearing and free-flow baselines |
+| `GET` | `/api/tie/roadworks` | Road works (flattened Datex2, incl. work-zone speed limits) |
+| `GET` | `/api/tie/incidents` | Traffic incident announcements |
+| `GET` | `/api/tie/speedlimits` | Variable speed-limit signs (currently displayed limits) |
+| `GET` | `/api/tie/parking` | Parking facilities with live availability |
+| `GET` | `/api/tie/weathercams` | Weather cameras with nearest-station weather |
+| `GET` | `/api/tie/charging` | EV charging network with live per-EVSE availability |
 
 ---
 
