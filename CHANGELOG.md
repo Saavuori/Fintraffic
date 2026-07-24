@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.10.0] - 2026-07-24
+
+### Added
+- **Mobile: search floats over the map**: with the tab bar clearing the top of the screen, Meri's vessel search (by name or MMSI) moves out of the filter sheet into a floating pill pinned to the top of the map, so it's reachable without first opening the sheet. Desktop keeps search inside the filter rail.
+- **Mobile: a "Nearest" list in the sheet**: the Meri and Raide filter sheets now open with the vessels / trains closest to the centre of what you're looking at — each with a distance and live speed — so the sheet shows real content at a glance instead of just filters. The list re-ranks as you pan the map, and tapping a row selects that vessel/train. Desktop is unchanged.
+
+### Changed
+- **Mobile: mode switching moves to a bottom tab bar**: on phones the Meri / Raide / Tie switcher — previously a small pill in the top-left corner — becomes a full-width tab bar fixed to the bottom of the screen, in the thumb zone, with a per-mode glyph above each label and a 44px-tall target. The active tab takes the current mode's own accent (Meri teal, Raide green, Tie blue), so colour and position both signal the active mode. Bottom sheets now rest on top of the bar rather than under it, and the floating map controls (locate button, replay transport bar, map attribution) rebase above both the active sheet and the bar so nothing hides behind the nav. The desktop top-left pill is unchanged.
+- **Mobile: category filters become chips**: Meri's ship-type and Raide's train-type filters render as horizontal wrapped chips in the sheet instead of a full-width vertical list — denser and quicker to scan and toggle with a thumb. Desktop keeps the vertical list.
+- **Mobile: the filter sheet minimizes to just a grab handle**: since the tab bar already names the active mode, the filter sheet drops its redundant mode title ("Meriliikenne" …) and desktop collapse chevron on phones, and when minimized it now collapses to a thin handle instead of a shrunken panel — so the map is unobstructed. Dragging it up reveals the live count, the nearest list, and the filters. Detail sheets keep their header (the selected vessel/train name isn't redundant).
+- **Mobile: the sheet remembers its last height**: tapping the handle to re-open a minimized sheet now returns it to the height you last left it at (half or full) instead of always snapping to half; dragging still settles to the nearest of the peek / half / full detents.
+- **Filter sheet grouped into clear sections**: the filter contents are now organised under labelled sections — Meri's "Vessel categories" / "Map layers" / "Appearance", and matching "Map layers" / "Appearance" groups for Raide and Tie. The map theme moves out of the layer grid into its own Appearance control — an explicit Dark / Light pair (the active one highlighted) instead of a single toggle that only named the other option — and Meri's fleet Replay becomes its own full-width action. Applies on desktop and mobile.
+
 ## [v0.9.0] - 2026-07-24
 
 ### Added

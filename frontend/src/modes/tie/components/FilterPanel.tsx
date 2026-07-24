@@ -139,7 +139,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           </div>
 
           <div className="filter-scroll-area">
-            <div className="filter-section-title">Layers</div>
+            <div className="filter-section-title">Map layers</div>
             <div className="layer-toggles">
               {LAYER_ORDER.map(key => {
                 const Icon = LAYER_ICONS[key];
@@ -155,9 +155,25 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                   </button>
                 );
               })}
-              <button className="layer-toggle" onClick={onToggleTheme} style={{ gridColumn: '1 / -1' }}>
-                {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-                <span>{theme === 'dark' ? 'Light map' : 'Dark map'}</span>
+            </div>
+
+            <div className="filter-section-title" style={{ marginTop: 14 }}>Appearance</div>
+            <div className="layer-toggles" style={{ gridTemplateColumns: '1fr 1fr' }}>
+              <button
+                className={`layer-toggle ${theme === 'dark' ? 'on' : ''}`}
+                onClick={() => { if (theme !== 'dark') onToggleTheme(); }}
+                aria-pressed={theme === 'dark'}
+              >
+                <Moon size={14} />
+                <span>Dark</span>
+              </button>
+              <button
+                className={`layer-toggle ${theme === 'light' ? 'on' : ''}`}
+                onClick={() => { if (theme !== 'light') onToggleTheme(); }}
+                aria-pressed={theme === 'light'}
+              >
+                <Sun size={14} />
+                <span>Light</span>
               </button>
             </div>
 

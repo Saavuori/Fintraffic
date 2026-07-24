@@ -167,6 +167,9 @@ interface MapProps {
   // mmsi → live metadata used to colour/label replay markers. Built from the
   // unfiltered live fleet so category filters don't blank out replay colours.
   replayMeta: Record<string, { icon: string; name: string }>;
+  // Fires (on moveend) with the viewport centre, so the panel can list the
+  // vessels nearest to what the user is currently looking at.
+  onMoveEnd?: (center: { lng: number; lat: number }) => void;
 }
 
 /** Draws a ship-arrow marker pointing north, returns ImageData for map.addImage. */
@@ -285,6 +288,7 @@ export function Map({
   onBackgroundClick,
   replay,
   replayMeta,
+  onMoveEnd,
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -540,10 +544,19 @@ export function Map({
 
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
+    const emitCenter = () => {
+      const c = map.getCenter();
+      onMoveEndRef.current?.({ lng: c.lng, lat: c.lat });
+    };
+
     map.on('load', () => {
       setupMapContent(map);
       setStyleEpoch((n) => n + 1);
+      emitCenter(); // seed the initial centre for the "nearest" list
     });
+
+    // Publish the viewport centre after each settled pan/zoom.
+    map.on('moveend', emitCenter);
 
     // Any manual drag breaks follow mode
     map.on('dragstart', () => onDisableFollowingRef.current());
@@ -562,6 +575,7 @@ export function Map({
   const onSelectPortRef = useRef(onSelectPort);
   const onSelectWebcamRef = useRef(onSelectWebcam);
   const onBackgroundClickRef = useRef(onBackgroundClick);
+  const onMoveEndRef = useRef(onMoveEnd);
   const webcamsRef = useRef(webcams);
   useEffect(() => {
     onDisableFollowingRef.current = onDisableFollowing;
@@ -569,8 +583,9 @@ export function Map({
     onSelectPortRef.current = onSelectPort;
     onSelectWebcamRef.current = onSelectWebcam;
     onBackgroundClickRef.current = onBackgroundClick;
+    onMoveEndRef.current = onMoveEnd;
     webcamsRef.current = webcams;
-  }, [onDisableFollowing, onSelectVessel, onSelectPort, onSelectWebcam, onBackgroundClick, webcams]);
+  }, [onDisableFollowing, onSelectVessel, onSelectPort, onSelectWebcam, onBackgroundClick, onMoveEnd, webcams]);
 
   const buoyPopupRef = useRef<maplibregl.Popup | null>(null);
 

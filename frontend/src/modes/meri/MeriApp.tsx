@@ -6,6 +6,7 @@ import { useFleetReplay } from './hooks/useFleetReplay';
 import { useIsMobile, MOBILE_QUERY } from '../../shared/hooks/useMediaQuery';
 import { Map } from './components/Map';
 import { FilterPanel } from './components/FilterPanel';
+import { VesselSearch } from './components/VesselSearch';
 import { VesselPopup } from './components/VesselPopup';
 import { VesselCard } from './components/VesselCard';
 import { PortPopup } from './components/PortPopup';
@@ -96,6 +97,17 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   const replay = useFleetReplay();
 
   const isMobile = useIsMobile();
+
+  // Viewport centre, refreshed on map moveend, used to list the vessels nearest
+  // to what the user is currently looking at (the mobile sheet's glanceable
+  // peek). Only tracked on mobile — that's the only place the list is shown.
+  const [mapCenter, setMapCenter] = useState<{ lng: number; lat: number } | null>(null);
+  const handleMoveEnd = useCallback(
+    (center: { lng: number; lat: number }) => {
+      if (isMobile) setMapCenter(center);
+    },
+    [isMobile]
+  );
 
   // Panel collapse state
   const [isDetailCollapsed, setIsDetailCollapsed] = useState<boolean>(false);
@@ -272,7 +284,14 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         onBackgroundClick={handleBackgroundClick}
         replay={replay.control}
         replayMeta={replayMeta}
+        onMoveEnd={handleMoveEnd}
       />
+
+      {/* On mobile, search is a floating pill over the map (the bottom tab bar
+          freed the top of the screen). Desktop keeps it inside the filter rail. */}
+      {isMobile && !replay.active && (
+        <VesselSearch vessels={vessels} onSelectVessel={handleSelectVessel} variant="floating" />
+      )}
 
       <FilterPanel
         vessels={vessels}
@@ -286,6 +305,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         isCollapsed={isFilterCollapsed}
         onToggleCollapse={toggleFilterCollapsed}
         isMobile={isMobile}
+        mapCenter={mapCenter}
         mapTheme={mapTheme}
         setMapTheme={setMapTheme}
         showPorts={showPorts}

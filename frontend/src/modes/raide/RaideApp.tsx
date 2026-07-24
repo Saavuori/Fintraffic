@@ -38,6 +38,15 @@ function RaideApp({ theme, onToggleTheme }: RaideAppProps) {
   );
   const [isDetailCollapsed, setIsDetailCollapsed] = useState<boolean>(false);
 
+  // Viewport centre (mobile only) for the sheet's "nearest trains" list.
+  const [mapCenter, setMapCenter] = useState<{ lng: number; lat: number } | null>(null);
+  const handleMoveEnd = useCallback(
+    (center: { lng: number; lat: number }) => {
+      if (isMobile) setMapCenter(center);
+    },
+    [isMobile]
+  );
+
   // Keep the open train card in step with the map's 10-second position poll.
   const onTrainsUpdate = useCallback((next: Train[]) => {
     setTrains(next);
@@ -126,11 +135,15 @@ function RaideApp({ theme, onToggleTheme }: RaideAppProps) {
         onTrainsUpdate={onTrainsUpdate}
         visibility={layerVisibility}
         theme={theme}
+        onMoveEnd={handleMoveEnd}
       />
 
       <FilterPanel
         total={trains.length}
         counts={counts}
+        trains={trains}
+        onSelectTrain={selectTrain}
+        mapCenter={mapCenter}
         visibility={layerVisibility}
         onToggleLayer={toggleLayer}
         theme={theme}

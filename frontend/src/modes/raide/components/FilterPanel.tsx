@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   TrainFront,
   TramFront,
@@ -12,13 +12,43 @@ import {
 } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { BottomSheet } from '../../../shared/components/BottomSheet';
-import { type TrainGroup, groupColors, CATEGORY_LABELS } from '../lib/trains';
+import { type Train, type TrainGroup, groupColors, trainGroup, trainLabel, CATEGORY_LABELS } from '../lib/trains';
 import { type LayerKey, type LayerVisibility } from '../lib/layers';
 import type { Theme } from '../lib/theme';
+
+const NEAREST_COUNT = 5;
+const DEG = Math.PI / 180;
+
+/** Trains closest to `center`, each with an equirectangular distance in km. */
+function nearestTrains(
+  center: { lng: number; lat: number },
+  trains: Train[],
+  count: number
+): Array<{ train: Train; km: number }> {
+  return trains
+    .filter((t) => Number.isFinite(t.latitude) && Number.isFinite(t.longitude))
+    .map((train) => {
+      const meanLat = ((center.lat + train.latitude) / 2) * DEG;
+      const dx = (center.lng - train.longitude) * Math.cos(meanLat);
+      const dy = center.lat - train.latitude;
+      return { train, km: Math.sqrt(dx * dx + dy * dy) * DEG * 6371 };
+    })
+    .sort((a, b) => a.km - b.km)
+    .slice(0, count);
+}
+
+function formatDistanceKm(km: number): string {
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  if (km < 10) return `${km.toFixed(1)} km`;
+  return `${Math.round(km)} km`;
+}
 
 interface FilterPanelProps {
   total: number;
   counts: Record<TrainGroup, number>;
+  trains: Train[];
+  onSelectTrain: (train: Train) => void;
+  mapCenter: { lng: number; lat: number } | null;
   visibility: LayerVisibility;
   onToggleLayer: (key: LayerKey) => void;
   theme: Theme;
@@ -42,6 +72,9 @@ const GROUP_ICONS: Record<TrainGroup, React.ComponentType<{ size?: number }>> = 
 export const FilterPanel: React.FC<FilterPanelProps> = ({
   total,
   counts,
+  trains,
+  onSelectTrain,
+  mapCenter,
   visibility,
   onToggleLayer,
   theme,
@@ -53,6 +86,13 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   const bodyCollapsed = !isMobile && isCollapsed;
   const colors = groupColors(theme);
   const anyHidden = GROUP_ORDER.some(g => !visibility[g]);
+
+  // Trains nearest the viewport centre — the sheet's glanceable content on
+  // mobile. Computed only there, and only once the map has reported a centre.
+  const nearest = useMemo(() => {
+    if (!isMobile || !mapCenter) return [];
+    return nearestTrains(mapCenter, trains, NEAREST_COUNT);
+  }, [isMobile, mapCenter, trains]);
 
   return (
     <BottomSheet
@@ -98,7 +138,32 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           </div>
 
           <div className="filter-scroll-area">
-            <div className="filter-section-title">Train types</div>
+            {nearest.length > 0 && (
+              <>
+                <div className="filter-section-title">Nearest</div>
+                <div className="nearest-list">
+                  {nearest.map(({ train, km }) => (
+                    <button
+                      key={`${train.trainNumber}/${train.departureDate}`}
+                      className="nearest-row"
+                      onClick={() => onSelectTrain(train)}
+                    >
+                      <span
+                        className="nearest-dot"
+                        style={{ background: colors[trainGroup(train.category)] }}
+                      />
+                      <span className="nearest-name">{trainLabel(train)}</span>
+                      <span className="nearest-dist">{formatDistanceKm(km)}</span>
+                      <span className="nearest-speed">{train.speed} km/h</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="filter-section-title" style={{ marginTop: 14 }}>
+                  Train types
+                </div>
+              </>
+            )}
+            {nearest.length === 0 && <div className="filter-section-title">Train types</div>}
             <div className="category-list">
               {GROUP_ORDER.map(group => {
                 const Icon = GROUP_ICONS[group];
@@ -121,7 +186,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             </div>
 
             <div className="filter-section-title" style={{ marginTop: 14 }}>
-              Layers
+              Map layers
             </div>
             <div className="layer-toggles">
               <button
@@ -138,9 +203,27 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                 <Route size={14} />
                 <span>Tracks</span>
               </button>
-              <button className="layer-toggle" onClick={onToggleTheme} style={{ gridColumn: '1 / -1' }}>
-                {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-                <span>{theme === 'dark' ? 'Light map' : 'Dark map'}</span>
+            </div>
+
+            <div className="filter-section-title" style={{ marginTop: 14 }}>
+              Appearance
+            </div>
+            <div className="layer-toggles">
+              <button
+                className={`layer-toggle ${theme === 'dark' ? 'on' : ''}`}
+                onClick={() => { if (theme !== 'dark') onToggleTheme(); }}
+                aria-pressed={theme === 'dark'}
+              >
+                <Moon size={14} />
+                <span>Dark</span>
+              </button>
+              <button
+                className={`layer-toggle ${theme === 'light' ? 'on' : ''}`}
+                onClick={() => { if (theme !== 'light') onToggleTheme(); }}
+                aria-pressed={theme === 'light'}
+              >
+                <Sun size={14} />
+                <span>Light</span>
               </button>
             </div>
 
