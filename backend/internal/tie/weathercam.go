@@ -31,7 +31,7 @@ type rawWeathercamCollection struct {
 }
 
 // FetchWeathercamStations fetches all Digitraffic weather camera stations and
-// flattens each active preset into a directly-fetchable image URL â€” the
+// flattens each active preset into a directly-fetchable image URL — the
 // stations endpoint only ever lists preset ids, never the images themselves.
 func FetchWeathercamStations(ctx context.Context) ([]WeathercamStation, error) {
 	var raw rawWeathercamCollection

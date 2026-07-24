@@ -10,7 +10,7 @@ const (
 	parkingUtilizationsURL = "https://parking.fintraffic.fi/api/v1/utilizations"
 )
 
-// rawParkingGeometry is a GeoJSON Point or Polygon â€” Digitraffic represents a
+// rawParkingGeometry is a GeoJSON Point or Polygon — Digitraffic represents a
 // facility either as a single point or as the outline of the parking area.
 type rawParkingGeometry struct {
 	Type        string          `json:"type"`
@@ -102,7 +102,7 @@ func FetchParkingFacilities(ctx context.Context) (map[int]ParkingFacility, error
 		if len(f.OpeningHours.ByDayType) > 0 {
 			openingHours = make(map[string]string, len(f.OpeningHours.ByDayType))
 			for day, h := range f.OpeningHours.ByDayType {
-				openingHours[day] = h.From + "â€“" + h.Until
+				openingHours[day] = h.From + "–" + h.Until
 			}
 		}
 

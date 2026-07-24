@@ -75,7 +75,7 @@ type StationWithData struct {
 	// Bearing is the road's compass direction in degrees at this station (Tien_suunta).
 	Bearing *float64 `json:"bearing,omitempty"`
 	// FreeFlow1/2 are the seasonal reference ("free flow") speeds in km/h per
-	// direction (VVAPAAS1/2) â€” used as the speed-limit baseline for relative
+	// direction (VVAPAAS1/2) — used as the speed-limit baseline for relative
 	// speed coloring, since Digitraffic doesn't expose static speed limits directly.
 	FreeFlow1 *float64 `json:"freeFlow1,omitempty"`
 	FreeFlow2 *float64 `json:"freeFlow2,omitempty"`
@@ -98,7 +98,7 @@ type StationConstantsResponse struct {
 	Stations []StationConstants `json:"stations"`
 }
 
-// POI Models (road works, traffic incidents) â€” simplified from Digitraffic's
+// POI Models (road works, traffic incidents) — simplified from Digitraffic's
 // deeply nested Datex2-derived JSON down to what the map actually renders.
 type POIProperties struct {
 	ID            string `json:"id"`
@@ -106,7 +106,7 @@ type POIProperties struct {
 	Description   string `json:"description"`
 	SituationType string `json:"situationType"`
 	ReleaseTime   string `json:"releaseTime,omitempty"`
-	// VersionTime is when Digitraffic last updated this situation record â€”
+	// VersionTime is when Digitraffic last updated this situation record —
 	// releaseTime is only the first publication, so this is the "last updated"
 	// timestamp shown in POI popups.
 	VersionTime string `json:"versionTime,omitempty"`
@@ -157,7 +157,7 @@ type ParkingFacility struct {
 	Longitude float64 `json:"longitude"`
 	Latitude  float64 `json:"latitude"`
 	// Type is the capacity type this facility row represents (CAR, BICYCLE,
-	// DISABLED, ELECTRIC_CAR, MOTORCYCLE) â€” Digitraffic models one facility
+	// DISABLED, ELECTRIC_CAR, MOTORCYCLE) — Digitraffic models one facility
 	// per type rather than one facility with mixed capacities.
 	Type     string `json:"type"`
 	Status   string `json:"status"`
@@ -178,7 +178,7 @@ type ParkingFacility struct {
 	// to English) from the facility's paymentInfo.detail.
 	PaymentInfo string `json:"paymentInfo,omitempty"`
 	// OpeningHours maps day type (BUSINESS_DAY/SATURDAY/SUNDAY) to an
-	// "HHâ€“HH" range string built from openingHours.byDayType.
+	// "HH–HH" range string built from openingHours.byDayType.
 	OpeningHours map[string]string `json:"openingHours,omitempty"`
 	// SpacesAvailable/OpenNow/UpdatedAt come from /api/v1/utilizations;
 	// SpacesAvailable/OpenNow are nil and UpdatedAt is "" if no live
@@ -267,7 +267,7 @@ type WeatherReading struct {
 	Value float64 `json:"value"`
 	Unit  string  `json:"unit,omitempty"`
 	// Description is Digitraffic's coded textual description for enumerated
-	// sensors (e.g. road condition "MÃ¤rkÃ¤"/wet); empty for plain numeric sensors.
+	// sensors (e.g. road condition "Märkä"/wet); empty for plain numeric sensors.
 	Description string `json:"description,omitempty"`
 }
 

@@ -60,7 +60,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       <div className="panel-header" onClick={isCollapsed ? undefined : stopPanelClick}>
         <div className="panel-title">
           <TrainFront size={16} />
-          <span>Junat Live</span>
+          <span>Raideliikenne</span>
         </div>
         {!isCollapsed && (
           <button

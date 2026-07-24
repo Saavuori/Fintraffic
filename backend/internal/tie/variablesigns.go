@@ -31,7 +31,7 @@ type rawSignCollection struct {
 }
 
 // FetchVariableSpeedSigns fetches all variable message signs and keeps the
-// SPEEDLIMIT ones that are currently displaying a numeric limit â€” a blank
+// SPEEDLIMIT ones that are currently displaying a numeric limit — a blank
 // displayValue means the sign is switched off, so it carries no limit to show.
 func FetchVariableSpeedSigns(ctx context.Context) ([]VariableSpeedSign, error) {
 	var raw rawSignCollection

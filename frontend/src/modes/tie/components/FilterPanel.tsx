@@ -109,7 +109,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       <div className="panel-header" onClick={isCollapsed ? undefined : stopPanelClick}>
         <div className="panel-title">
           <Activity size={16} />
-          <span>Tieliikenne Live</span>
+          <span>Tieliikenne</span>
         </div>
         {!isCollapsed && (
           <button
