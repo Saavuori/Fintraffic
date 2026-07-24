@@ -17,6 +17,7 @@ import {
 import { type LayerKey, LAYER_ORDER, type LayerVisibility } from '../lib/layers';
 import { type Theme, BASEMAP_STYLES, MARKER_STROKE, TRACK_COLORS } from '../lib/theme';
 import { loadMapIcons, TRAIN_ICON_ID, STATION_PIN_ICON_ID, CANCELLED_BADGE_ICON_ID } from '../lib/mapIcons';
+import { LocateControl } from '../../../shared/components/LocateControl';
 
 interface MapProps {
   onSelectTrain: (train: Train) => void;
@@ -190,8 +191,12 @@ const Map: React.FC<MapProps> = ({
       style: BASEMAP_STYLES[themeRef.current],
       center: [25.75, 62.2], // roughly the middle of the rail network
       zoom: 5.2,
+      // Own compact attribution bottom-left (see meri) instead of the default
+      // expanded one bottom-right.
+      attributionControl: false,
     });
     map.current = m;
+    m.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
     // Dev-only escape hatch for driving the map from the console / test tools.
     if (import.meta.env.DEV) (window as unknown as { __map?: maplibregl.Map }).__map = m;
 
@@ -540,7 +545,12 @@ const Map: React.FC<MapProps> = ({
     };
   }, []);
 
-  return <div ref={mapContainer} className="map-container" />;
+  return (
+    <>
+      <div ref={mapContainer} className="map-container" />
+      <LocateControl getMap={() => map.current} />
+    </>
+  );
 };
 
 export default Map;

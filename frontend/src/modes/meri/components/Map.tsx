@@ -5,6 +5,7 @@ import type { Feature } from 'geojson';
 import { lerpAngle } from '../lib/lerp';
 import { deadReckon } from '../lib/geo';
 import { categorize, CATEGORY_COLORS, isStationary, ALL_CATEGORIES } from '../lib/shipTypes';
+import { LocateControl } from '../../../shared/components/LocateControl';
 import type { Vessel, Port, SeaStateFeature, AtonFaultFeature, ReplayPoint } from '../types';
 
 const STYLE_URLS = {
@@ -449,7 +450,9 @@ export function Map({
       style: STYLE_URLS[mapTheme],
       center: INITIAL_CENTER,
       zoom: INITIAL_ZOOM,
-      attributionControl: { compact: true },
+      // Default attribution lives bottom-right; we add our own compact one
+      // bottom-left instead so it tucks beside the version badge.
+      attributionControl: false,
     });
     mapRef.current = map;
 
@@ -457,11 +460,7 @@ export function Map({
       (window as unknown as { __map?: maplibregl.Map }).__map = map;
     }
 
-    map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
-    map.addControl(
-      new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true } }),
-      'top-right'
-    );
+    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
     map.on('load', () => {
       setupMapContent(map);
@@ -929,7 +928,12 @@ export function Map({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFollowing]);
 
-  return <div ref={containerRef} className="map-container" />;
+  return (
+    <>
+      <div ref={containerRef} className="map-container" />
+      <LocateControl getMap={() => mapRef.current} />
+    </>
+  );
 }
 
 function esc(s: string): string {

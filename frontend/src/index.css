@@ -988,6 +988,108 @@ body {
   user-select: none;
 }
 
+/* ---------- Locate-me control (shared by every mode) ---------- */
+
+.locate-control {
+  position: absolute;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  right: 1rem;
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glow);
+  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.2s;
+}
+
+.locate-control:hover {
+  border-color: var(--border-button-hover);
+}
+
+.locate-control:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.locate-spin {
+  animation: locate-spin 1s linear infinite;
+}
+
+@keyframes locate-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.locate-error {
+  position: absolute;
+  bottom: calc(4.25rem + env(safe-area-inset-bottom));
+  right: 1rem;
+  z-index: 11;
+  max-width: 220px;
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glow);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
+  padding: 0.5rem 0.75rem;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+}
+
+/* "You are here" marker dropped by the locate control. Falls back to a blue
+   accent for modes (meri) that don't define --accent. */
+.user-location-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent, #38bdf8);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.3);
+}
+
+/* ---------- MapLibre attribution (compact ⓘ, bottom-left) ---------- */
+
+/* We add a compact AttributionControl at bottom-left so the required OSM/CARTO
+   credit stays present but tucks above the version badge, out of the way of the
+   bottom-right locate control. MapLibre renders it as a <details> with the
+   .maplibregl-ctrl-attrib class (collapsed to an ⓘ button in compact mode). */
+.maplibregl-ctrl-bottom-left {
+  z-index: 8;
+}
+
+.maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
+  margin: 0 0 40px 8px;
+  background: var(--bg-panel);
+  border-radius: 6px;
+  font-size: 10px;
+  opacity: 0.75;
+}
+
+/* Nothing to credit (e.g. before the basemap's TileJSON loads) → hide the
+   empty pill rather than show a stray ⓘ. */
+.maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib.maplibregl-attrib-empty {
+  display: none;
+}
+
+.maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib-inner a {
+  color: var(--text-secondary);
+}
+
 /* ---------- MapLibre popup (buoys / AtoN) ---------- */
 
 .maplibregl-popup-content {
@@ -1055,18 +1157,67 @@ body {
 
 /* ---------- Mobile ---------- */
 
+/* On phones the side panels become bottom sheets: filters and detail views
+   slide up from the bottom, keeping the map fully visible above. Everything
+   anchored to the bottom shares --sheet-peek (how much of a collapsed sheet
+   stays tappable) so the badges/controls above it line up. Collapsing hides the
+   panel content, so a collapsed sheet naturally shrinks to just its header. */
 @media (max-width: 768px) {
-  .filter-panel {
-    top: 66px;
-    height: calc(100vh - 132px);
-    height: calc(100dvh - 132px);
+  :root {
+    --sheet-peek: 64px;
   }
 
+  /* Filter panel → bottom sheet */
+  .filter-panel {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: auto;
+    height: auto;
+    max-height: 55dvh;
+    padding: 10px 14px calc(12px + env(safe-area-inset-bottom));
+    border-radius: 16px 16px 0 0;
+    border-left: 1px solid var(--border-glow);
+    border-bottom: none;
+    z-index: 12;
+  }
+
+  /* Grab-handle affordance on the sheets */
+  .filter-panel::before,
+  .detail-popup::before {
+    content: '';
+    display: block;
+    flex: none;
+    width: 36px;
+    height: 4px;
+    margin: 0 auto 8px;
+    border-radius: 999px;
+    background: var(--border-glow);
+  }
+
+  .filter-panel.collapsed {
+    transform: translateY(calc(100% - var(--sheet-peek))) !important;
+  }
+
+  /* Detail view → bottom sheet, above the filter sheet */
   .detail-popup {
-    top: 66px;
-    width: min(320px, 88vw);
-    max-height: calc(100vh - 82px);
-    max-height: calc(100dvh - 82px - env(safe-area-inset-bottom));
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: auto;
+    max-height: 70dvh;
+    padding: 10px 16px calc(16px + env(safe-area-inset-bottom));
+    border-radius: 16px 16px 0 0;
+    border-right: 1px solid var(--border-glow);
+    border-bottom: none;
+    z-index: 13;
+  }
+
+  .detail-popup.collapsed {
+    transform: translateY(calc(100% - var(--sheet-peek))) !important;
+    min-height: 0;
   }
 
   .vessel-card-overlay {
@@ -1077,6 +1228,32 @@ body {
 
   .vessel-card-dest {
     display: none;
+  }
+
+  /* Bigger tap target, lifted clear of the collapsed filter-sheet peek */
+  .locate-control {
+    width: 44px;
+    height: 44px;
+    bottom: calc(var(--sheet-peek) + 16px + env(safe-area-inset-bottom));
+  }
+
+  .locate-error {
+    bottom: calc(var(--sheet-peek) + 68px + env(safe-area-inset-bottom));
+  }
+
+  /* Keep the required attribution visible just above the collapsed sheet peek */
+  .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
+    margin-bottom: calc(var(--sheet-peek) + 8px);
+  }
+
+  /* Build metadata isn't useful on a phone and would fight the sheet peek */
+  .version-badge {
+    display: none;
+  }
+
+  /* Fleet-replay transport bar clears the collapsed filter-sheet peek */
+  .replay-bar {
+    bottom: calc(var(--sheet-peek) + 12px + env(safe-area-inset-bottom));
   }
 }
 

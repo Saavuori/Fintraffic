@@ -249,78 +249,8 @@
   border-color: var(--border-button-hover);
 }
 
-/* ---------- Locate-me control (rendered inside Map) ---------- */
-
-.mode-tie .locate-control {
-  position: absolute;
-  bottom: 1.5rem;
-  right: 1rem;
-  z-index: 11;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  background: var(--bg-panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-glow);
-  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
-  color: var(--text-primary);
-  cursor: pointer;
-  padding: 0;
-  transition: border-color 0.2s;
-}
-
-.mode-tie .locate-control:hover {
-  border-color: var(--border-button-hover);
-}
-
-.mode-tie .locate-control:disabled {
-  cursor: default;
-  opacity: 0.7;
-}
-
-.mode-tie .locate-spin {
-  animation: tie-locate-spin 1s linear infinite;
-}
-
-@keyframes tie-locate-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.mode-tie .locate-error {
-  position: absolute;
-  bottom: 4rem;
-  right: 1rem;
-  z-index: 11;
-  max-width: 220px;
-  background: var(--bg-panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-glow);
-  border-radius: 10px;
-  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
-  padding: 0.5rem 0.75rem;
-  color: var(--text-primary);
-  font-size: 0.8rem;
-}
-
-/* "You are here" marker dropped by the locate control. */
-.mode-tie .user-location-dot {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--accent);
-  border: 2px solid #fff;
-  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.3);
-}
+/* The locate-me control + "you are here" marker are shared across modes;
+   their styles live in index.css. */
 
 /* ---------- Map hover popup ---------- */
 
@@ -346,12 +276,11 @@
 /* ---------- Mobile ---------- */
 
 @media (max-width: 768px) {
-  .mode-tie .filter-panel {
-    width: 216px;
-  }
-
+  /* Full-width bottom sheets on mobile (see index.css); drop the desktop
+     fixed widths so they can stretch edge-to-edge. */
+  .mode-tie .filter-panel,
   .mode-tie .detail-popup {
-    width: min(340px, 88vw);
+    width: auto;
   }
 
   .mode-tie .selected-card-overlay {
@@ -362,10 +291,5 @@
 
   .mode-tie .theme-toggle.detail-open {
     right: 16px;
-  }
-
-  /* Keep MapLibre's attribution clear of the version badge. */
-  .mode-tie .maplibregl-ctrl-bottom-left {
-    margin-bottom: 34px;
   }
 }

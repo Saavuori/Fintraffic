@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import maplibregl, { type MapGeoJSONFeature } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { LocateFixed } from 'lucide-react';
 import {
   type Station,
   type DirectionalStatus,
@@ -15,6 +14,7 @@ import { type VariableSpeedSign, speedSignPopupHTML } from '../lib/speedLimits';
 import { type ChargingStation, chargingLevel, availabilityText } from '../lib/charging';
 import { type LayerKey, LAYER_ORDER, type LayerVisibility, poiColors } from '../lib/layers';
 import { type Theme, BASEMAP_STYLES } from '../lib/theme';
+import { LocateControl } from '../../../shared/components/LocateControl';
 
 interface MapProps {
   onSelectStation: (station: Station) => void;
@@ -130,10 +130,6 @@ const Map: React.FC<MapProps> = ({
   const chargersById = useRef<globalThis.Map<string, ChargingStation>>(new globalThis.Map());
   const hoverPopupRef = useRef<maplibregl.Popup | null>(null);
   const clickPopupRef = useRef<maplibregl.Popup | null>(null);
-  const userLocationMarkerRef = useRef<maplibregl.Marker | null>(null);
-  const geoErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [locating, setLocating] = useState(false);
-  const [geoError, setGeoError] = useState<string | null>(null);
 
   // Latest visibility, readable from the mount effect's fetch closures so a
   // layer added after the user toggled it off still starts hidden.
@@ -194,49 +190,6 @@ const Map: React.FC<MapProps> = ({
     }
   }, [visibility]);
 
-  const showGeoError = (message: string) => {
-    setGeoError(message);
-    if (geoErrorTimeoutRef.current) clearTimeout(geoErrorTimeoutRef.current);
-    geoErrorTimeoutRef.current = setTimeout(() => setGeoError(null), 5000);
-  };
-
-  const locateUser = () => {
-    const m = map.current;
-    if (!m) return;
-    if (!navigator.geolocation) {
-      showGeoError('Geolocation is not supported by this browser.');
-      return;
-    }
-
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      position => {
-        setLocating(false);
-        const coords: [number, number] = [position.coords.longitude, position.coords.latitude];
-
-        if (userLocationMarkerRef.current) {
-          userLocationMarkerRef.current.setLngLat(coords);
-        } else {
-          const el = document.createElement('div');
-          el.className = 'user-location-dot';
-          userLocationMarkerRef.current = new maplibregl.Marker({ element: el }).setLngLat(coords).addTo(m);
-        }
-        m.flyTo({ center: coords, zoom: 14, essential: true });
-      },
-      error => {
-        setLocating(false);
-        const message =
-          error.code === error.PERMISSION_DENIED
-            ? 'Location permission denied.'
-            : error.code === error.POSITION_UNAVAILABLE
-              ? 'Location unavailable.'
-              : 'Location request timed out.';
-        showGeoError(message);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-    );
-  };
-
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
@@ -246,8 +199,12 @@ const Map: React.FC<MapProps> = ({
       center: [24.9384, 60.1699], // Helsinki center
       zoom: 6,
       pitch: 45,
+      // Own compact attribution bottom-left (see meri) instead of the default
+      // expanded one bottom-right.
+      attributionControl: false,
     });
     map.current = m;
+    m.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
     hoverPopupRef.current = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });
     clickPopupRef.current = new maplibregl.Popup({ closeButton: true, offset: 12, maxWidth: '280px' });
@@ -828,9 +785,6 @@ const Map: React.FC<MapProps> = ({
     return () => {
       intervalIds.forEach(clearInterval);
       installLayersRef.current = null;
-      if (geoErrorTimeoutRef.current) clearTimeout(geoErrorTimeoutRef.current);
-      userLocationMarkerRef.current?.remove();
-      userLocationMarkerRef.current = null;
       m.remove();
       map.current = null;
     };
@@ -839,16 +793,7 @@ const Map: React.FC<MapProps> = ({
   return (
     <>
       <div ref={mapContainer} className="map-container" />
-      <button
-        className="locate-control"
-        onClick={locateUser}
-        disabled={locating}
-        aria-label="Locate me"
-        title="Locate me"
-      >
-        <LocateFixed size={18} className={locating ? 'locate-spin' : undefined} />
-      </button>
-      {geoError && <div className="locate-error">{geoError}</div>}
+      <LocateControl getMap={() => map.current} />
     </>
   );
 };
