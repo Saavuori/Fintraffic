@@ -22,6 +22,8 @@ interface FilterPanelProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   isMobile: boolean;
+  /** False while a detail sheet is up on mobile — see BottomSheet's `open`. */
+  open?: boolean;
   mapCenter: { lng: number; lat: number } | null;
   mapTheme: 'light' | 'dark';
   setMapTheme: (theme: 'light' | 'dark') => void;
@@ -50,6 +52,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   isCollapsed,
   onToggleCollapse,
   isMobile,
+  open = true,
   mapCenter,
   mapTheme,
   setMapTheme,
@@ -84,7 +87,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     <BottomSheet
       variant="filter"
       isMobile={isMobile}
-      open
+      open={open}
       ariaLabel="Open filters panel"
       collapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}

@@ -175,7 +175,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
               <h3>{title}</h3>
               <span className="detail-subtitle">{subtitle}</span>
             </div>
-            <button className="icon-btn" onClick={onToggleCollapse} aria-label="Collapse panel">
+            <button className="icon-btn panel-collapse-btn" onClick={onToggleCollapse} aria-label="Collapse panel">
               <ChevronRight size={16} />
             </button>
             <button className="icon-btn" onClick={onClose} aria-label="Close panel">

@@ -31,7 +31,23 @@ interface UseBottomSheetReturn {
   isDragging: boolean;
 }
 
-const PEEK_PX = 40; // minimized = just the grab handle; content appears on drag
+/** Fallback peek height, used only if the stylesheet hasn't applied yet. */
+const PEEK_FALLBACK = 108;
+/** Visible fraction of the sheet's box at the middle stop. */
+const HALF_RATIO = 0.56;
+/** Must match `.bottom-sheet`'s padding-bottom in BottomSheet.css. */
+const BASE_PAD = 14;
+
+/**
+ * Visible height at the peek stop — the grab handle plus one summary row (the
+ * live count on a filter sheet, the selected vessel/train on a detail sheet), so
+ * a minimized sheet still says something. BottomSheet.css owns the number and
+ * lays the row out to match; read it back rather than duplicating it here.
+ */
+function peekHeight(el: HTMLElement): number {
+  const declared = parseFloat(getComputedStyle(el).getPropertyValue('--sheet-peek-height'));
+  return Number.isFinite(declared) && declared > 0 ? declared : PEEK_FALLBACK;
+}
 const FLING_V = 0.5; // px/ms — above this a release flings one snap step
 const RUBBER = 0.3; // resistance when dragged above the full stop
 
@@ -43,9 +59,20 @@ const ORDER: SnapPoint[] = ['full', 'half', 'peek'];
  * at a fixed tall height and pushed down with `translateY`; visible height =
  * elementHeight − translateY. Dragging is driven imperatively (transform written
  * inside rAF, transition suppressed via a `--dragging` class) so it tracks the
- * finger at 60fps; React state only changes at rest. On rest the sheet's visible
- * height is published to `--sheet-height-<id>` on <html> so bottom-anchored map
- * controls can clear the expanded sheet.
+ * finger at 60fps; React state only changes at rest.
+ *
+ * Because the box is taller than the visible slot, the part below the fold would
+ * otherwise be laid out behind the bottom tab bar and off-screen — content the
+ * user can scroll to but never see. So every resting position also writes a
+ * matching `padding-bottom` (translateY + the sheet's own padding), which shrinks
+ * the flex content area to exactly the visible region. It carries the same
+ * transition as the transform, so the two move in lockstep. During a drag the
+ * padding is parked at its minimum (content at full height, the surplus simply
+ * off-screen) — resizing the content on every frame would reflow the list under
+ * the finger.
+ *
+ * At rest and throughout a drag the sheet's visible height is published to
+ * `--sheet-height-<id>` on <html> so bottom-anchored map controls can clear it.
  */
 export function useBottomSheet({
   isMobile,
@@ -81,23 +108,30 @@ export function useBottomSheet({
   const translateFor = useCallback((el: HTMLElement, s: SnapPoint): number => {
     const h = el.offsetHeight;
     if (s === 'full') return 0;
-    if (s === 'half') return Math.max(0, h - Math.round(0.5 * window.innerHeight));
-    return Math.max(0, h - PEEK_PX); // peek
+    if (s === 'half') return Math.max(0, Math.round(h * (1 - HALF_RATIO)));
+    return Math.max(0, h - peekHeight(el)); // peek
   }, []);
-
-  // Visible height (px) for a snap — what we publish so controls can clear it.
-  const visibleHeightFor = useCallback((s: SnapPoint): number => {
-    const el = sheetRef.current;
-    if (!el) return 0;
-    return el.offsetHeight - translateFor(el, s);
-  }, [translateFor]);
 
   const publishHeight = useCallback(
     (px: number) => {
-      document.documentElement.style.setProperty(cssVar, `${Math.round(px)}px`);
+      document.documentElement.style.setProperty(cssVar, `${Math.round(Math.max(0, px))}px`);
     },
     [cssVar]
   );
+
+  /** Park the sheet at `t` px down: transform, content height and published height. */
+  const applyRest = useCallback(
+    (el: HTMLElement, t: number) => {
+      el.style.transform = `translate3d(0, ${t}px, 0)`;
+      el.style.paddingBottom = `${t + BASE_PAD}px`;
+      publishHeight(el.offsetHeight - t);
+    },
+    [publishHeight]
+  );
+
+  // A sheet that appears (a detail sheet on selection, the filter sheet coming
+  // back when the detail closes) should slide up rather than pop into place.
+  const enteredRef = useRef(false);
 
   // Keep the sheet resting at its snap position, and publish its height, whenever
   // snap/open/mobile changes (but never while a drag is mid-flight).
@@ -105,38 +139,65 @@ export function useBottomSheet({
     const el = sheetRef.current;
     if (!isMobile || !open) {
       publishHeight(0);
-      if (el) el.style.transform = '';
+      enteredRef.current = false;
+      if (el) {
+        el.style.transform = '';
+        el.style.paddingBottom = '';
+      }
       return;
     }
     if (!el || isDragging) return;
-    el.style.transform = `translate3d(0, ${translateFor(el, snap)}px, 0)`;
-    publishHeight(visibleHeightFor(snap));
-  }, [snap, open, isMobile, isDragging, translateFor, visibleHeightFor, publishHeight]);
+    const rest = translateFor(el, snap);
+    if (!enteredRef.current) {
+      enteredRef.current = true;
+      // Let the browser paint the stylesheet's off-screen start once, then move
+      // to the resting position on the next frame so the transition actually
+      // runs — a transform set in the same frame the element is inserted has no
+      // previous value to animate from, and would just pop into place. The
+      // published height is final immediately, so the map controls that ease off
+      // it travel with the sheet rather than after it.
+      publishHeight(el.offsetHeight - rest);
+      const raf = requestAnimationFrame(() => applyRest(el, translateFor(el, snap)));
+      return () => {
+        cancelAnimationFrame(raf);
+        // The entrance hasn't happened yet, so the next run still owes it —
+        // including StrictMode's immediate mount/unmount/mount rehearsal.
+        enteredRef.current = false;
+      };
+    }
+    applyRest(el, rest);
+  }, [snap, open, isMobile, isDragging, translateFor, applyRest, publishHeight]);
 
   // Reset the published height when the sheet unmounts.
   useEffect(() => () => publishHeight(0), [publishHeight]);
 
-  // Recompute resting position / published height on viewport resize (the half
-  // target depends on innerHeight, and offsetHeight tracks dvh).
+  // Recompute resting position / published height on viewport resize (the sheet's
+  // offsetHeight tracks dvh, which moves with the URL bar and on rotation).
   useEffect(() => {
     if (!isMobile || !open) return;
     const onResize = () => {
       const el = sheetRef.current;
-      if (!el || snapRef.current == null) return;
-      el.style.transform = `translate3d(0, ${translateFor(el, snapRef.current)}px, 0)`;
-      publishHeight(el.offsetHeight - translateFor(el, snapRef.current));
+      if (!el) return;
+      applyRest(el, translateFor(el, snapRef.current));
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [isMobile, open, translateFor, publishHeight]);
+  }, [isMobile, open, translateFor, applyRest]);
+
+  // Bottom-anchored map controls ease to a settling sheet's height but must
+  // track a dragged one frame-for-frame; index.css keys that off this class.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('sheet-dragging', isDragging);
+    return () => root.classList.remove('sheet-dragging');
+  }, [isDragging]);
 
   const settle = useCallback(
     (target: SnapPoint) => {
       const el = sheetRef.current;
       if (el) {
         el.classList.remove('bottom-sheet--dragging');
-        el.style.transform = `translate3d(0, ${translateFor(el, target)}px, 0)`;
-        publishHeight(el.offsetHeight - translateFor(el, target));
+        applyRest(el, translateFor(el, target));
       }
       // Peek == collapsed; drive it through the App flag so `snap` re-derives.
       if (target === 'peek') {
@@ -146,7 +207,7 @@ export function useBottomSheet({
         if (collapsed) onCollapsedChangeRef.current(false);
       }
     },
-    [translateFor, publishHeight, collapsed]
+    [translateFor, applyRest, collapsed]
   );
 
   const onPointerDown = useCallback(
@@ -166,6 +227,10 @@ export function useBottomSheet({
       let moved = false;
 
       el.classList.add('bottom-sheet--dragging');
+      // Content at full height for the whole gesture: whatever falls below the
+      // fold is simply off-screen, and the visible area can grow without a
+      // reflow on every frame.
+      el.style.paddingBottom = `${BASE_PAD}px`;
       setIsDragging(true);
       try {
         el.setPointerCapture(e.pointerId);
@@ -176,6 +241,7 @@ export function useBottomSheet({
       const apply = () => {
         raf = 0;
         el.style.transform = `translate3d(0, ${pending}px, 0)`;
+        publishHeight(el.offsetHeight - pending);
       };
 
       const onMove = (ev: PointerEvent) => {
@@ -237,7 +303,7 @@ export function useBottomSheet({
       el.addEventListener('pointerup', onUp);
       el.addEventListener('pointercancel', onUp);
     },
-    [isMobile, translateFor, settle]
+    [isMobile, translateFor, publishHeight, settle]
   );
 
   return { snap, sheetRef, handleProps: { onPointerDown }, isDragging };

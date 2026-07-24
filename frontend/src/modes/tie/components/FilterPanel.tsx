@@ -30,6 +30,8 @@ interface FilterPanelProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   isMobile: boolean;
+  /** False while a detail sheet is up on mobile — see BottomSheet's `open`. */
+  open?: boolean;
 }
 
 // Pictogram per layer, mirroring what the map draws so the toggle key matches
@@ -98,6 +100,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   isCollapsed,
   onToggleCollapse,
   isMobile,
+  open = true,
 }) => {
   const bodyCollapsed = !isMobile && isCollapsed;
 
@@ -107,7 +110,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     <BottomSheet
       variant="filter"
       isMobile={isMobile}
-      open
+      open={open}
       ariaLabel="Open layers panel"
       collapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}

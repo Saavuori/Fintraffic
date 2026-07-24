@@ -232,6 +232,9 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
 
   const displayedVessel = replay.active ? replayVessel : liveVessel;
 
+  // Whether any detail sheet/panel is up (vessel, port or webcam).
+  const detailOpen = displayedVessel !== null || selectedPort !== null || selectedWebcam !== null;
+
   // The trail is drawn in the selected vessel's category colour.
   const trailColor = displayedVessel
     ? CATEGORY_COLORS[categorize(displayedVessel.shipType)]
@@ -294,6 +297,11 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
       )}
 
       <FilterPanel
+        /* Two sheets can't share one bottom edge on a phone — a detail sheet
+           would sit exactly on top of the filter sheet's handle. So the filter
+           sheet stands down while something is selected; closing the detail
+           brings it back. Desktop shows both rails as before. */
+        open={!isMobile || !detailOpen}
         vessels={vessels}
         onSelectVessel={handleSelectVessel}
         categoryCounts={categoryCounts}
