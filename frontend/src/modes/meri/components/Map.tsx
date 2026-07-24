@@ -23,7 +23,8 @@ const SMOOTHING_TAU_MS = 600;
 // setData at most ~30fps — 700+ features every frame is wasted work at 60fps
 const SET_DATA_INTERVAL_MS = 33;
 
-// Replay: teal used for every playback marker (history has no ship type).
+// Replay fallback: teal marker for vessels whose live metadata (ship type) is
+// unknown — e.g. they left AIS coverage before the client connected.
 const REPLAY_COLOR = '#2dd4bf';
 // Trail colour before a vessel is selected / as a fallback.
 const DEFAULT_TRAIL_COLOR = '#2dd4bf';
@@ -142,6 +143,9 @@ interface MapProps {
   onDisableFollowing: () => void;
   onBackgroundClick: () => void;
   replay: ReplayControl | null;
+  // mmsi → live metadata used to colour/label replay markers. Built from the
+  // unfiltered live fleet so category filters don't blank out replay colours.
+  replayMeta: Record<string, { icon: string; name: string }>;
 }
 
 /** Draws a ship-arrow marker pointing north, returns ImageData for map.addImage. */
@@ -219,6 +223,7 @@ export function Map({
   onDisableFollowing,
   onBackgroundClick,
   replay,
+  replayMeta,
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -236,6 +241,7 @@ export function Map({
   // Replay playback state read by the rAF loop. replayRef mirrors the prop;
   // clockRef is the virtual playhead (epoch seconds) advanced every frame.
   const replayRef = useRef<ReplayControl | null>(replay);
+  const replayMetaRef = useRef<Record<string, { icon: string; name: string }>>(replayMeta);
   const replayClockRef = useRef<number>(0);
   const replayLastProgressRef = useRef<number>(0);
   const replayEndedRef = useRef<boolean>(false);
@@ -252,6 +258,10 @@ export function Map({
   useEffect(() => {
     followRef.current = isFollowing;
   }, [isFollowing]);
+
+  useEffect(() => {
+    replayMetaRef.current = replayMeta;
+  }, [replayMeta]);
 
   // Mirror the replay control into a ref for the rAF loop, and manage the
   // virtual clock: initialize it when replay turns on, and honor scrubs (a
@@ -347,14 +357,23 @@ export function Map({
 
         const replaySource = map.getSource('replay') as maplibregl.GeoJSONSource | undefined;
         if (!replaySource) return;
+        const meta = replayMetaRef.current;
+        const selectedInReplay = selectedRef.current;
         const feats: Feature[] = [];
         for (const [id, pts] of Object.entries(rp.data)) {
           const pose = poseAt(pts, t);
           if (!pose) continue;
+          const m = meta[id];
           feats.push({
             type: 'Feature',
             geometry: { type: 'Point', coordinates: [pose.lng, pose.lat] },
-            properties: { mmsi: Number(id), hdg: pose.hdg },
+            properties: {
+              mmsi: Number(id),
+              hdg: pose.hdg,
+              icon: m?.icon ?? 'vessel-replay',
+              name: m?.name ?? '',
+              selected: selectedInReplay !== null && Number(id) === selectedInReplay,
+            },
           });
         }
         replaySource.setData({ type: 'FeatureCollection', features: feats });
@@ -476,7 +495,7 @@ export function Map({
 
   /** Click + hover wiring. Registered once; guards against missing layers. */
   function registerInteractions(map: maplibregl.Map) {
-    const interactive = ['vessels-moving', 'vessels-stationary', 'ports-layer', 'buoys-layer', 'aton-layer'];
+    const interactive = ['vessels-moving', 'vessels-stationary', 'replay-vessels', 'ports-layer', 'buoys-layer', 'aton-layer'];
 
     map.on('click', (e) => {
       const layers = interactive.filter((l) => map.getLayer(l));
@@ -492,6 +511,7 @@ export function Map({
       switch (hit.layer.id) {
         case 'vessels-moving':
         case 'vessels-stationary':
+        case 'replay-vessels':
           onSelectVesselRef.current(Number(props.mmsi));
           break;
         case 'ports-layer':
@@ -674,8 +694,26 @@ export function Map({
       });
     }
 
-    // Replay markers: hidden until playback starts (toggled by the visibility
-    // effect). Single teal arrow rotated by the interpolated heading.
+    // Replay layers: hidden until playback starts (toggled by the visibility
+    // effect). Markers reuse the live category icons (teal fallback when the
+    // vessel's ship type is unknown), rotated by the interpolated heading, with
+    // a selection ring beneath and name labels above — mirroring the live map.
+    if (!map.getLayer('replay-selection')) {
+      map.addLayer({
+        id: 'replay-selection',
+        type: 'circle',
+        source: 'replay',
+        filter: ['==', ['get', 'selected'], true],
+        layout: { visibility: 'none' },
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 11, 12, 20],
+          'circle-color': 'rgba(45, 212, 191, 0.15)',
+          'circle-stroke-color': '#2dd4bf',
+          'circle-stroke-width': 2,
+        },
+      });
+    }
+
     if (!map.getLayer('replay-vessels')) {
       map.addLayer({
         id: 'replay-vessels',
@@ -683,12 +721,34 @@ export function Map({
         source: 'replay',
         layout: {
           visibility: 'none',
-          'icon-image': 'vessel-replay',
+          'icon-image': ['get', 'icon'],
           'icon-rotate': ['get', 'hdg'],
           'icon-rotation-alignment': 'map',
           'icon-allow-overlap': true,
           'icon-ignore-placement': true,
           'icon-size': ['interpolate', ['linear'], ['zoom'], 4, 0.45, 9, 0.75, 14, 1.1],
+        },
+      });
+    }
+
+    if (!map.getLayer('replay-labels')) {
+      map.addLayer({
+        id: 'replay-labels',
+        type: 'symbol',
+        source: 'replay',
+        minzoom: 9,
+        layout: {
+          visibility: 'none',
+          'text-field': ['get', 'name'],
+          'text-size': 10,
+          'text-offset': [0, 1.4],
+          'text-anchor': 'top',
+          'text-optional': true,
+        },
+        paint: {
+          'text-color': labelColor,
+          'text-halo-color': labelHalo,
+          'text-halo-width': 1,
         },
       });
     }
@@ -838,7 +898,9 @@ export function Map({
     for (const l of ['vessels-moving', 'vessels-stationary', 'vessel-labels', 'vessel-selection', 'trail-line']) {
       vis(l, !replayActive);
     }
-    vis('replay-vessels', replayActive);
+    for (const l of ['replay-vessels', 'replay-selection', 'replay-labels']) {
+      vis(l, replayActive);
+    }
     if (!replayActive) {
       const src = map.getSource('replay') as maplibregl.GeoJSONSource | undefined;
       src?.setData({ type: 'FeatureCollection', features: [] });

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.6.0] - 2026-07-24
+
+### Added
+- **Fleet replay: category colours + vessel selection** (synced from Marinetraffic): replay markers now use the live category icon per MMSI — colours match the live map, with a teal fallback for vessels that have left AIS coverage; metadata comes from the *unfiltered* live fleet so category filters don't strip replay colours. Replay vessels are clickable, opening the same vessel card and detail popup as live selection, with a selection ring that follows the marker through playback and name labels at the live zoom threshold. The vessel card hides its Follow and Track controls during replay, since both act on live-only layers hidden while playback runs.
+
+### Fixed
+- **Deploy: install/update script + SELinux trail volume** (synced from Marinetraffic): new idempotent `deploy/install.sh` writes the compose, ensures the `web-proxy` network + trail volume, pulls the image, recreates the stack and verifies trail recording came up; the trail volume now mounts with `:Z` (SELinux relabel) — without it the SQLite DB can't be created and recording is silently disabled. `update.sh` remains the image-only 5-min cron.
+
+---
+
 ## [v0.5.0] - 2026-07-24
 
 ### Added

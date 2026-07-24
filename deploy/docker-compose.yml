@@ -20,8 +20,10 @@ services:
       - TRAIL_RETENTION_DAYS=60
       - TRAIL_INTERVAL_SEC=60
     volumes:
-      # Persist trail history across container recreation.
-      - fintraffic-trail:/data
+      # Persist trail history across container recreation. `:Z` relabels the
+      # volume for SELinux (Oracle Linux enforces it). Without this mount the
+      # SQLite DB can't be created and recording is silently disabled.
+      - fintraffic-trail:/data:Z
     networks:
       - default
       - web-proxy
