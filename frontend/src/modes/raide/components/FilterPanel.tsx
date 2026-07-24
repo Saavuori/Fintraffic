@@ -79,7 +79,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       {!isCollapsed && (
         <div className="filter-content" onClick={stopPanelClick}>
           <div className="panel-stats">
-            <span className="conn-dot" title="Live Â· updates every 10 s" />
+            <span className="conn-dot" title="Live · updates every 10 s" />
             <span>{total} trains</span>
             {anyHidden && (
               <button
@@ -139,7 +139,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             </div>
 
             <div className="legend-hint">
-              Yellow ring: 3+ min late Â· red ring: 10+ min. Click a station for its
+              Yellow ring: 3+ min late · red ring: 10+ min. Click a station for its
               departures.
             </div>
           </div>
