@@ -74,6 +74,11 @@ function TieApp({ theme, onToggleTheme }: TieAppProps) {
       />
 
       <FilterPanel
+        /* Two sheets can't share one bottom edge on a phone — a detail sheet
+           would sit exactly on top of the filter sheet's handle. So the filter
+           sheet stands down while something is selected; closing the detail
+           brings it back. Desktop shows both rails as before. */
+        open={!isMobile || !selection}
         visibility={layerVisibility}
         onToggleLayer={toggleLayer}
         theme={theme}

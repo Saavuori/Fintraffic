@@ -1,10 +1,28 @@
 /* Draggable bottom-sheet chrome. Everything here is phone-only: on desktop the
    BottomSheet component renders the existing `.glass-panel` rail instead, so
-   these rules never apply. Snap positioning (translateY) is written imperatively
-   by useBottomSheet; this file owns the look, the transition, and the handle. */
+   these rules never apply. Snap positioning (translateY) and the matching
+   content height (padding-bottom) are written imperatively by useBottomSheet;
+   this file owns the look, the transition, the handle, and the geometry those
+   two agree on. */
 
 @media (max-width: 768px) {
   .bottom-sheet {
+    /* --- geometry, shared with useBottomSheet ---
+       The sheet is laid out taller than it ever shows and pushed down with
+       translateY, so the hook needs to know how much of it stays visible when
+       minimized. It reads --sheet-peek-height off this element, which makes the
+       declaration below the single source of truth: handle + one summary row +
+       the sheet's own bottom padding. Keep it a plain px literal (the hook
+       parses it; a calc() would come back unevaluated). */
+    --sheet-handle-height: 40px;
+    --sheet-pad-bottom: 14px;
+    --sheet-peek-height: 108px;
+    /* What's left for the summary row that the peek shows: the live count on a
+       filter sheet, the selected vessel/train on a detail sheet. */
+    --sheet-peek-row: calc(
+      var(--sheet-peek-height) - var(--sheet-handle-height) - var(--sheet-pad-bottom)
+    );
+
     position: fixed;
     left: 0;
     right: 0;
@@ -18,7 +36,7 @@
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    padding: 0 16px 14px;
+    padding: 0 16px var(--sheet-pad-bottom);
     background: var(--bg-panel);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -27,10 +45,16 @@
     border-radius: 16px 16px 0 0;
     box-shadow: 0 -8px 40px -10px rgba(0, 0, 0, 0.6);
     color: var(--text-primary);
-    /* Off-screen until useBottomSheet's layout effect positions it — avoids a
-       first-paint flash at the top of the sheet's 88dvh box. */
+    /* Off-screen until useBottomSheet's layout effect positions it — that's both
+       the first-paint state (no flash at the top of the sheet's 88dvh box) and
+       the start of the slide-up the hook animates from when a sheet appears. */
     transform: translate3d(0, 100%, 0);
-    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+    /* padding-bottom rides the same curve as the transform: the hook grows it by
+       exactly the amount the sheet is pushed down, which trims the flex content
+       area to the visible slot. Without it the body would keep its full height
+       and lay content out behind the tab bar — scrollable but never visible. */
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1),
+      padding-bottom 0.28s cubic-bezier(0.32, 0.72, 0, 1);
     will-change: transform;
   }
 
@@ -52,14 +76,16 @@
      that starts here never scrolls the page or pans the map beneath. */
   .bottom-sheet__handle {
     flex: none;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 28px;
+    height: var(--sheet-handle-height);
     padding-top: 8px;
     margin: 0 -16px; /* full-width tap zone despite the sheet's side padding */
     touch-action: none;
     cursor: grab;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .bottom-sheet__handle:active {
@@ -71,15 +97,61 @@
     height: 4px;
     border-radius: 999px;
     background: var(--border-glow);
+    transition: background 0.15s, width 0.15s;
+  }
+
+  .bottom-sheet__handle:active .bottom-sheet__grip {
+    background: var(--text-secondary);
+    width: 44px;
   }
 
   /* The panel body fills the sheet below the handle and owns the scroll. The
      content components already set overflow + min-height on these; we only need
-     them to grow to fill the fixed-height sheet. */
+     them to grow to fill the sheet's visible slot. */
   .bottom-sheet > .filter-content,
   .bottom-sheet > .detail-content {
     flex: 1;
     min-height: 0;
+  }
+
+  /* Scrolling a sheet must not chain out to the map or the page behind it. */
+  .bottom-sheet .filter-scroll-area,
+  .bottom-sheet .detail-content,
+  .bottom-sheet .port-calls-list {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* --- the peek row ---
+     Minimized, the sheet shows the handle plus exactly one row. On a filter
+     sheet that's the live count: pinning it to the full row height leaves the
+     scroll area below it zero-height, so a minimized sheet shows a complete
+     line rather than a clipped stub of the next section. */
+  .bottom-sheet--filter .panel-stats {
+    box-sizing: border-box;
+    min-height: var(--sheet-peek-row);
+  }
+
+  /* On a detail sheet it's the header — the selected vessel/train, with its
+     close button — so a minimized detail sheet still says what's selected. */
+  .bottom-sheet .detail-header {
+    align-items: center;
+    min-height: var(--sheet-peek-row);
+    margin-bottom: 0;
+    box-sizing: border-box;
+    padding-bottom: 10px;
+  }
+
+  /* The chevron that collapses the desktop rail into its sliver is redundant
+     here — the grab handle right above it does the same job, and the peek row
+     is too valuable to spend on a second copy of it. The close button stays. */
+  .bottom-sheet .panel-collapse-btn {
+    display: none;
+  }
+
+  /* Minimized, that row is all there is: no scrolling it out of view. */
+  .bottom-sheet[data-snap='peek']:not(.bottom-sheet--dragging) .detail-content {
+    overflow: hidden;
   }
 
   /* The webcam detail is a fixed-width card on desktop; edge-to-edge on a sheet. */

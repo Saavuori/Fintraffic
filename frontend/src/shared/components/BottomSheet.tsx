@@ -7,7 +7,13 @@ interface BottomSheetProps {
   /** 'filter' → left rail / lower sheet; 'detail' → right rail / upper sheet. */
   variant: 'filter' | 'detail';
   isMobile: boolean;
-  /** Whether the sheet is mounted at all (detail sheets mount on selection). */
+  /**
+   * Whether the sheet is shown at all. Only the mobile sheet honours this: the
+   * desktop rails coexist happily side by side, but two stacked sheets sharing
+   * one bottom edge do not — so a mode passes `open={false}` for its filter
+   * sheet while a detail sheet is up, rather than leaving an unreachable handle
+   * buried behind it.
+   */
   open: boolean;
   ariaLabel: string;
   /** Extra classes for the panel root (e.g. 'webcam-popup'). */
@@ -50,7 +56,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     if (target !== collapsed) onToggleCollapse();
   };
 
-  const { sheetRef, handleProps, isDragging } = useBottomSheet({
+  const { snap, sheetRef, handleProps, isDragging } = useBottomSheet({
     isMobile,
     open,
     collapsed,
@@ -76,6 +82,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     );
   }
 
+  if (!open) return null;
+
   const onHandleKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -89,6 +97,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       className={`bottom-sheet bottom-sheet--${variant} ${className ?? ''} ${
         isDragging ? 'bottom-sheet--dragging' : ''
       }`.trim()}
+      // `data-snap` lets the stylesheet react to the resting height — minimized,
+      // the one visible row must not be scrollable out of view.
+      data-snap={snap}
       role="dialog"
       aria-label={ariaLabel}
     >
@@ -96,6 +107,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         className="bottom-sheet__handle"
         role="button"
         tabIndex={0}
+        aria-expanded={!collapsed}
         aria-label={collapsed ? `Expand ${ariaLabel}` : `Collapse ${ariaLabel}`}
         onKeyDown={onHandleKey}
         {...handleProps}

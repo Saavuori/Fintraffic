@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.10.1] - 2026-07-24
+
+### Fixed
+- **Mobile: sheet content no longer runs underneath the tab bar**: a bottom sheet is laid out taller than it shows and pushed down, so at the peek and half stops its body kept its full height and laid content out behind the nav — visible as a strip bleeding through the bar, and as list rows you could scroll to but never see. The sheet now trims its content area to exactly the visible slot as it moves (in lockstep with the slide, so nothing jumps), and the tab bar is opaque instead of 95% translucent, so nothing shows through it.
+- **Mobile: a minimized sheet now shows its summary line**: the peek stop was 40px — the grab handle and nothing else — despite the layout reserving a row for the sheet's headline. It's now tall enough for that row, so a minimized filter sheet shows the live vessel/train count and a minimized detail sheet shows what's selected, with its close button, instead of an anonymous handle.
+- **Mobile: one sheet at a time**: selecting something no longer parks a detail sheet directly on top of the filter sheet's handle (two stacked grab handles on the same bottom edge, the lower one unreachable). The filter sheet stands down while a detail sheet is up and returns when it closes.
+
+### Changed
+- **Mobile: sheets slide in, and the map controls travel with them**: sheets animate up from the bottom edge when they appear rather than popping into place, and the locate button, replay bar and map attribution ease along the sheet's own curve when it settles into a snap while still tracking it frame-for-frame during a drag. The grab handle is a taller target that thickens under the finger, the redundant collapse chevron is gone from sheet headers (the handle does that job), sheet scrolling no longer chains out to the map behind it, tab-bar presses answer with the icon rather than the browser's grey tap flash, and the middle snap sits slightly lower so it reads as half the screen with the bar included.
+
 ## [v0.10.0] - 2026-07-24
 
 ### Added

@@ -56,6 +56,8 @@ interface FilterPanelProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   isMobile: boolean;
+  /** False while a detail sheet is up on mobile — see BottomSheet's `open`. */
+  open?: boolean;
 }
 
 const GROUP_ORDER: TrainGroup[] = ['longDistance', 'commuter', 'cargo', 'other'];
@@ -82,6 +84,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   isCollapsed,
   onToggleCollapse,
   isMobile,
+  open = true,
 }) => {
   const bodyCollapsed = !isMobile && isCollapsed;
   const colors = groupColors(theme);
@@ -98,7 +101,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     <BottomSheet
       variant="filter"
       isMobile={isMobile}
-      open
+      open={open}
       ariaLabel="Open filters panel"
       collapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}

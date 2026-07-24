@@ -40,6 +40,11 @@
   --scrollbar-thumb: rgba(255, 255, 255, 0.15);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
   --app-bg: #020b17;
+  /* Opaque sibling of --bg-panel-hover, for the mobile tab bar. The bar is the
+     one surface that must not be see-through: a minimized sheet's box extends
+     down behind it, so any transparency shows the sheet's edge bleeding into
+     the nav. */
+  --bg-bar: hsl(210, 78%, 9%);
 }
 
 [data-theme='light'] {
@@ -70,6 +75,7 @@
   --scrollbar-thumb: rgba(12, 36, 48, 0.2);
   --scrollbar-thumb-hover: rgba(12, 36, 48, 0.35);
   --app-bg: #f5f9fb;
+  --bg-bar: #ffffff;
 }
 
 body {
@@ -95,6 +101,14 @@ body {
   outline: 2px solid var(--border-focus);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* Mobile browsers paint a grey box over any tapped control; every control here
+   already has its own hover/active treatment, so the default just reads as lag. */
+button,
+a,
+[role='button'] {
+  -webkit-tap-highlight-color: transparent;
 }
 
 .dashboard-container {
@@ -1499,6 +1513,26 @@ body {
     margin-bottom: calc(var(--active-sheet-height) + var(--tabbar-height) + 8px);
   }
 
+  /* The controls above rebase off --active-sheet-height, which the sheet
+     publishes continuously. While a finger is down that's a live value and they
+     must track it frame-for-frame; when the sheet is settling into a snap it
+     steps once, so they ease along the sheet's own curve instead of jumping
+     ahead of it. useBottomSheet toggles .sheet-dragging on <html>. */
+  .locate-control,
+  .locate-error,
+  .replay-bar,
+  .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
+    transition: bottom 0.28s cubic-bezier(0.32, 0.72, 0, 1),
+      margin-bottom 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  :root.sheet-dragging .locate-control,
+  :root.sheet-dragging .locate-error,
+  :root.sheet-dragging .replay-bar,
+  :root.sheet-dragging .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
+    transition: none;
+  }
+
   /* Build metadata isn't useful on a phone. */
   .version-badge {
     display: none;
@@ -1611,7 +1645,11 @@ body {
     border: none;
     border-top: 1px solid var(--border-glow);
     border-radius: 0;
-    background: var(--bg-panel-hover);
+    /* Opaque, and no backdrop blur: a minimized sheet's box runs down behind the
+       bar, so anything see-through here shows that overhang bleeding through. */
+    background: var(--bg-bar);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     box-shadow: 0 -8px 28px -12px rgba(0, 0, 0, 0.55);
   }
 
@@ -1633,7 +1671,13 @@ body {
     width: 46px;
     height: 26px;
     border-radius: 999px;
-    transition: background 0.2s;
+    transition: background 0.2s, transform 0.15s;
+  }
+
+  /* Touch has no hover, so the press itself has to answer. */
+  .mode-switcher__btn:active:not(:disabled) .mode-switcher__icon {
+    transform: scale(0.9);
+    background: var(--bg-button-hover);
   }
 
   .mode-switcher__icon svg {

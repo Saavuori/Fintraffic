@@ -119,7 +119,7 @@ export const PortPopup: React.FC<PortPopupProps> = ({
               <h3>{port.name}</h3>
               <span className="detail-subtitle">{port.locode}</span>
             </div>
-            <button className="icon-btn" onClick={onToggleCollapse} aria-label="Collapse panel">
+            <button className="icon-btn panel-collapse-btn" onClick={onToggleCollapse} aria-label="Collapse panel">
               <ChevronRight size={16} />
             </button>
             <button className="icon-btn" onClick={onClose} aria-label="Close panel">
