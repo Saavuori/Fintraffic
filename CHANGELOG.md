@@ -26,7 +26,7 @@ All notable changes to this project will be documented in this file. Fintraffic 
 ## [v0.6.4] - 2026-07-24
 
 ### Added
-- **CI: compile + changelog checks required on PRs to main**: a new pull-request workflow gates merges on three status checks — backend (`go build`/`go test`, `CGO_ENABLED=0`), frontend (lint/vitest/build), and changelog (rejects `[Unreleased]`, renders via `build-changelog.js`).
+- **CI: compile + changelog checks required on PRs to main**: a new pull-request workflow gates merges on three status checks — backend (`go build`/`go test`, `CGO_ENABLED=0`), frontend (lint/vitest/build), and changelog (rejects an unreleased-only heading, renders via `build-changelog.js`).
 
 ### Fixed
 - **Meri: React 19 hooks lint errors in popups**, surfaced by the new lint gate (never run in CI before) — `PortPopup`/`VesselPopup` now reset state on prop change during render instead of inside the effect, and `VesselPopup` derives fix age from a ticking clock state instead of calling `Date.now()` during render.
