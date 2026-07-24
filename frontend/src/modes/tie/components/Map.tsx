@@ -153,7 +153,7 @@ const Map: React.FC<MapProps> = ({
 
   // Swap the basemap when the theme changes. setStyle() throws away every
   // custom source, layer and marker image, so the install has to run again once
-  // the new style is ready â€” layer visibility survives via visibilityRef.
+  // the new style is ready — layer visibility survives via visibilityRef.
   useEffect(() => {
     themeRef.current = theme;
     const m = map.current;
@@ -272,7 +272,7 @@ const Map: React.FC<MapProps> = ({
     };
 
     // Layers are re-added after every theme swap, but map event listeners
-    // survive setStyle() â€” without this guard each swap would stack another
+    // survive setStyle() — without this guard each swap would stack another
     // copy of every handler (double popups, double flyTo).
     const boundLayers = new Set<string>();
     const bindOnce = (layerId: string, bind: () => void) => {
@@ -469,7 +469,7 @@ const Map: React.FC<MapProps> = ({
         if (!source && !styleReadyRef.current) return;
 
         // The sign images carry the displayed number baked in, so each distinct
-        // limit needs its own image â€” registered lazily as values appear (a new
+        // limit needs its own image — registered lazily as values appear (a new
         // value can show up on any poll, and a style swap drops all images).
         for (const sign of new Set(signs.map(s => s.speedLimit))) {
           registerSpeedLimitIcon(m, sign);
@@ -546,7 +546,7 @@ const Map: React.FC<MapProps> = ({
       try {
         const res = await fetch('/api/tie/parking');
         const allFacilities: ParkingFacility[] = await res.json();
-        // Facilities with no live utilization row yet carry no useful info â€” hide them.
+        // Facilities with no live utilization row yet carry no useful info — hide them.
         const facilities = allFacilities.filter(f => f.spacesAvailable != null);
 
         facilitiesById.current = new globalThis.Map(facilities.map(f => [f.id, f]));
@@ -808,7 +808,7 @@ const Map: React.FC<MapProps> = ({
       styleReadyRef.current = true;
       installLayers();
 
-      // Registered once â€” a theme swap reinstalls layers, not timers.
+      // Registered once — a theme swap reinstalls layers, not timers.
       intervalIds.push(setInterval(fetchStations, 60000));
       intervalIds.push(setInterval(fetchRoadworks, 120000));
       intervalIds.push(setInterval(fetchIncidents, 120000));
@@ -816,7 +816,7 @@ const Map: React.FC<MapProps> = ({
       // minute, so match that.
       intervalIds.push(setInterval(fetchSpeedLimits, 60000));
       intervalIds.push(setInterval(fetchParking, 60000));
-      // Weathercam stations/presets rarely change, so poll infrequently â€” the
+      // Weathercam stations/presets rarely change, so poll infrequently — the
       // camera images themselves are fetched fresh directly from
       // weathercam.digitraffic.fi by <img> tags, not through this list.
       intervalIds.push(setInterval(fetchWeathercams, 300000));

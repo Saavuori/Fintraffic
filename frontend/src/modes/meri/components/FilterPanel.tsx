@@ -151,7 +151,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                     <div className="alert-item" key={f.properties.id}>
                       <div className="alert-title">{f.properties.aton_name_fi}</div>
                       <div className="alert-desc">
-                        {f.properties.type} Â· {f.properties.fairway_name_fi}
+                        {f.properties.type} · {f.properties.fairway_name_fi}
                       </div>
                     </div>
                   ))}
