@@ -1,17 +1,9 @@
 # 🇫🇮 Fintraffic — Live Finnish Traffic Tracker (Meri · Raide · Tie)
 
-[![Live Application](https://img.shields.io/badge/Live-fintraffic.duckdns.org-2dd4bf?style=for-the-badge&logo=react)](https://fintraffic.duckdns.org/)
+[![Live Application](https://img.shields.io/badge/Live-liikenne.duckdns.org-2dd4bf?style=for-the-badge&logo=react)](https://liikenne.duckdns.org/)
 [![Changelog](https://img.shields.io/badge/Changelog-GitHub%20Pages-38bdf8?style=for-the-badge&logo=github)](https://saavuori.github.io/Fintraffic/)
 
-One live map for **Finnish sea, rail and road traffic**, built on Digitraffic's open data. Fintraffic consolidates three standalone apps — Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) — into a single Go backend + React frontend with a mode switcher.
-
-**Consolidation status:**
-
-| Mode | Source app | Status |
-|---|---|---|
-| 🚢 **Meri** | [Marinetraffic](https://github.com/Saavuori/Marinetraffic) | ✅ Ported (phase 1) |
-| 🚆 **Raide** | [railway](https://github.com/Saavuori/railway) | ✅ Ported (phase 2) |
-| 🚗 **Tie** | [tieliikenne](https://github.com/Saavuori/tieliikenne) | ✅ Ported (phase 3) |
+One live map for **Finnish sea, rail and road traffic**, built on Digitraffic's open data: a single Go backend + React frontend with three switchable modes — 🚢 **Meri** (vessels), 🚆 **Raide** (trains) and 🚗 **Tie** (road traffic).
 
 ---
 
@@ -78,49 +70,46 @@ Modes implement the `server.Mode` interface (`Name`, `Register`, `Health`); the 
 * **Variable speed-limit signs** (1 min), **parking availability** (2 min), **EV charging (AFIR)** locations with live per-EVSE availability (5 min), and **weather cameras** enriched with the nearest road-weather-station observations (3 min).
 * Locate-me control, per-layer toggles (7 layers), camera thumbnails loaded straight from `weathercam.digitraffic.fi`.
 
+---
+
+## Data Sources
+
+All data comes from [Digitraffic](https://www.digitraffic.fi/en/) and other Fintraffic open APIs — public, keyless, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The backend identifies itself with a `Digitraffic-User` header per the API etiquette.
+
+### 🚢 Meri — `meri.digitraffic.fi`
+
+| Feed | Endpoint | Used for |
+|---|---|---|
+| AIS positions & metadata | MQTT `wss://meri.digitraffic.fi:443/mqtt`, topic `vessels-v2/#` | Live vessel stream (positions, metadata, nav status) |
+| AIS REST | `/api/ais/v1/vessels`, `/api/ais/v1/locations` | Fleet hydration on boot + per-vessel details |
+| Port calls (Portnet) | `/api/port-call/v1/ports`, `/api/port-call/v1/port-calls` | Finnish ports layer + arrivals/departures |
+| Sea state estimation | `/api/sse/v1/measurements` | Smart-buoy wave/sea-state layer |
+| Aids to navigation | `/api/aton/v1/faults` | AtoN fault warnings layer |
+
+### 🚆 Raide — `rata.digitraffic.fi`
+
+| Feed | Endpoint | Used for |
+|---|---|---|
+| Train locations | `/api/v1/train-locations/latest` (10 s poll) | Live train GPS positions |
+| Live trains | `/api/v1/live-trains` (60 s poll) | Timetables, delays, categories, station boards |
+| Station metadata | `/api/v1/metadata/stations` (6 h poll) | Station register (names, coordinates) |
+
+### 🚗 Tie — `tie.digitraffic.fi` + friends
+
+| Feed | Endpoint | Used for |
+|---|---|---|
+| TMS stations | `tie.digitraffic.fi/api/tms/v1/stations[/data]` (1 min poll) | Traffic measurement stations layer |
+| TMS constants & sensors | `tie.digitraffic.fi/api/tms/v1/stations/sensor-constants`, `/api/tms/v1/sensors` (6 h) | Free-flow speed baselines, road bearings, sensor descriptions |
+| Traffic messages | `tie.digitraffic.fi/api/traffic-message/v2/roadworks`, `/traffic-announcements` (2 min) | Road works + incidents layers |
+| Variable signs | `tie.digitraffic.fi/api/variable-sign/v1/signs` (1 min) | Variable speed-limit layer |
+| Road weather | `tie.digitraffic.fi/api/weather/v1/stations[/data]` (3 min) | Weather readings embedded in camera popups |
+| Weather cameras | `tie.digitraffic.fi/api/weathercam/v1/stations` (3 min) + images from `weathercam.digitraffic.fi` | Weather camera layer + thumbnails |
+| Parking | `parking.fintraffic.fi/api/v1/facilities`, `/utilizations` (2 min) | Parking availability layer |
+| EV charging (AFIR) | `afir.digitraffic.fi/api/charging-network/v1/locations[/statuses]` (5 min) | EV charging layer with per-EVSE availability |
+
 ## HTTP API
 
-Global endpoints:
-
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/api/health` | Aggregated status: redis, uptime, per-mode health (`modes.meri.*`) |
-| `GET` | `/api/version` | Build `version`, `build_date`, `git_sha` (injected via ldflags) |
-| `GET` | `/metrics` | Prometheus exposition format |
-| `GET` | `/` | Embedded React SPA (go:embed static fallback) |
-
-Meri mode (`/api/meri`):
-
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/api/meri/ports` | Finnish ports with coordinates (thinned from Portnet) |
-| `GET` | `/api/meri/port-calls/{locode}` | Arrivals/departures for a port by UN/LOCODE |
-| `GET` | `/api/meri/vessel/{mmsi}` | Vessel metadata merged with its live cached position |
-| `GET` | `/api/meri/vessel/{mmsi}/trail` | Recorded track as `[lng, lat, ts]` tuples |
-| `GET` | `/api/meri/replay` | All vessels' recorded tracks in a window (fleet replay) |
-| `GET` | `/api/meri/sea-state` | Smart-buoy sea state measurements |
-| `GET` | `/api/meri/aton-faults` | Active aids-to-navigation faults |
-| `GET` | `/api/meri/stream` | WebSocket stream of live vessel positions (snapshot + delta) |
-
-Raide mode (`/api/raide`):
-
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/api/raide/trains` | Live train positions merged with timetable metadata |
-| `GET` | `/api/raide/stations` | Station register (code, name, coordinates, passenger/major flags) |
-| `GET` | `/api/raide/departures/{shortCode}` | Departure/arrival board for one station |
-
-Tie mode (`/api/tie`):
-
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/api/tie/tms` | TMS stations with sensor data, bearing and free-flow baselines |
-| `GET` | `/api/tie/roadworks` | Road works (flattened Datex2, incl. work-zone speed limits) |
-| `GET` | `/api/tie/incidents` | Traffic incident announcements |
-| `GET` | `/api/tie/speedlimits` | Variable speed-limit signs (currently displayed limits) |
-| `GET` | `/api/tie/parking` | Parking facilities with live availability |
-| `GET` | `/api/tie/weathercams` | Weather cameras with nearest-station weather |
-| `GET` | `/api/tie/charging` | EV charging network with live per-EVSE availability |
+Global endpoints (`/api/health`, `/api/version`, `/metrics`) plus per-mode routes under `/api/meri/`, `/api/raide/` and `/api/tie/`. The full endpoint reference — paths, query parameters, response shapes and caching/poll cadences — lives in **[docs/API.md](docs/API.md)**.
 
 ---
 
@@ -185,7 +174,23 @@ curl http://localhost:8080/api/health
 
 ### Production Deployment (RHEL & Podman)
 
-Deployed behind a single shared Caddy instance on an Oracle Cloud host. The backend publishes no ports and joins the external `web-proxy` Podman network; Caddy reverse-proxies `fintraffic.duckdns.org` to it. This one stack replaces the standalone marinetraffic/railway/tieliikenne stacks (and their per-app Redis instances and domains).
+Deployed behind a single shared Caddy instance on an Oracle Cloud host. The backend publishes no ports and joins the external `web-proxy` Podman network; Caddy reverse-proxies `liikenne.duckdns.org` to it.
+
+Install or update the stack on the host:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/Saavuori/Fintraffic/main/deploy/install.sh
+chmod +x install.sh
+./install.sh
+```
+
+The domain defaults to `liikenne.duckdns.org` and is used for the post-deploy health checks. To deploy under your own DNS name, pass it as an argument (or set `DOMAIN`):
+
+```bash
+./install.sh traffic.example.org
+```
+
+Other overrides: `APP_DIR` (default `~/fintraffic`) and `IMAGE` (default `ghcr.io/saavuori/fintraffic:latest`). The domain must resolve to the reverse proxy in front of the stack — add the matching vhost to the Caddy config on the `web-proxy` network.
 
 Two scripts in `deploy/`:
 

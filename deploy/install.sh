@@ -14,14 +14,20 @@
 # the backend on that network, not on a host port.
 #
 # Usage:
-#   ./install.sh
-#   APP_DIR=/srv/fintraffic DOMAIN=example.org ./install.sh
+#   ./install.sh                        # default domain (liikenne.duckdns.org)
+#   ./install.sh traffic.example.org    # custom domain as an argument
+#   DOMAIN=traffic.example.org ./install.sh          # ...or via env
+#   APP_DIR=/srv/fintraffic IMAGE=ghcr.io/you/fintraffic:latest ./install.sh
+#
+# The domain is only used for the post-deploy health checks and must resolve to
+# the reverse proxy in front of this stack — remember to add the matching vhost
+# to your Caddy/nginx config on the `web-proxy` network.
 #
 set -euo pipefail
 
-# --- config (override via env) ---------------------------------------------
+# --- config (first argument or env, with defaults) --------------------------
 APP_DIR="${APP_DIR:-$HOME/fintraffic}"
-DOMAIN="${DOMAIN:-fintraffic.duckdns.org}"   # used for the post-deploy checks
+DOMAIN="${1:-${DOMAIN:-liikenne.duckdns.org}}"   # used for the post-deploy checks
 IMAGE="${IMAGE:-ghcr.io/saavuori/fintraffic:latest}"
 
 # --- pick a container engine + compose command ------------------------------
@@ -37,7 +43,7 @@ else
   echo "ERROR: need podman-compose, 'podman compose', or Docker Compose installed." >&2
   exit 1
 fi
-echo "engine=$ENGINE  compose='$COMPOSE'  app_dir=$APP_DIR"
+echo "engine=$ENGINE  compose='$COMPOSE'  app_dir=$APP_DIR  domain=$DOMAIN"
 
 # --- write the compose file (backing up any existing one) -------------------
 mkdir -p "$APP_DIR"
