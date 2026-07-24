@@ -14,13 +14,17 @@
        declaration below the single source of truth: handle + one summary row +
        the sheet's own bottom padding. Keep it a plain px literal (the hook
        parses it; a calc() would come back unevaluated). */
-    --sheet-handle-height: 40px;
-    --sheet-pad-bottom: 14px;
-    --sheet-peek-height: 108px;
+    --sheet-handle-height: 24px;
+    --sheet-pad-bottom: 8px;
+    /* Overridden per variant below — minimized, a sheet should read as a summary
+       line, not as a second tab bar. */
+    --sheet-peek-height: 82px;
     /* What's left for the summary row that the peek shows: the live count on a
-       filter sheet, the selected vessel/train on a detail sheet. */
+       filter sheet, the selected vessel/train on a detail sheet. The 1px is the
+       top border, which the peek height (a visible height) includes and the
+       content box doesn't. */
     --sheet-peek-row: calc(
-      var(--sheet-peek-height) - var(--sheet-handle-height) - var(--sheet-pad-bottom)
+      var(--sheet-peek-height) - var(--sheet-handle-height) - var(--sheet-pad-bottom) - 1px
     );
 
     position: fixed;
@@ -58,7 +62,11 @@
     will-change: transform;
   }
 
+  /* A filter sheet's summary is one line of text, so its peek is the shorter of
+     the two — the same height as the tab bar it sits on. A detail sheet's summary
+     is the header row, whose 44px close button sets the floor. */
   .bottom-sheet--filter {
+    --sheet-peek-height: 64px;
     z-index: 12;
   }
 
@@ -81,7 +89,7 @@
     align-items: center;
     justify-content: center;
     height: var(--sheet-handle-height);
-    padding-top: 8px;
+    padding-top: 10px;
     margin: 0 -16px; /* full-width tap zone despite the sheet's side padding */
     touch-action: none;
     cursor: grab;
@@ -123,23 +131,35 @@
   }
 
   /* --- the peek row ---
-     Minimized, the sheet shows the handle plus exactly one row. On a filter
-     sheet that's the live count: pinning it to the full row height leaves the
-     scroll area below it zero-height, so a minimized sheet shows a complete
-     line rather than a clipped stub of the next section. */
+     Minimized, the sheet shows the handle plus exactly one row. The filter
+     sheet's own header is hidden on phones (the tab bar already names the mode),
+     which leaves the live count as its summary — so it takes the row whole, with
+     the padding it wears on desktop dropped. Pinning it to the full row height
+     also leaves the scroll area below it zero-height, so the peek shows a
+     complete line rather than a clipped stub of the next section. */
   .bottom-sheet--filter .panel-stats {
     box-sizing: border-box;
+    /* flex:none — the peek shrinks the flex column to this one row's height, and
+       a shrinkable row would be squeezed by it instead of filling it. */
+    flex: none;
+    align-items: center;
     min-height: var(--sheet-peek-row);
+    padding: 0;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-strong);
   }
 
   /* On a detail sheet it's the header — the selected vessel/train, with its
-     close button — so a minimized detail sheet still says what's selected. */
+     close button — so a minimized detail sheet still says what's selected. Its
+     spacing from the body below stays a margin: that pushes the next block out
+     of the peek instead of padding the header past the row and clipping it. */
   .bottom-sheet .detail-header {
+    box-sizing: border-box;
+    flex: none;
     align-items: center;
     min-height: var(--sheet-peek-row);
-    margin-bottom: 0;
-    box-sizing: border-box;
-    padding-bottom: 10px;
+    margin-bottom: 12px;
   }
 
   /* The chevron that collapses the desktop rail into its sliver is redundant
