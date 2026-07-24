@@ -276,20 +276,10 @@
 /* ---------- Mobile ---------- */
 
 @media (max-width: 768px) {
-  /* Full-width bottom sheets on mobile (see index.css); drop the desktop
-     fixed widths so they can stretch edge-to-edge. */
-  .mode-tie .filter-panel,
-  .mode-tie .detail-popup {
-    width: auto;
-  }
-
-  .mode-tie .selected-card-overlay {
-    top: 10px;
-    max-width: 94vw;
-    padding: 6px 10px;
-  }
-
-  .mode-tie .theme-toggle.detail-open {
-    right: 16px;
+  /* On phones the panels render as bottom sheets (shared BottomSheet), and the
+     theme control lives inside the filter sheet's layer toggles — so the
+     floating theme toggle would just crowd the mode switcher. Hide it. */
+  .mode-tie .theme-toggle {
+    display: none;
   }
 }

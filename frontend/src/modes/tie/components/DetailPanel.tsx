@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, ChevronRight, Gauge, SquareParking, Camera, Zap } from 'lucide-react';
-import { useCollapsiblePanel, stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
+import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
+import { BottomSheet } from '../../../shared/components/BottomSheet';
 import { type Station, directionalStatuses, stationVolume, congestionColors } from '../lib/traffic';
 import type { Theme } from '../lib/theme';
 import {
@@ -29,6 +30,7 @@ interface DetailPanelProps {
   onClose: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  isMobile: boolean;
 }
 
 function StationDetail({ station, theme }: { station: Station; theme: Theme }) {
@@ -321,18 +323,22 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   onClose,
   isCollapsed,
   onToggleCollapse,
+  isMobile,
 }) => {
-  const { className: collapsedClass, ...collapsibleProps } = useCollapsiblePanel(
-    isCollapsed,
-    onToggleCollapse,
-    'Open details panel'
-  );
+  const bodyCollapsed = !isMobile && isCollapsed;
 
   const { title, subtitle, badgeClass, Icon } = header(selection);
 
   return (
-    <div className={`glass-panel detail-popup ${collapsedClass}`} {...collapsibleProps}>
-      {!isCollapsed && (
+    <BottomSheet
+      variant="detail"
+      isMobile={isMobile}
+      open
+      ariaLabel="Open details panel"
+      collapsed={isCollapsed}
+      onToggleCollapse={onToggleCollapse}
+    >
+      {!bodyCollapsed && (
         <div className="detail-content" onClick={stopPanelClick}>
           <div className="detail-header">
             <div className={`detail-badge ${badgeClass}`}>
@@ -356,6 +362,6 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
           {selection.kind === 'charger' && <ChargerDetail charger={selection.charger} />}
         </div>
       )}
-    </div>
+    </BottomSheet>
   );
 };

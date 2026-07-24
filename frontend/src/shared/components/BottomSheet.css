@@ -1,0 +1,84 @@
+/* Draggable bottom-sheet chrome. Everything here is phone-only: on desktop the
+   BottomSheet component renders the existing `.glass-panel` rail instead, so
+   these rules never apply. Snap positioning (translateY) is written imperatively
+   by useBottomSheet; this file owns the look, the transition, and the handle. */
+
+@media (max-width: 768px) {
+  .bottom-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 88dvh;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    padding: 0 16px calc(14px + env(safe-area-inset-bottom));
+    background: var(--bg-panel);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-glow);
+    border-bottom: none;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 40px -10px rgba(0, 0, 0, 0.6);
+    color: var(--text-primary);
+    /* Off-screen until useBottomSheet's layout effect positions it — avoids a
+       first-paint flash at the top of the sheet's 88dvh box. */
+    transform: translate3d(0, 100%, 0);
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+    will-change: transform;
+  }
+
+  .bottom-sheet--filter {
+    z-index: 12;
+  }
+
+  .bottom-sheet--detail {
+    z-index: 13;
+  }
+
+  /* No transition while the finger is down — the transform follows in rAF. */
+  .bottom-sheet--dragging {
+    transition: none;
+  }
+
+  /* The real grab handle (replaces the old non-interactive ::before pills). Its
+     touch-action:none tells the browser we own the vertical gesture, so a drag
+     that starts here never scrolls the page or pans the map beneath. */
+  .bottom-sheet__handle {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    padding-top: 8px;
+    margin: 0 -16px; /* full-width tap zone despite the sheet's side padding */
+    touch-action: none;
+    cursor: grab;
+  }
+
+  .bottom-sheet__handle:active {
+    cursor: grabbing;
+  }
+
+  .bottom-sheet__grip {
+    width: 36px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--border-glow);
+  }
+
+  /* The panel body fills the sheet below the handle and owns the scroll. The
+     content components already set overflow + min-height on these; we only need
+     them to grow to fill the fixed-height sheet. */
+  .bottom-sheet > .filter-content,
+  .bottom-sheet > .detail-content {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* The webcam detail is a fixed-width card on desktop; edge-to-edge on a sheet. */
+  .bottom-sheet.webcam-popup {
+    width: auto;
+  }
+}

@@ -238,17 +238,3 @@
   font-size: 0.75rem;
   white-space: pre-line;
 }
-
-/* ---------- Mobile ---------- */
-
-@media (max-width: 768px) {
-  .mode-raide .train-card-overlay {
-    top: 10px;
-    max-width: 94vw;
-    padding: 6px 10px;
-  }
-
-  .mode-raide .train-card-dest {
-    display: none;
-  }
-}

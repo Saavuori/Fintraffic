@@ -3,13 +3,11 @@ import Map from './components/Map';
 import { FilterPanel } from './components/FilterPanel';
 import { DetailPanel } from './components/DetailPanel';
 import { SelectedCard } from './components/SelectedCard';
-import { useSwipeGestures } from '../../shared/hooks/useSwipeGestures';
+import { useIsMobile, MOBILE_QUERY } from '../../shared/hooks/useMediaQuery';
 import { type Theme } from './lib/theme';
 import { type Train, type StationMeta, type Board, type TrainGroup, trainGroup } from './lib/trains';
 import { type LayerKey, type LayerVisibility, DEFAULT_LAYER_VISIBILITY } from './lib/layers';
 import './raide.css';
-
-const MOBILE_QUERY = '(max-width: 768px)';
 
 const trainKey = (t: Pick<Train, 'trainNumber' | 'departureDate'>) =>
   `${t.trainNumber}/${t.departureDate}`;
@@ -27,6 +25,7 @@ interface RaideAppProps {
 }
 
 function RaideApp({ theme, onToggleTheme }: RaideAppProps) {
+  const isMobile = useIsMobile();
   const [trains, setTrains] = useState<Train[]>([]);
   const [selectedTrain, setSelectedTrain] = useState<Train | null>(null);
   const [selectedStation, setSelectedStation] = useState<StationMeta | null>(null);
@@ -38,13 +37,6 @@ function RaideApp({ theme, onToggleTheme }: RaideAppProps) {
     typeof window !== 'undefined' ? window.matchMedia(MOBILE_QUERY).matches : false
   );
   const [isDetailCollapsed, setIsDetailCollapsed] = useState<boolean>(false);
-
-  useSwipeGestures({
-    isFilterCollapsed,
-    isDetailCollapsed,
-    setFilterCollapsed: setIsFilterCollapsed,
-    setDetailCollapsed: setIsDetailCollapsed,
-  });
 
   // Keep the open train card in step with the map's 10-second position poll.
   const onTrainsUpdate = useCallback((next: Train[]) => {
@@ -145,6 +137,7 @@ function RaideApp({ theme, onToggleTheme }: RaideAppProps) {
         onToggleTheme={onToggleTheme}
         isCollapsed={isFilterCollapsed}
         onToggleCollapse={() => setIsFilterCollapsed(v => !v)}
+        isMobile={isMobile}
       />
 
       {hasSelection && (
@@ -164,6 +157,7 @@ function RaideApp({ theme, onToggleTheme }: RaideAppProps) {
           onClose={clearSelection}
           isCollapsed={isDetailCollapsed}
           onToggleCollapse={() => setIsDetailCollapsed(v => !v)}
+          isMobile={isMobile}
         />
       )}
     </div>

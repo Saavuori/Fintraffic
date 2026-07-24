@@ -10,7 +10,8 @@ import {
   Sun,
   ChevronLeft,
 } from 'lucide-react';
-import { useCollapsiblePanel, stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
+import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
+import { BottomSheet } from '../../../shared/components/BottomSheet';
 import { type TrainGroup, groupColors, CATEGORY_LABELS } from '../lib/trains';
 import { type LayerKey, type LayerVisibility } from '../lib/layers';
 import type { Theme } from '../lib/theme';
@@ -24,6 +25,7 @@ interface FilterPanelProps {
   onToggleTheme: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  isMobile: boolean;
 }
 
 const GROUP_ORDER: TrainGroup[] = ['longDistance', 'commuter', 'cargo', 'other'];
@@ -46,23 +48,27 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   onToggleTheme,
   isCollapsed,
   onToggleCollapse,
+  isMobile,
 }) => {
-  const { className: collapsedClass, ...collapsibleProps } = useCollapsiblePanel(
-    isCollapsed,
-    onToggleCollapse,
-    'Open filters panel'
-  );
+  const bodyCollapsed = !isMobile && isCollapsed;
   const colors = groupColors(theme);
   const anyHidden = GROUP_ORDER.some(g => !visibility[g]);
 
   return (
-    <div className={`glass-panel filter-panel ${collapsedClass}`} {...collapsibleProps}>
-      <div className="panel-header" onClick={isCollapsed ? undefined : stopPanelClick}>
+    <BottomSheet
+      variant="filter"
+      isMobile={isMobile}
+      open
+      ariaLabel="Open filters panel"
+      collapsed={isCollapsed}
+      onToggleCollapse={onToggleCollapse}
+    >
+      <div className="panel-header" onClick={bodyCollapsed ? undefined : stopPanelClick}>
         <div className="panel-title">
           <TrainFront size={16} />
           <span>Raideliikenne</span>
         </div>
-        {!isCollapsed && (
+        {!bodyCollapsed && (
           <button
             className="icon-btn"
             onClick={e => {
@@ -76,7 +82,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         )}
       </div>
 
-      {!isCollapsed && (
+      {!bodyCollapsed && (
         <div className="filter-content" onClick={stopPanelClick}>
           <div className="panel-stats">
             <span className="conn-dot" title="Live · updates every 10 s" />
@@ -145,6 +151,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </BottomSheet>
   );
 };

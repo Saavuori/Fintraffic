@@ -3,7 +3,7 @@ import { useWebSocket } from './hooks/useWebSocket';
 import { useVesselData } from './hooks/useVesselData';
 import { useVesselTrail } from './hooks/useVesselTrail';
 import { useFleetReplay } from './hooks/useFleetReplay';
-import { useSwipeGestures } from '../../shared/hooks/useSwipeGestures';
+import { useIsMobile, MOBILE_QUERY } from '../../shared/hooks/useMediaQuery';
 import { Map } from './components/Map';
 import { FilterPanel } from './components/FilterPanel';
 import { VesselPopup } from './components/VesselPopup';
@@ -16,8 +16,6 @@ import { categorize, CATEGORY_COLORS, type ShipCategory } from './lib/shipTypes'
 import { WEBCAMS } from './lib/webcams';
 import type { Webcam } from './lib/webcams';
 import type { Port, SeaStateFeature, AtonFaultFeature, Vessel } from './types';
-
-const MOBILE_QUERY = '(max-width: 768px)';
 
 interface MeriAppProps {
   theme: 'light' | 'dark';
@@ -97,18 +95,13 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   // Fleet-wide animated replay of recorded tracks.
   const replay = useFleetReplay();
 
+  const isMobile = useIsMobile();
+
   // Panel collapse state
   const [isDetailCollapsed, setIsDetailCollapsed] = useState<boolean>(false);
   const [isFilterCollapsed, setIsFilterCollapsed] = useState<boolean>(
     typeof window !== 'undefined' ? window.matchMedia(MOBILE_QUERY).matches : false
   );
-
-  useSwipeGestures({
-    isFilterCollapsed,
-    isDetailCollapsed,
-    setFilterCollapsed: setIsFilterCollapsed,
-    setDetailCollapsed: setIsDetailCollapsed,
-  });
 
   const onSelectionMade = useCallback(() => {
     setIsDetailCollapsed(false);
@@ -292,6 +285,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         connectionStatus={connectionStatus}
         isCollapsed={isFilterCollapsed}
         onToggleCollapse={toggleFilterCollapsed}
+        isMobile={isMobile}
         mapTheme={mapTheme}
         setMapTheme={setMapTheme}
         showPorts={showPorts}
@@ -327,6 +321,13 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
           onClose={handleCloseVessel}
           isCollapsed={isDetailCollapsed}
           onToggleCollapse={toggleDetailCollapsed}
+          isMobile={isMobile}
+          isFollowing={isFollowing}
+          onToggleFollow={toggleFollowing}
+          showTrail={showTrail}
+          onToggleTrail={toggleTrail}
+          trailWindowSec={trailWindowSec}
+          onSetTrailWindow={setTrailWindowSec}
           replayActive={replay.active}
         />
       )}
@@ -337,6 +338,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
           onClose={handleClosePort}
           isCollapsed={isDetailCollapsed}
           onToggleCollapse={toggleDetailCollapsed}
+          isMobile={isMobile}
           onSelectVessel={handleSelectVessel}
         />
       )}
@@ -347,6 +349,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
           onClose={handleCloseWebcam}
           isCollapsed={isDetailCollapsed}
           onToggleCollapse={toggleDetailCollapsed}
+          isMobile={isMobile}
         />
       )}
 

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { X, ChevronRight, Navigation, Anchor as AnchorIcon } from 'lucide-react';
-import { useCollapsiblePanel, stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
+import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
+import { BottomSheet } from '../../../shared/components/BottomSheet';
 import { categorize, CATEGORY_COLORS, CATEGORY_LABELS, shipTypeText, navStatText } from '../lib/shipTypes';
 import { fetchVesselDetails } from '../lib/api';
+import { VesselActions } from './VesselActions';
 import type { Vessel, VesselDetailsResponse } from '../types';
 
 interface VesselPopupProps {
@@ -10,6 +12,15 @@ interface VesselPopupProps {
   onClose: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  isMobile: boolean;
+  // On mobile the floating vessel card is hidden, so its follow / track-history
+  // controls are relocated into this sheet's header.
+  isFollowing: boolean;
+  onToggleFollow: () => void;
+  showTrail: boolean;
+  onToggleTrail: () => void;
+  trailWindowSec: number;
+  onSetTrailWindow: (sec: number) => void;
   // During replay the selected vessel may not be transmitting live AIS at
   // all, so skip the live metadata fetch rather than show an unrelated ship.
   replayActive?: boolean;
@@ -30,13 +41,16 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
   onClose,
   isCollapsed,
   onToggleCollapse,
+  isMobile,
+  isFollowing,
+  onToggleFollow,
+  showTrail,
+  onToggleTrail,
+  trailWindowSec,
+  onSetTrailWindow,
   replayActive = false,
 }) => {
-  const { className: collapsedClass, ...collapsibleProps } = useCollapsiblePanel(
-    isCollapsed,
-    onToggleCollapse,
-    'Open vessel details'
-  );
+  const bodyCollapsed = !isMobile && isCollapsed;
   const [details, setDetails] = useState<VesselDetailsResponse | null>(null);
   const [loadedMmsi, setLoadedMmsi] = useState(vessel.mmsi);
   // Ticking clock (ms) so the fix-age display stays current without reading
@@ -92,8 +106,15 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
     : null;
 
   return (
-    <div className={`glass-panel detail-popup ${collapsedClass}`} {...collapsibleProps}>
-      {!isCollapsed && (
+    <BottomSheet
+      variant="detail"
+      isMobile={isMobile}
+      open
+      ariaLabel="Open vessel details"
+      collapsed={isCollapsed}
+      onToggleCollapse={onToggleCollapse}
+    >
+      {!bodyCollapsed && (
         <div className="detail-content" onClick={stopPanelClick}>
           <div className="detail-header">
             <div className="vessel-badge" style={{ borderColor: CATEGORY_COLORS[cat] }}>
@@ -112,6 +133,22 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
               <X size={16} />
             </button>
           </div>
+
+          {/* On mobile the floating card is hidden; surface its follow / trail
+              controls here instead. */}
+          {isMobile && !replayActive && (
+            <div className="vessel-actions-row">
+              <VesselActions
+                isFollowing={isFollowing}
+                onToggleFollow={onToggleFollow}
+                showTrail={showTrail}
+                onToggleTrail={onToggleTrail}
+                trailWindowSec={trailWindowSec}
+                onSetTrailWindow={onSetTrailWindow}
+                replayActive={replayActive}
+              />
+            </div>
+          )}
 
           <div className="telemetry-grid">
             <div className="telemetry-item">
@@ -216,6 +253,6 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </BottomSheet>
   );
 };

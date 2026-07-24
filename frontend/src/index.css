@@ -1300,121 +1300,74 @@ body {
 
 /* ---------- Mobile ---------- */
 
-/* On phones the side panels become bottom sheets: filters and detail views
-   slide up from the bottom, keeping the map fully visible above. Everything
-   anchored to the bottom shares --sheet-peek (how much of a collapsed sheet
-   stays tappable) so the badges/controls above it line up. Collapsing hides the
-   panel content, so a collapsed sheet naturally shrinks to just its header. */
+/* On phones the side panels become draggable bottom sheets (see
+   shared/components/BottomSheet). Each open sheet publishes its live height to
+   --sheet-height-<id>; --active-sheet-height is the taller of the two, so the
+   bottom-anchored map controls below always clear whichever sheet is expanded
+   (the fix for the old buried-locate-button problem). useBottomSheet writes the
+   two inputs; the max() here recomposes without any JS coordination. */
+:root {
+  --sheet-height-filter: 0px;
+  --sheet-height-detail: 0px;
+  --active-sheet-height: max(var(--sheet-height-filter), var(--sheet-height-detail));
+}
+
 @media (max-width: 768px) {
-  :root {
-    --sheet-peek: 64px;
-  }
-
-  /* Filter panel → bottom sheet */
-  .filter-panel {
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: auto;
-    height: auto;
-    max-height: 55dvh;
-    padding: 10px 14px calc(12px + env(safe-area-inset-bottom));
-    border-radius: 16px 16px 0 0;
-    border-left: 1px solid var(--border-glow);
-    border-bottom: none;
-    z-index: 12;
-  }
-
-  /* Grab-handle affordance on the sheets */
-  .filter-panel::before,
-  .detail-popup::before {
-    content: '';
-    display: block;
-    flex: none;
-    width: 36px;
-    height: 4px;
-    margin: 0 auto 8px;
-    border-radius: 999px;
-    background: var(--border-glow);
-  }
-
-  .filter-panel.collapsed {
-    transform: translateY(calc(100% - var(--sheet-peek))) !important;
-  }
-
-  /* Detail view → bottom sheet, above the filter sheet */
-  .detail-popup {
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: auto;
-    max-height: 70dvh;
-    padding: 10px 16px calc(16px + env(safe-area-inset-bottom));
-    border-radius: 16px 16px 0 0;
-    border-right: 1px solid var(--border-glow);
-    border-bottom: none;
-    z-index: 13;
-  }
-
-  .detail-popup.collapsed {
-    transform: translateY(calc(100% - var(--sheet-peek))) !important;
-    min-height: 0;
-  }
-
-  .vessel-card-overlay {
-    top: 10px;
-    max-width: 94vw;
-    padding: 6px 10px;
-  }
-
-  .vessel-card-dest {
+  /* The floating summary pills are redundant on mobile — the detail sheet is
+     the single source of selection detail — so hide them (Meri's follow/trail
+     actions move into the sheet header via VesselActions). */
+  .vessel-card-overlay,
+  .train-card-overlay,
+  .selected-card-overlay {
     display: none;
   }
 
-  /* Bigger tap target, lifted clear of the collapsed filter-sheet peek */
+  /* Sheet icon buttons (header collapse/close, relocated follow/trail) get the
+     full 44px thumb target. On mobile the panels render as `.bottom-sheet`. */
+  .bottom-sheet .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Meri's relocated follow / track-history controls, in the detail sheet. */
+  .vessel-actions-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  /* Bigger tap target, lifted clear of the active sheet. */
   .locate-control {
     width: 44px;
     height: 44px;
-    bottom: calc(var(--sheet-peek) + 16px + env(safe-area-inset-bottom));
-  }
-
-  /* Icon buttons are 28px at desktop precision — too small to reliably hit
-     with a thumb. Panel-header buttons (filter/detail sheets) have room to
-     grow to the ~44px recommended touch target; the floating vessel/train
-     card is a tight single-row pill that would overflow at 44px, so it gets
-     a smaller bump instead. */
-  .filter-panel .icon-btn,
-  .detail-popup .icon-btn {
-    width: 44px;
-    height: 44px;
-  }
-
-  .vessel-card-overlay .icon-btn,
-  .train-card-overlay .icon-btn,
-  .selected-card-overlay .icon-btn {
-    width: 34px;
-    height: 34px;
+    bottom: calc(var(--active-sheet-height) + 16px + env(safe-area-inset-bottom));
   }
 
   .locate-error {
-    bottom: calc(var(--sheet-peek) + 68px + env(safe-area-inset-bottom));
+    bottom: calc(var(--active-sheet-height) + 68px + env(safe-area-inset-bottom));
   }
 
-  /* Keep the required attribution visible just above the collapsed sheet peek */
+  /* Keep the required attribution visible just above the active sheet. */
   .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
-    margin-bottom: calc(var(--sheet-peek) + 8px);
+    margin-bottom: calc(var(--active-sheet-height) + 8px);
   }
 
-  /* Build metadata isn't useful on a phone and would fight the sheet peek */
+  /* Build metadata isn't useful on a phone. */
   .version-badge {
     display: none;
   }
 
-  /* Fleet-replay transport bar clears the collapsed filter-sheet peek */
+  /* Fleet-replay transport bar clears the active sheet. */
   .replay-bar {
-    bottom: calc(var(--sheet-peek) + 12px + env(safe-area-inset-bottom));
+    bottom: calc(var(--active-sheet-height) + 12px + env(safe-area-inset-bottom));
+  }
+
+  /* The mode switcher is the primary nav — give it real tap targets. */
+  .mode-switcher__btn {
+    font-size: 0.9rem;
+    padding: 8px 16px;
   }
 }
 

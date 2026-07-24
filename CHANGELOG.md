@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file. Fintraffic 
 ## [v0.9.0] - 2026-07-24
 
 ### Added
+- **Mobile: draggable bottom sheets**: on phones the filter and detail panels are now real drag-to-resize bottom sheets with peek / half / full snap points, a finger-tracking drag, a working grab handle, and flick-to-snap — replacing the previous collapse-only sheets. Bottom-anchored map controls (the locate button, Meri's replay transport bar, the map attribution) rebase off the active sheet's live height, so an expanded sheet no longer buries the locate button. A shared, reactive breakpoint hook (`useMediaQuery` / `useIsMobile`) drives the switch, so rotating or resizing the viewport is handled live.
+
+### Changed
+- **Mobile: a single selection surface**: the redundant floating summary pill is hidden on phones — Meri's follow / track-history controls move into the detail sheet header — the mode switcher gets larger touch targets, and Tie's floating theme toggle is dropped in favour of the one already inside its filter sheet.
+
+### Removed
+- **Horizontal panel swipe gestures**: the window-level left/right edge-swipe hook — which competed with map panning and in-panel list scrolling — is gone; the vertical sheet drag replaces it.
+
+## [v0.8.3] - 2026-07-24
+
+### Added
 - **Meri: vessel search**: the filter panel gains a search box (by name or MMSI) over the full live fleet, independent of the active category filter, showing up to 8 matches; picking a result selects that vessel the same as clicking its marker.
 
 ### Fixed

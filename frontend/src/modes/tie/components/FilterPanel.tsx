@@ -12,7 +12,8 @@ import {
   Sun,
   ChevronLeft,
 } from 'lucide-react';
-import { useCollapsiblePanel, stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
+import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
+import { BottomSheet } from '../../../shared/components/BottomSheet';
 import { type LayerKey, type LayerVisibility, LAYER_ORDER, LAYER_LABELS, poiColors } from '../lib/layers';
 import { congestionColors } from '../lib/traffic';
 import { parkingColors } from '../lib/parking';
@@ -28,6 +29,7 @@ interface FilterPanelProps {
   onToggleTheme: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  isMobile: boolean;
 }
 
 // Pictogram per layer, mirroring what the map draws so the toggle key matches
@@ -95,23 +97,27 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   onToggleTheme,
   isCollapsed,
   onToggleCollapse,
+  isMobile,
 }) => {
-  const { className: collapsedClass, ...collapsibleProps } = useCollapsiblePanel(
-    isCollapsed,
-    onToggleCollapse,
-    'Open layers panel'
-  );
+  const bodyCollapsed = !isMobile && isCollapsed;
 
   const visibleKeys = LAYER_ORDER.filter(key => visibility[key]);
 
   return (
-    <div className={`glass-panel filter-panel ${collapsedClass}`} {...collapsibleProps}>
-      <div className="panel-header" onClick={isCollapsed ? undefined : stopPanelClick}>
+    <BottomSheet
+      variant="filter"
+      isMobile={isMobile}
+      open
+      ariaLabel="Open layers panel"
+      collapsed={isCollapsed}
+      onToggleCollapse={onToggleCollapse}
+    >
+      <div className="panel-header" onClick={bodyCollapsed ? undefined : stopPanelClick}>
         <div className="panel-title">
           <CarFront size={16} />
           <span>Tieliikenne</span>
         </div>
-        {!isCollapsed && (
+        {!bodyCollapsed && (
           <button
             className="icon-btn"
             onClick={e => {
@@ -125,7 +131,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         )}
       </div>
 
-      {!isCollapsed && (
+      {!bodyCollapsed && (
         <div className="filter-content" onClick={stopPanelClick}>
           <div className="panel-stats">
             <span className="conn-dot" title="Live · Digitraffic" />
@@ -184,6 +190,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </BottomSheet>
   );
 };

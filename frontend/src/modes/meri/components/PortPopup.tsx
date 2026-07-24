@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, ChevronRight, Anchor, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
-import { useCollapsiblePanel, stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
+import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
+import { BottomSheet } from '../../../shared/components/BottomSheet';
 import { fetchPortCalls } from '../lib/api';
 import type { Port, PortCall } from '../types';
 
@@ -9,6 +10,7 @@ interface PortPopupProps {
   onClose: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  isMobile: boolean;
   onSelectVessel: (mmsi: number) => void;
 }
 
@@ -67,13 +69,10 @@ export const PortPopup: React.FC<PortPopupProps> = ({
   onClose,
   isCollapsed,
   onToggleCollapse,
+  isMobile,
   onSelectVessel,
 }) => {
-  const { className: collapsedClass, ...collapsibleProps } = useCollapsiblePanel(
-    isCollapsed,
-    onToggleCollapse,
-    'Open port details'
-  );
+  const bodyCollapsed = !isMobile && isCollapsed;
   const [rows, setRows] = useState<CallRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadedLocode, setLoadedLocode] = useState(port.locode);
@@ -102,8 +101,15 @@ export const PortPopup: React.FC<PortPopupProps> = ({
   }, [port.locode]);
 
   return (
-    <div className={`glass-panel detail-popup ${collapsedClass}`} {...collapsibleProps}>
-      {!isCollapsed && (
+    <BottomSheet
+      variant="detail"
+      isMobile={isMobile}
+      open
+      ariaLabel="Open port details"
+      collapsed={isCollapsed}
+      onToggleCollapse={onToggleCollapse}
+    >
+      {!bodyCollapsed && (
         <div className="detail-content" onClick={stopPanelClick}>
           <div className="detail-header">
             <div className="vessel-badge port-badge">
@@ -155,6 +161,6 @@ export const PortPopup: React.FC<PortPopupProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </BottomSheet>
   );
 };

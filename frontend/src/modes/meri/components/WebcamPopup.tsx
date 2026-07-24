@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, ChevronRight, Video } from 'lucide-react';
-import { useCollapsiblePanel, stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
+import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
+import { BottomSheet } from '../../../shared/components/BottomSheet';
 import type { Webcam } from '../lib/webcams';
 
 interface WebcamPopupProps {
@@ -8,6 +9,7 @@ interface WebcamPopupProps {
   onClose: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  isMobile: boolean;
 }
 
 export const WebcamPopup: React.FC<WebcamPopupProps> = ({
@@ -15,16 +17,21 @@ export const WebcamPopup: React.FC<WebcamPopupProps> = ({
   onClose,
   isCollapsed,
   onToggleCollapse,
+  isMobile,
 }) => {
-  const { className: collapsedClass, ...collapsibleProps } = useCollapsiblePanel(
-    isCollapsed,
-    onToggleCollapse,
-    'Open webcam'
-  );
+  const bodyCollapsed = !isMobile && isCollapsed;
 
   return (
-    <div className={`glass-panel detail-popup webcam-popup ${collapsedClass}`} {...collapsibleProps}>
-      {!isCollapsed && (
+    <BottomSheet
+      variant="detail"
+      className="webcam-popup"
+      isMobile={isMobile}
+      open
+      ariaLabel="Open webcam"
+      collapsed={isCollapsed}
+      onToggleCollapse={onToggleCollapse}
+    >
+      {!bodyCollapsed && (
         <div className="detail-content" onClick={stopPanelClick}>
           <div className="detail-header">
             <div className="vessel-badge port-badge">
@@ -52,6 +59,6 @@ export const WebcamPopup: React.FC<WebcamPopupProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </BottomSheet>
   );
 };
