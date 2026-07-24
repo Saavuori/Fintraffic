@@ -1,6 +1,6 @@
 # 🇫🇮 Fintraffic — Live Finnish Traffic Tracker (Meri · Raide · Tie)
 
-[![Live Application](https://img.shields.io/badge/Live-fintraffic.duckdns.org-2dd4bf?style=for-the-badge&logo=react)](https://fintraffic.duckdns.org/)
+[![Live Application](https://img.shields.io/badge/Live-liikenne.duckdns.org-2dd4bf?style=for-the-badge&logo=react)](https://liikenne.duckdns.org/)
 [![Changelog](https://img.shields.io/badge/Changelog-GitHub%20Pages-38bdf8?style=for-the-badge&logo=github)](https://saavuori.github.io/Fintraffic/)
 
 One live map for **Finnish sea, rail and road traffic**, built on Digitraffic's open data: a single Go backend + React frontend with three switchable modes — 🚢 **Meri** (vessels), 🚆 **Raide** (trains) and 🚗 **Tie** (road traffic).
@@ -137,7 +137,23 @@ curl http://localhost:8080/api/health
 
 ### Production Deployment (RHEL & Podman)
 
-Deployed behind a single shared Caddy instance on an Oracle Cloud host. The backend publishes no ports and joins the external `web-proxy` Podman network; Caddy reverse-proxies `fintraffic.duckdns.org` to it.
+Deployed behind a single shared Caddy instance on an Oracle Cloud host. The backend publishes no ports and joins the external `web-proxy` Podman network; Caddy reverse-proxies `liikenne.duckdns.org` to it.
+
+Install or update the stack on the host:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/Saavuori/Fintraffic/main/deploy/install.sh
+chmod +x install.sh
+./install.sh
+```
+
+The domain defaults to `liikenne.duckdns.org` and is used for the post-deploy health checks. To deploy under your own DNS name, pass it as an argument (or set `DOMAIN`):
+
+```bash
+./install.sh traffic.example.org
+```
+
+Other overrides: `APP_DIR` (default `~/fintraffic`) and `IMAGE` (default `ghcr.io/saavuori/fintraffic:latest`). The domain must resolve to the reverse proxy in front of the stack — add the matching vhost to the Caddy config on the `web-proxy` network.
 
 Two scripts in `deploy/`:
 

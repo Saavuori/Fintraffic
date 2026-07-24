@@ -1,7 +1,7 @@
 # Production stack for fintraffic (rootless Podman on the Oracle host).
 #
 # TLS termination is NOT here: the Caddy container from the ratikka stack owns
-# :80/:443 on this host and proxies fintraffic.duckdns.org to this backend
+# :80/:443 on this host and proxies liikenne.duckdns.org to this backend
 # over the shared external `web-proxy` network.
 #
 # Migration note: this stack replaces the standalone marinetraffic stack. To
