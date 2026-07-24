@@ -15,7 +15,7 @@ import { fetchPorts, fetchSeaState, fetchAtonFaults } from './lib/api';
 import { categorize, CATEGORY_COLORS, type ShipCategory } from './lib/shipTypes';
 import { WEBCAMS } from './lib/webcams';
 import type { Webcam } from './lib/webcams';
-import type { Port, SeaStateFeature, AtonFaultFeature } from './types';
+import type { Port, SeaStateFeature, AtonFaultFeature, Vessel } from './types';
 
 interface MeriAppProps {
   theme: 'light' | 'dark';
@@ -188,9 +188,6 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
 
   const liveVessel = selectedMmsi !== null ? vessels[String(selectedMmsi)] ?? null : null;
 
-  // The trail is drawn in the selected vessel's category colour.
-  const trailColor = liveVessel ? CATEGORY_COLORS[categorize(liveVessel.shipType)] : '#2dd4bf';
-
   // mmsi → category icon + name for replay markers, from the *unfiltered* live
   // fleet so category filters don't strip colours off the playback overlay.
   const replayMeta = useMemo(() => {
@@ -200,6 +197,38 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
     }
     return meta;
   }, [vessels]);
+
+  // During replay, the detail panel must track the playhead-interpolated pose
+  // (position/course/speed) rather than the live feed, which is frozen from
+  // the panel's perspective — it only changes when a fresh AIS message for
+  // that ship happens to arrive, unrelated to replay progress. Static fields
+  // (name, ship type, destination, ...) still come from the live fleet /
+  // replay metadata when available, since the replay track only records pose.
+  const replayPose = replay.selectedPose;
+  const replayVessel: Vessel | null = useMemo(() => {
+    if (selectedMmsi === null || !replayPose || replayPose.mmsi !== selectedMmsi) return null;
+    const known = vessels[String(selectedMmsi)];
+    const meta = replayMeta[String(selectedMmsi)];
+    return {
+      ...known,
+      mmsi: selectedMmsi,
+      navStat: known?.navStat ?? 15,
+      name: known?.name ?? meta?.name,
+      lat: replayPose.lat,
+      lng: replayPose.lng,
+      cog: replayPose.cog,
+      hdg: replayPose.cog,
+      sog: replayPose.sog,
+      ts: replayPose.ts,
+    };
+  }, [selectedMmsi, replayPose, vessels, replayMeta]);
+
+  const displayedVessel = replay.active ? replayVessel : liveVessel;
+
+  // The trail is drawn in the selected vessel's category colour.
+  const trailColor = displayedVessel
+    ? CATEGORY_COLORS[categorize(displayedVessel.shipType)]
+    : '#2dd4bf';
 
   // Entering replay clears the live selection so its card/popup don't linger
   // over the historical overlay.
@@ -274,9 +303,9 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         onEnterReplay={handleEnterReplay}
       />
 
-      {liveVessel && (
+      {displayedVessel && (
         <VesselCard
-          vessel={liveVessel}
+          vessel={displayedVessel}
           onClose={handleCloseVessel}
           isFollowing={isFollowing}
           onToggleFollow={toggleFollowing}
@@ -288,12 +317,13 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         />
       )}
 
-      {liveVessel && (
+      {displayedVessel && (
         <VesselPopup
-          vessel={liveVessel}
+          vessel={displayedVessel}
           onClose={handleCloseVessel}
           isCollapsed={isDetailCollapsed}
           onToggleCollapse={toggleDetailCollapsed}
+          replayActive={replay.active}
         />
       )}
 

@@ -240,7 +240,7 @@ const (
 
 // FleetReplay returns the recorded tracks of ALL vessels within a time window,
 // for the animated playback overlay. Vessels are keyed by MMSI; each track is
-// an array of compact [lng, lat, ts, cog] tuples ascending by time. Query
+// an array of compact [lng, lat, ts, cog, sog] tuples ascending by time. Query
 // params: from, to (epoch seconds). The window is clamped to replayMaxWindowSec.
 func (h *Handlers) FleetReplay(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().Unix()
@@ -269,13 +269,13 @@ func (h *Handlers) FleetReplay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Compact [lng, lat, ts, cog] tuples, keyed by MMSI as a string so the
+	// Compact [lng, lat, ts, cog, sog] tuples, keyed by MMSI as a string so the
 	// object is valid JSON.
-	vessels := make(map[string][][4]float64, len(tracks))
+	vessels := make(map[string][][5]float64, len(tracks))
 	for mmsi, pts := range tracks {
-		coords := make([][4]float64, 0, len(pts))
+		coords := make([][5]float64, 0, len(pts))
 		for _, p := range pts {
-			coords = append(coords, [4]float64{p.Lng, p.Lat, float64(p.Ts), p.Cog})
+			coords = append(coords, [5]float64{p.Lng, p.Lat, float64(p.Ts), p.Cog, p.Sog})
 		}
 		vessels[strconv.Itoa(mmsi)] = coords
 	}
@@ -285,7 +285,7 @@ func (h *Handlers) FleetReplay(w http.ResponseWriter, r *http.Request) {
 		From      int64                   `json:"from"`
 		To        int64                   `json:"to"`
 		Truncated bool                    `json:"truncated"`
-		Vessels   map[string][][4]float64 `json:"vessels"`
+		Vessels   map[string][][5]float64 `json:"vessels"`
 	}{From: from, To: to, Truncated: truncated, Vessels: vessels})
 }
 
