@@ -185,4 +185,9 @@ curl http://localhost:8080/api/health
 
 ### Production Deployment (RHEL & Podman)
 
-Deployed behind a single shared Caddy instance on an Oracle Cloud host. See `deploy/docker-compose.yml` and `deploy/update.sh` — the backend publishes no ports and joins the external `web-proxy` Podman network; Caddy reverse-proxies `fintraffic.duckdns.org` to it. Images are refreshed by an `update.sh` cron job every 5 minutes rather than Watchtower, which is incompatible with rootless Podman. As modes are ported in, this one stack replaces the standalone marinetraffic/railway/tieliikenne stacks (and their per-app Redis instances and domains).
+Deployed behind a single shared Caddy instance on an Oracle Cloud host. The backend publishes no ports and joins the external `web-proxy` Podman network; Caddy reverse-proxies `fintraffic.duckdns.org` to it. This one stack replaces the standalone marinetraffic/railway/tieliikenne stacks (and their per-app Redis instances and domains).
+
+Two scripts in `deploy/`:
+
+* **`install.sh`** — idempotent install/update: writes the compose file, ensures the `web-proxy` network and trail volume exist, pulls the image, recreates the stack, and verifies trail recording actually came up. Run it for first install and whenever the *compose* changes (env vars, volumes).
+* **`update.sh`** — image-only refresher for a 5-minute cron: pulls the latest image and recreates the containers when it changed. It never touches the compose file, so config drift is fixed by re-running `install.sh`. (Watchtower is not used — it is incompatible with rootless Podman.)
