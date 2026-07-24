@@ -1486,14 +1486,9 @@ a,
     display: none;
   }
 
-  /* With the title gone, the live count is the sheet's summary line — give it
-     a bit more presence so the peek reads at a glance. */
-  .bottom-sheet--filter .panel-stats {
-    padding-top: 10px;
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: var(--text-strong);
-  }
+  /* With the title gone, the live count is the sheet's summary line — it's what
+     the peek shows, so BottomSheet.css styles and sizes it alongside the rest of
+     the peek geometry rather than here. */
 
   /* Bigger tap target, lifted clear of the active sheet AND the tab bar. The
      sheet rests on the tab bar, so its top edge is (tabbar + sheet) up from the

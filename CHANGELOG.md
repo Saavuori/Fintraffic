@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.10.2] - 2026-07-24
+
+### Fixed
+- **Mobile: a minimized sheet is sized to its summary row**: the peek stop was 108px — nearly twice the tab bar's height for one line of text, most of it empty. It's now declared per sheet and sized to what the row actually holds: a minimized filter sheet is exactly as tall as the tab bar it rests on, and a minimized detail sheet only as tall as its two-line title and close button need. Both numbers live in the stylesheet, which the sheet reads back, so the height and the layout that has to fit inside it can't drift apart.
+- **Mobile: the summary row is no longer squeezed and clipped**: the row is a flex item in a column the peek shrinks to one row's height, so instead of filling that row it was compressed below its content — visibly cutting off the vessel badge and subtitle on a minimized detail sheet.
+- **Mobile: a sheet no longer drifts out of position when the viewport height changes**: the resting offset is measured against the sheet's own height and was only recomputed on a window resize event, which the mobile URL bar collapsing doesn't reliably fire — leaving the sheet parked several pixels off and its summary row clipped by the difference. It now watches the element itself, so any height change re-seats it.
+
 ## [v0.10.1] - 2026-07-24
 
 ### Fixed
