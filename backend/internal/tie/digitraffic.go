@@ -86,7 +86,7 @@ func FetchTMSData(ctx context.Context) ([]TmsStationData, error) {
 }
 
 // FetchSensorMeta fetches the static description/unit for every TMS sensor
-// type (e.g. id 5116 -> "AjoneuvomÃ¤Ã¤rÃ¤ suunta 1 (-5 min)", "kpl/h").
+// type (e.g. id 5116 -> "Ajoneuvomäärä suunta 1 (-5 min)", "kpl/h").
 func FetchSensorMeta(ctx context.Context) (map[int]SensorMeta, error) {
 	var res SensorMetaResponse
 	if err := fetchJSON(ctx, sensorMetaURL, &res); err != nil {
