@@ -71,7 +71,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
             <div className="detail-title">
               <h3>{vessel.name || `MMSI ${vessel.mmsi}`}</h3>
               <span className="detail-subtitle" style={{ color: CATEGORY_COLORS[cat] }}>
-                {shipTypeText(vessel.shipType)} Â· {CATEGORY_LABELS[cat]}
+                {shipTypeText(vessel.shipType)} · {CATEGORY_LABELS[cat]}
               </span>
             </div>
             <button className="icon-btn" onClick={onToggleCollapse} aria-label="Collapse panel">
@@ -105,7 +105,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
                     <small>Â°</small>
                   </>
                 ) : (
-                  'â€”'
+                  '—'
                 )}
               </span>
             </div>
@@ -117,7 +117,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
                     {vessel.draught.toFixed(1)} <small>m</small>
                   </>
                 ) : (
-                  'â€”'
+                  '—'
                 )}
               </span>
             </div>
@@ -166,7 +166,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
               <div className="fact-row">
                 <span>Size</span>
                 <b>
-                  {dims.length} Ã— {dims.beam} m
+                  {dims.length} × {dims.beam} m
                 </b>
               </div>
             )}
