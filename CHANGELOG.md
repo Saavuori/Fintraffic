@@ -2,11 +2,62 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
-## [v0.6.1] - 2026-07-24
+## [v0.8.0] - 2026-07-24
+
+### Added
+- **Mobile bottom-sheet layout and unified map controls**: on phones (≤768px) the filter and detail panels become full-width bottom sheets with a grab handle, the locate button grows to a 44px tap target, and bottom-anchored elements clear the collapsed sheet peek. Tie's locate button is now a shared `LocateControl` (bottom-right) reused by all three modes, so Raide gains a locate button it never had. The zoom/compass control is removed from Meri, so no mode shows zoom buttons (pinch/scroll still zoom), and MapLibre attribution moves to a compact bottom-left info control, tucked above the version badge and clear of the locate control, while staying license-compliant.
+
+---
+
+## [v0.7.0] - 2026-07-24
+
+### Added
+- **Länsisatama LT1/LT2 webcams**: two purple camera markers at Jätkäsaari for the Port of Helsinki's Länsisatama LT1/LT2 YouTube live feeds, with a togglable "Webcams" layer and a detail panel that embeds the stream on click.
+
+---
+
+## [v0.6.5] - 2026-07-24
+
+### Fixed
+- **Meri: Helsinki port now shows on the map**: Digitraffic's SSN location registry returns `geometry: null` for FIHEL (Helsinki, covering Länsisatama/Jätkäsaari, Eteläsatama and Vuosaari), so it was being silently dropped from the port list. Locodes missing geometry now fall back to a static coordinate override.
+
+---
+
+## [v0.6.4] - 2026-07-24
+
+### Added
+- **CI: compile + changelog checks required on PRs to main**: a new pull-request workflow gates merges on three status checks — backend (`go build`/`go test`, `CGO_ENABLED=0`), frontend (lint/vitest/build), and changelog (rejects an unreleased-only heading, renders via `build-changelog.js`).
+
+### Fixed
+- **Meri: React 19 hooks lint errors in popups**, surfaced by the new lint gate (never run in CI before) — `PortPopup`/`VesselPopup` now reset state on prop change during render instead of inside the effect, and `VesselPopup` derives fix age from a ticking clock state instead of calling `Date.now()` during render.
+
+---
+
+## [v0.6.3] - 2026-07-24
+
+### Fixed
+- **Tie: filter-panel road icon, remaining mojibake**: the filter panel's Activity (EKG) glyph read as a lightning bolt at 16px; swapped to `CarFront` to match the `Ship`/`TrainFront` icons used by Meri/Raide. Also repaired double-encoded UTF-8 punctuation (middle dot, en/em dash, `>=`) left over across Tie, Raide, and Meri components and comments.
+
+---
+
+## [v0.6.2] - 2026-07-24
 
 ### Fixed
 - **Deploy: auto-update is now installed by `install.sh`**: the installer writes `update.sh` into the app dir and registers its `*/5` cron idempotently — previously the update script shipped in the repo but nothing installed it, so a fresh install never auto-updated. `update.sh` no longer hardcodes `/home/opc/fintraffic`: it derives the compose dir from its own location and auto-detects the container engine, and the image is overridable via `IMAGE`.
 - **Deploy/docs: the production domain is `liikenne.duckdns.org`** — the install script's default check domain, the README live badge and deploy notes, and the changelog site's back-link all pointed at `fintraffic.duckdns.org`, which was never registered (it made the installer's post-deploy verification fail even when the stack was healthy). The domain can also be passed as the first argument: `./install.sh traffic.example.org`.
+
+### Changed
+- **CI: fix Node.js 20 deprecation warning on GitHub Actions runners**: `actions/checkout` bumped to v7 (native Node 24) and the unmaintained tag-action (no release since Aug 2024, still Node 20) swapped for `paulhatch/semantic-version@v6.0.3` (Node 24), which computes the same conventional-commits bump (`feat!`/`BREAKING CHANGE` → major, `feat:` → minor, else patch).
+
+---
+
+## [v0.6.1] - 2026-07-24
+
+### Fixed
+- **Repaired mojibake in Tie source comments**: UTF-8 text (em/en dashes, Finnish umlauts) had been re-encoded through Windows-1252 at some point. Also aligned the Raide and Tie side-panel titles with Meri's naming convention.
+
+### Changed
+- **Docs**: README no longer carries the pre-consolidation origin story (dropped the source-app status table and standalone-stack comparisons); detailed endpoint documentation moved to `docs/API.md`, expanded with query parameters, response shapes (health, trail, replay, WS stream) and caching/poll cadences. Added a per-mode Data Sources table listing each mode's upstream feeds — hosts, endpoints, poll cadences and what each drives. Production deploy instructions now show the actual `deploy/install.sh` commands, with the custom DNS name as an argument and `APP_DIR`/`IMAGE` overrides documented.
 
 ---
 
