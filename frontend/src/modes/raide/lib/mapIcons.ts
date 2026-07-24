@@ -1,4 +1,4 @@
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import type { TrainGroup } from './trains';
 
 // Pictograms for the map's symbol layers. Path data is lifted from
