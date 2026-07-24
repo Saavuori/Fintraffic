@@ -88,6 +88,14 @@ type thinnedPort struct {
 	Lng    float64 `json:"lng"`
 }
 
+// portCoordOverrides fills in coordinates for locodes Digitraffic's SSN
+// location registry lists with geometry: null. FIHEL (Helsinki, covering
+// Länsisatama/Jätkäsaari, Eteläsatama and Vuosaari) is one of these, so
+// without an override the whole port silently disappears from the map.
+var portCoordOverrides = map[string][2]float64{
+	"FIHEL": {60.1552, 24.9074}, // Länsisatama, Helsinki's main passenger/cargo terminal
+}
+
 func thinPorts(body []byte) ([]byte, error) {
 	var raw struct {
 		SsnLocations struct {
@@ -109,14 +117,23 @@ func thinPorts(body []byte) ([]byte, error) {
 
 	ports := make([]thinnedPort, 0, 64)
 	for _, f := range raw.SsnLocations.Features {
-		if f.Properties.Country != "Finland" || f.Geometry == nil || len(f.Geometry.Coordinates) < 2 {
+		if f.Properties.Country != "Finland" {
+			continue
+		}
+		lat, lng, ok := 0.0, 0.0, false
+		if f.Geometry != nil && len(f.Geometry.Coordinates) >= 2 {
+			lat, lng, ok = f.Geometry.Coordinates[1], f.Geometry.Coordinates[0], true
+		} else if c, has := portCoordOverrides[f.Locode]; has {
+			lat, lng, ok = c[0], c[1], true
+		}
+		if !ok {
 			continue
 		}
 		ports = append(ports, thinnedPort{
 			Locode: f.Locode,
 			Name:   f.Properties.LocationName,
-			Lat:    f.Geometry.Coordinates[1],
-			Lng:    f.Geometry.Coordinates[0],
+			Lat:    lat,
+			Lng:    lng,
 		})
 	}
 
