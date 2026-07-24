@@ -53,6 +53,7 @@ Modes implement the `server.Mode` interface (`Name`, `Register`, `Health`); the 
 * **Vessel trails** — every fix recorded to an on-disk SQLite store (60-day retention, 1 pt/min/vessel); selected vessels draw their dotted history track.
 * **Fleet replay** — animated playback of all vessels' recorded tracks with play/pause/scrub/speed transport.
 * **Ports & port calls, sea state buoys, AtoN faults** as toggleable layers.
+* **Länsisatama LT1/LT2 webcams** — live YouTube streams from Port of Helsinki's passenger terminal cameras, plotted next to the Länsisatama port pin.
 * **Ship-type categorization** with colour-coded markers and live per-category counts.
 
 ## ✨ Raide mode (railway traffic)
@@ -85,6 +86,7 @@ All data comes from [Digitraffic](https://www.digitraffic.fi/en/) and other Fint
 | Port calls (Portnet) | `/api/port-call/v1/ports`, `/api/port-call/v1/port-calls` | Finnish ports layer + arrivals/departures |
 | Sea state estimation | `/api/sse/v1/measurements` | Smart-buoy wave/sea-state layer |
 | Aids to navigation | `/api/aton/v1/faults` | AtoN fault warnings layer |
+| Port of Helsinki webcams | YouTube live streams (portofhelsinki.fi), hardcoded — no upstream API | Länsisatama LT1/LT2 webcam markers |
 
 ### 🚆 Raide — `rata.digitraffic.fi`
 
