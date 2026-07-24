@@ -17,6 +17,8 @@ import { WEBCAMS } from './lib/webcams';
 import type { Webcam } from './lib/webcams';
 import type { Port, SeaStateFeature, AtonFaultFeature, Vessel } from './types';
 
+const MOBILE_QUERY = '(max-width: 768px)';
+
 interface MeriAppProps {
   theme: 'light' | 'dark';
   setTheme: (theme: 'light' | 'dark') => void;
@@ -98,7 +100,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   // Panel collapse state
   const [isDetailCollapsed, setIsDetailCollapsed] = useState<boolean>(false);
   const [isFilterCollapsed, setIsFilterCollapsed] = useState<boolean>(
-    typeof window !== 'undefined' ? window.innerWidth <= 768 : false
+    typeof window !== 'undefined' ? window.matchMedia(MOBILE_QUERY).matches : false
   );
 
   useSwipeGestures({
@@ -110,7 +112,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
 
   const onSelectionMade = useCallback(() => {
     setIsDetailCollapsed(false);
-    if (window.innerWidth <= 768) {
+    if (window.matchMedia(MOBILE_QUERY).matches) {
       setIsFilterCollapsed(true);
     }
   }, []);
@@ -280,6 +282,8 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
       />
 
       <FilterPanel
+        vessels={vessels}
+        onSelectVessel={handleSelectVessel}
         categoryCounts={categoryCounts}
         totalVessels={Object.keys(vessels).length}
         selectedCategories={selectedCategories}

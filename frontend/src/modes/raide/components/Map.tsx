@@ -213,7 +213,7 @@ const Map: React.FC<MapProps> = ({
     };
 
     const buildTrainHoverHTML = (train: Train): string => {
-      const route = train.dest ? `${train.origin} â†’ ${train.dest}<br/>` : '';
+      const route = train.dest ? `${train.origin} → ${train.dest}<br/>` : '';
       return (
         `<strong>${trainTitle(train)}</strong><br/>` +
         route +

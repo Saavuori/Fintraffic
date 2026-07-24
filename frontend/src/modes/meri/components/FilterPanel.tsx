@@ -1,11 +1,15 @@
-import React from 'react';
-import { Ship, Anchor, Waves, TriangleAlert, Moon, Sun, ChevronLeft, History, Video } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Ship, Anchor, Waves, TriangleAlert, Moon, Sun, ChevronLeft, History, Video, Search, X } from 'lucide-react';
 import { useCollapsiblePanel, stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
-import { ALL_CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS, type ShipCategory } from '../lib/shipTypes';
+import { ALL_CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS, categorize, type ShipCategory } from '../lib/shipTypes';
 import type { ConnectionStatus } from '../hooks/useWebSocket';
-import type { AtonFaultFeature } from '../types';
+import type { AtonFaultFeature, Vessel } from '../types';
+
+const MAX_SEARCH_RESULTS = 8;
 
 interface FilterPanelProps {
+  vessels: Record<string, Vessel>;
+  onSelectVessel: (mmsi: number) => void;
   categoryCounts: Record<ShipCategory, number>;
   totalVessels: number;
   selectedCategories: ShipCategory[];
@@ -30,6 +34,8 @@ interface FilterPanelProps {
 }
 
 export const FilterPanel: React.FC<FilterPanelProps> = ({
+  vessels,
+  onSelectVessel,
   categoryCounts,
   totalVessels,
   selectedCategories,
@@ -58,6 +64,23 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     'Open filters panel'
   );
 
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Search runs over the full live fleet, independent of the category filter,
+  // so finding a specific vessel doesn't require first clearing filters.
+  const searchResults = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return [];
+    return Object.values(vessels)
+      .filter((v) => (v.name && v.name.toLowerCase().includes(q)) || String(v.mmsi).includes(q))
+      .slice(0, MAX_SEARCH_RESULTS);
+  }, [vessels, searchTerm]);
+
+  const handlePickResult = (mmsi: number) => {
+    onSelectVessel(mmsi);
+    setSearchTerm('');
+  };
+
   return (
     <div className={`glass-panel filter-panel ${collapsedClass}`} {...collapsibleProps}>
       <div className="panel-header" onClick={isCollapsed ? undefined : stopPanelClick}>
@@ -82,12 +105,59 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       {!isCollapsed && (
         <div className="filter-content" onClick={stopPanelClick}>
           <div className="panel-stats">
-            <span className={`conn-dot ${connectionStatus}`} title={connectionStatus} />
+            <span
+              className={`conn-dot ${connectionStatus}`}
+              role="status"
+              aria-label={`Connection: ${connectionStatus}`}
+              title={connectionStatus}
+            />
             <span>{totalVessels} vessels</span>
             {selectedCategories.length > 0 && (
               <button className="clear-filters-btn" onClick={onClearFilters}>
                 Clear
               </button>
+            )}
+          </div>
+
+          <div className="vessel-search">
+            <Search size={14} className="vessel-search-icon" aria-hidden="true" />
+            <input
+              type="text"
+              className="vessel-search-input"
+              placeholder="Search by name or MMSI"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              aria-label="Search vessels by name or MMSI"
+            />
+            {searchTerm && (
+              <button
+                className="vessel-search-clear"
+                onClick={() => setSearchTerm('')}
+                aria-label="Clear search"
+              >
+                <X size={13} />
+              </button>
+            )}
+            {searchTerm && (
+              <div className="vessel-search-results" role="listbox">
+                {searchResults.length === 0 && <div className="panel-note">No vessels match.</div>}
+                {searchResults.map((v) => {
+                  const cat = categorize(v.shipType);
+                  return (
+                    <button
+                      key={v.mmsi}
+                      className="vessel-search-result"
+                      role="option"
+                      aria-selected="false"
+                      onClick={() => handlePickResult(v.mmsi)}
+                    >
+                      <span className="vessel-search-dot" style={{ background: CATEGORY_COLORS[cat] }} />
+                      <span className="vessel-search-name">{v.name || `MMSI ${v.mmsi}`}</span>
+                      <span className="vessel-search-mmsi">{v.mmsi}</span>
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
 

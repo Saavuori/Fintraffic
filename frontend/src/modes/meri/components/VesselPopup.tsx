@@ -79,6 +79,17 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
 
   const etaText = formatEta(vessel.eta);
   const fixAge = Math.max(0, Math.round(nowMs / 1000 - vessel.ts));
+  // During replay vessel.ts is a historical playhead timestamp, not a live AIS
+  // fix — "3h ago" would read as stale reception rather than the point in the
+  // past being played back, so show the actual recorded time instead.
+  const positionTime = replayActive
+    ? new Date(vessel.ts * 1000).toLocaleString(undefined, {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null;
 
   return (
     <div className={`glass-panel detail-popup ${collapsedClass}`} {...collapsibleProps}>
@@ -113,7 +124,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
               <span className="telemetry-label">Course</span>
               <span className="telemetry-value">
                 {Math.round(vessel.cog)}
-                <small>Â°</small>
+                <small>°</small>
               </span>
             </div>
             <div className="telemetry-item">
@@ -122,7 +133,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
                 {vessel.hdg != null ? (
                   <>
                     {vessel.hdg}
-                    <small>Â°</small>
+                    <small>°</small>
                   </>
                 ) : (
                   '—'
@@ -197,8 +208,10 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
               </b>
             </div>
             <div className="fact-row">
-              <span>Last fix</span>
-              <b>{fixAge < 60 ? `${fixAge}s ago` : `${Math.round(fixAge / 60)}min ago`}</b>
+              <span>{replayActive ? 'Recorded' : 'Last fix'}</span>
+              <b>
+                {positionTime ?? (fixAge < 60 ? `${fixAge}s ago` : `${Math.round(fixAge / 60)}min ago`)}
+              </b>
             </div>
           </div>
         </div>
