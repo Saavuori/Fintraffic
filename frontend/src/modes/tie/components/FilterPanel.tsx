@@ -17,13 +17,7 @@ import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { Panel } from '../../../shared/components/Panel';
 import { BackToSelection } from '../../../shared/components/SheetViewSwitch';
 import { EntitySearch, type SearchItem } from '../../../shared/components/EntitySearch';
-import { Fold } from '../../../shared/components/Fold';
-import { type LayerKey, type LayerVisibility, LAYER_ORDER, LAYER_LABELS, poiColors } from '../lib/layers';
-import { congestionColors } from '../lib/traffic';
-import { parkingColors } from '../lib/parking';
-import { chargingColors } from '../lib/charging';
-import { weathercamColor } from '../lib/weathercam';
-import { SPEED_SIGN_RING } from '../lib/speedLimits';
+import { type LayerKey, type LayerVisibility, LAYER_ORDER, LAYER_LABELS } from '../lib/layers';
 import type { Theme } from '../lib/theme';
 
 interface FilterPanelProps {
@@ -63,52 +57,6 @@ const LAYER_ICONS: Record<LayerKey, React.ComponentType<{ size?: number }>> = {
   charging: Zap,
 };
 
-interface LegendItem {
-  label: string;
-  color: string;
-}
-
-// Color-key rows per layer, drawn from the same theme-aware helpers the map
-// paints with, so a legend dot can never disagree with its marker.
-function legendItems(key: LayerKey, theme: Theme): LegendItem[] {
-  switch (key) {
-    case 'stations': {
-      const c = congestionColors(theme);
-      return [
-        { label: 'Free flow (≥85% of baseline)', color: c.free },
-        { label: 'Slowing (60–85% of baseline)', color: c.moderate },
-        { label: 'Heavy slowdown (<60%)', color: c.heavy },
-        { label: 'No data', color: c.unknown },
-      ];
-    }
-    case 'roadworks':
-      return [{ label: 'Road works', color: poiColors(theme).roadworks }];
-    case 'incidents':
-      return [{ label: 'Incidents', color: poiColors(theme).incidents }];
-    case 'speedlimits':
-      return [{ label: 'Current limit on a variable sign', color: SPEED_SIGN_RING }];
-    case 'parking': {
-      const c = parkingColors(theme);
-      return [
-        { label: 'Plenty of space', color: c.plenty },
-        { label: 'Limited space', color: c.limited },
-        { label: 'Full / closed', color: c.full },
-      ];
-    }
-    case 'weathercams':
-      return [{ label: 'Weather camera', color: weathercamColor(theme) }];
-    case 'charging': {
-      const c = chargingColors(theme);
-      return [
-        { label: 'Available', color: c.available },
-        { label: 'Limited', color: c.limited },
-        { label: 'Full / offline', color: c.full },
-        { label: 'No live status', color: c.unknown },
-      ];
-    }
-  }
-}
-
 export const FilterPanel: React.FC<FilterPanelProps> = ({
   searchItems,
   onPickSearchResult,
@@ -125,8 +73,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   asRail,
 }) => {
   const bodyCollapsed = !isMobile && isCollapsed;
-
-  const visibleKeys = LAYER_ORDER.filter(key => visibility[key]);
 
   // On a phone the header button is the way out of a full-screen page: back to
   // the selection it is covering if there is one (the map still has it), and
@@ -236,34 +182,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               </button>
             </div>
 
-            <Fold folded={isMobile} label="Legend">
-            <div className="filter-section-title" style={{ marginTop: 14 }}>
-              Legend
-            </div>
-            {visibleKeys.length === 0 ? (
-              <div className="legend-hint">No layers shown</div>
-            ) : (
-              <div className="legend-list">
-                {visibleKeys.map(key => (
-                  <div key={key}>
-                    <div className="legend-group-title">{LAYER_LABELS[key]}</div>
-                    {legendItems(key, theme).map(item => (
-                      <div className="legend-row" key={item.label}>
-                        <span className="legend-dot" style={{ backgroundColor: item.color }} />
-                        <span>{item.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="legend-hint">
-              Each half of a station dot is one direction, colored by its speed vs.
-              seasonal free-flow speed (not the legal limit); dot size = volume. Click
-              any marker for live details.
-            </div>
-            </Fold>
           </div>
         </div>
       )}

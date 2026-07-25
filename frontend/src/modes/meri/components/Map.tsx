@@ -142,7 +142,7 @@ function poseAt(pts: ReplayPoint[], t: number, maxGapSec = REPLAY_MAX_GAP_SEC): 
 /**
  * Paints every recorded vessel at time t into the shared `replay` source. Both
  * playbacks feed this: the fleet replay passes its whole window, the track
- * replay passes the traffic around the ship it is following (which is drawn
+ * replay passes the traffic around the ship being replayed (which is drawn
  * separately, as the ghost, and so is absent from `tracks`).
  */
 function drawFleetAt(
@@ -261,8 +261,6 @@ interface MapProps {
   showWebcams: boolean;
   onSelectWebcam: (webcam: Webcam) => void;
   mapTheme: 'light' | 'dark';
-  isFollowing: boolean;
-  onDisableFollowing: () => void;
   onBackgroundClick: () => void;
   replay: ReplayControl | null;
   // mmsi → live metadata used to colour/label replay markers. Built from the
@@ -448,8 +446,6 @@ export function Map({
   showWebcams,
   onSelectWebcam,
   mapTheme,
-  isFollowing,
-  onDisableFollowing,
   onBackgroundClick,
   replay,
   replayMeta,
@@ -463,7 +459,6 @@ export function Map({
   const targetsRef = useRef<Record<string, TargetPos>>({});
   const renderRef = useRef<Record<string, RenderPos>>({});
   const selectedRef = useRef<number | null>(selectedMmsi);
-  const followRef = useRef<boolean>(isFollowing);
   const animationFrameRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number>(0);
   const lastSetDataRef = useRef<number>(0);
@@ -499,10 +494,6 @@ export function Map({
   useEffect(() => {
     selectedRef.current = selectedMmsi;
   }, [selectedMmsi]);
-
-  useEffect(() => {
-    followRef.current = isFollowing;
-  }, [isFollowing]);
 
   useEffect(() => {
     replayMetaRef.current = replayMeta;
@@ -657,7 +648,7 @@ export function Map({
         return;
       }
 
-      // Track replay winds the whole scene back with the followed ship: the
+      // Track replay winds the whole scene back with the selected ship: the
       // ghost retraces its recorded path and the traffic around it is redrawn
       // from the same history, so nothing on the map is still running live. The
       // clock advances every frame (not only on the setData ticks below) so
@@ -710,11 +701,6 @@ export function Map({
           drawTrackReplay(map, tr, trackClockRef.current, trackPose, icon);
           drawFleetAt(map, tr.fleet, trackClockRef.current, replayMetaRef.current, null);
         }
-        // The live layers are hidden, so the ghost is what the chase cam has
-        // to follow — the real ship is wherever it is now, off in the future.
-        if (followRef.current && trackPose && selectedRef.current === tr.mmsi) {
-          map.jumpTo({ center: [trackPose.lng, trackPose.lat] });
-        }
         return;
       }
 
@@ -759,14 +745,6 @@ export function Map({
       }
 
       source.setData({ type: 'FeatureCollection', features });
-
-      // Chase cam: keep the followed vessel centered
-      if (followRef.current && selected !== null) {
-        const r = render[String(selected)];
-        if (r) {
-          map.jumpTo({ center: [r.lng, r.lat] });
-        }
-      }
     };
 
     animationFrameRef.current = requestAnimationFrame(tick);
@@ -810,9 +788,6 @@ export function Map({
     // Publish the viewport centre after each settled pan/zoom.
     map.on('moveend', emitCenter);
 
-    // Any manual drag breaks follow mode
-    map.on('dragstart', () => onDisableFollowingRef.current());
-
     registerInteractions(map);
 
     return () => {
@@ -822,7 +797,6 @@ export function Map({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const onDisableFollowingRef = useRef(onDisableFollowing);
   const onSelectVesselRef = useRef(onSelectVessel);
   const onSelectPortRef = useRef(onSelectPort);
   const onSelectWebcamRef = useRef(onSelectWebcam);
@@ -830,14 +804,13 @@ export function Map({
   const onMoveEndRef = useRef(onMoveEnd);
   const webcamsRef = useRef(webcams);
   useEffect(() => {
-    onDisableFollowingRef.current = onDisableFollowing;
     onSelectVesselRef.current = onSelectVessel;
     onSelectPortRef.current = onSelectPort;
     onSelectWebcamRef.current = onSelectWebcam;
     onBackgroundClickRef.current = onBackgroundClick;
     onMoveEndRef.current = onMoveEnd;
     webcamsRef.current = webcams;
-  }, [onDisableFollowing, onSelectVessel, onSelectPort, onSelectWebcam, onBackgroundClick, onMoveEnd, webcams]);
+  }, [onSelectVessel, onSelectPort, onSelectWebcam, onBackgroundClick, onMoveEnd, webcams]);
 
   const buoyPopupRef = useRef<maplibregl.Popup | null>(null);
 
@@ -1532,17 +1505,6 @@ export function Map({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPortLocode]);
-
-  // Fly to the selected vessel when following starts
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !isFollowing || selectedMmsi === null) return;
-    const r = renderRef.current[String(selectedMmsi)];
-    if (r) {
-      map.flyTo({ center: [r.lng, r.lat], zoom: Math.max(map.getZoom(), 11), duration: 800 });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFollowing]);
 
   return (
     <>
