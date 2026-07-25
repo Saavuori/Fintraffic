@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.10.7] - 2026-07-25
+
+### Changed
+- **Runtime base image moves to Alpine 3.24**: the first Dependabot base-image bump, and a small one — the runtime stage is the only place the Dockerfile pins an Alpine release, the backend is a static `CGO_ENABLED=0` binary that doesn't link against the base at all, and the only packages installed on top are `ca-certificates` and `tzdata`. So what a bump like this actually buys is a refreshed CA bundle and timezone database plus a security-support window that runs further out: v0.10.3 had to move off 3.21 by hand because it was approaching end of life, and taking each release as it ships is what keeps that from becoming a scramble again.
+
 ## [v0.10.6] - 2026-07-25
 
 ### Changed
