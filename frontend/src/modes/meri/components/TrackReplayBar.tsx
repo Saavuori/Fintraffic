@@ -2,29 +2,7 @@ import React from 'react';
 import { Play, Pause, SkipBack, X, Gauge } from 'lucide-react';
 import type { TrackReplay } from '../hooks/useTrackReplay';
 import { TRACK_REPLAY_SPEEDS } from '../hooks/useTrackReplay';
-
-/** The playhead can sit days back, so the date is part of the readout — a bare
- *  clock would be ambiguous over anything but the 1h window. */
-function fmtStamp(epochSec: number): string {
-  if (!epochSec) return '--:--';
-  return new Date(epochSec * 1000).toLocaleString([], {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-/** "3 h 12 min" / "6 d 4 h" — how much recorded time the track covers. */
-function fmtSpan(sec: number): string {
-  if (sec <= 0) return '';
-  const d = Math.floor(sec / 86400);
-  const h = Math.floor((sec % 86400) / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (d > 0) return `${d} d${h > 0 ? ` ${h} h` : ''}`;
-  if (h > 0) return `${h} h${m > 0 ? ` ${m} min` : ''}`;
-  return `${m} min`;
-}
+import { fmtSpan, fmtStamp } from '../lib/replayTime';
 
 interface TrackReplayBarProps {
   replay: TrackReplay;
@@ -36,6 +14,9 @@ interface TrackReplayBarProps {
  * speed and a scrubber over the track's own time span. Shares the fleet
  * replay's chrome (`.replay-bar`) — the two are never on screen together — with
  * a modifier for what differs: this one names the ship it is rewinding.
+ *
+ * Mobile only. The desktop top bar hosts the same transport inline (see
+ * TrackReplayPanel); the phone hides that bar, so playback floats here instead.
  */
 export const TrackReplayBar: React.FC<TrackReplayBarProps> = ({ replay, vesselName }) => {
   const {

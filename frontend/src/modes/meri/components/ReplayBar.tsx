@@ -2,30 +2,16 @@ import React from 'react';
 import { Play, Pause, X, Gauge, AlertTriangle } from 'lucide-react';
 import type { FleetReplay } from '../hooks/useFleetReplay';
 import { REPLAY_SPEEDS } from '../hooks/useFleetReplay';
+import { fmtClock, fmtStamp } from '../lib/replayTime';
 
+// Fleet playback keeps its own short windows: every active vessel contributes
+// points, so the track history's 7d/60d spans are nothing like an affordable
+// request here.
 const WINDOWS: { label: string; sec: number }[] = [
   { label: '1h', sec: 3600 },
   { label: '3h', sec: 3 * 3600 },
   { label: '6h', sec: 6 * 3600 },
 ];
-
-function fmtClock(epochSec: number): string {
-  if (!epochSec) return '--:--';
-  return new Date(epochSec * 1000).toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function fmtStamp(epochSec: number): string {
-  if (!epochSec) return '';
-  return new Date(epochSec * 1000).toLocaleString([], {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 interface ReplayBarProps {
   replay: FleetReplay;

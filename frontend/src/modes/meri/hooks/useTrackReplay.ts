@@ -206,14 +206,25 @@ export function useTrackReplay(
   const from = session?.from ?? trackFrom;
   const to = session?.to ?? trackTo;
 
+  // The transport is on screen before playback starts (the top bar shows it
+  // whenever the trail is up), so both entry points open a session when there
+  // isn't one rather than acting on a playhead that doesn't exist yet.
   const restart = useCallback(() => {
+    if (!active) {
+      if (available && !loading) enter();
+      return;
+    }
     setPlaying(true);
     setPlayhead(from);
     setPose(null);
     setSeek({ nonce: Date.now(), ts: from });
-  }, [from]);
+  }, [active, available, loading, enter, from]);
 
   const togglePlay = useCallback(() => {
+    if (!active) {
+      if (available && !loading) enter();
+      return;
+    }
     setPlaying((p) => {
       // Paused at the very end: play means start over.
       if (!p && playhead >= to) {
@@ -222,7 +233,7 @@ export function useTrackReplay(
       }
       return !p;
     });
-  }, [playhead, from, to]);
+  }, [active, available, loading, enter, playhead, from, to]);
 
   const setSpeed = useCallback((s: number) => setSpeedState(s), []);
 

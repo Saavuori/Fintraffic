@@ -386,9 +386,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
           onToggleTrail={toggleTrail}
           trailWindowSec={trailWindowSec}
           onSetTrailWindow={setTrailWindowSec}
-          trackReplayAvailable={trackReplay.available}
-          trackReplayActive={trackReplay.active || trackReplay.loading}
-          onToggleTrackReplay={trackReplay.toggle}
+          trackReplay={trackReplay}
           replayActive={replay.active}
         />
       )}
@@ -436,7 +434,9 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
 
       {replay.visible && <ReplayBar replay={replay} />}
 
-      {(trackReplay.active || trackReplay.loading) && displayedVessel && (
+      {/* On desktop the transport lives in the top bar, unfolded under the
+          vessel's name. The phone hides that bar, so the floating one stands in. */}
+      {isMobile && (trackReplay.active || trackReplay.loading) && displayedVessel && (
         <TrackReplayBar
           replay={trackReplay}
           vesselName={displayedVessel.name || `MMSI ${displayedVessel.mmsi}`}
