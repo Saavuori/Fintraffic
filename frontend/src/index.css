@@ -986,10 +986,18 @@ a,
 }
 
 .follow-btn.active,
-.trail-btn.active {
+.trail-btn.active,
+.track-replay-btn.active {
   color: var(--accent-teal);
   border-color: var(--border-focus);
   background: rgba(45, 212, 191, 0.12);
+}
+
+/* Nothing recorded for the chosen window yet — the button stays in place so
+   the action row doesn't reflow the moment a first fix lands. */
+.track-replay-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .trail-window {
@@ -1104,6 +1112,14 @@ a,
   text-align: center;
 }
 
+/* A single vessel's track can reach back 60 days, so its readout carries the
+   date as well as the time and needs the room for it. */
+.replay-clock--wide {
+  font-size: 0.82rem;
+  min-width: 124px;
+  white-space: nowrap;
+}
+
 .replay-speed {
   display: inline-flex;
   align-items: center;
@@ -1178,6 +1194,21 @@ a,
   align-items: center;
   gap: 5px;
   color: var(--accent-coral);
+}
+
+/* Single-vessel track replay reuses the transport chrome above — the two bars
+   are never on screen together — and differs only in naming the ship it is
+   rewinding, which must not push the window's timestamps out of the row. */
+.replay-bar--track .replay-meta-mid {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.replay-bar--track .replay-meta > span:first-child,
+.replay-bar--track .replay-meta > span:last-child {
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {

@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.11.0] - 2026-07-25
+
+### Added
+- **Track replay: rewind a vessel along its own recorded path**: switching on track history now also offers to play it back. The selected ship is retraced by a ghost marker moving along the very points the dotted trail is drawn from, with the covered stretch drawn solid over the dimmed remainder, and the transport bar gives restart, play/pause, 0.5–4× speed and a scrubber over the track's own time span. Playback is scaled to that span rather than to a wall-clock multiplier — the fleet replay can use a fixed multiplier because every one of its windows is the same shape, but a track window runs from one hour to sixty days, so a fixed rate would flash the short ones past and make the long ones unwatchable. Every window instead takes the same thirty seconds to watch at 1×. The detail panel follows the playhead too, reporting the speed, course and fix time being replayed rather than the live feed, and follow mode chases the ghost rather than the ship's present position.
+- **The traffic around it rewinds with it**: a vessel retracing its path through a live fleet reads as the one ship being wrong, so entering track replay winds the whole scene back — every other vessel is drawn from the same recorded history at the same instant, and the live layers stand down until playback ends. The surrounding traffic is loaded over at most the final six hours of the window (every active vessel contributes points, and six hours is the widest window the fleet replay itself offers); a longer track therefore replays alone before that point, and the bar says from when the other ships are there.
+
+### Changed
+- **The vessel trail endpoint returns course and speed**: `/api/meri/vessel/{mmsi}/trail` points go from `[lng, lat, ts]` to `[lng, lat, ts, cog, sog]` — the same tuple the fleet replay already used, so one interpolator now serves both playbacks and the replayed marker can point where the ship was actually heading. The store recorded both all along; only the response omitted them. The extra fields are what the replay reads, so a client on the old three-element shape keeps working for drawing the line.
+
 ## [v0.10.12] - 2026-07-25
 
 ### Fixed

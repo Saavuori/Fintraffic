@@ -196,8 +196,11 @@ func (h *Handlers) Vessel(w http.ResponseWriter, r *http.Request) {
 }
 
 // VesselTrail returns the recorded position history for one vessel as an array
-// of [lng, lat, ts] tuples (ascending by time), ready to drop into a GeoJSON
-// LineString. Query params: from, to (epoch seconds), maxPoints.
+// of [lng, lat, ts, cog, sog] tuples (ascending by time). The leading lng/lat
+// pair drops straight into a GeoJSON LineString for the drawn track; the
+// trailing course/speed drive the per-vessel track replay, which animates a
+// marker along the same points. Query params: from, to (epoch seconds),
+// maxPoints.
 func (h *Handlers) VesselTrail(w http.ResponseWriter, r *http.Request) {
 	mmsi, err := strconv.Atoi(r.PathValue("mmsi"))
 	if err != nil {
@@ -230,16 +233,17 @@ func (h *Handlers) VesselTrail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Compact [lng, lat, ts] tuples.
-	coords := make([][3]float64, 0, len(points))
+	// Compact [lng, lat, ts, cog, sog] tuples — the same layout the fleet replay
+	// uses, so both playback paths share one interpolator on the frontend.
+	coords := make([][5]float64, 0, len(points))
 	for _, p := range points {
-		coords = append(coords, [3]float64{p.Lng, p.Lat, float64(p.Ts)})
+		coords = append(coords, [5]float64{p.Lng, p.Lat, float64(p.Ts), p.Cog, p.Sog})
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(struct {
 		MMSI   int          `json:"mmsi"`
-		Points [][3]float64 `json:"points"`
+		Points [][5]float64 `json:"points"`
 	}{MMSI: mmsi, Points: coords})
 }
 

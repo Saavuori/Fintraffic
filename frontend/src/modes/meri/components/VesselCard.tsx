@@ -13,6 +13,9 @@ interface VesselCardProps {
   onToggleTrail: () => void;
   trailWindowSec: number;
   onSetTrailWindow: (sec: number) => void;
+  trackReplayAvailable: boolean;
+  trackReplayActive: boolean;
+  onToggleTrackReplay: () => void;
   // Follow and trail act on the live layers, which are hidden during replay —
   // hide their controls so the card is info-only while playback runs.
   replayActive?: boolean;
@@ -27,6 +30,9 @@ export const VesselCard: React.FC<VesselCardProps> = ({
   onToggleTrail,
   trailWindowSec,
   onSetTrailWindow,
+  trackReplayAvailable,
+  trackReplayActive,
+  onToggleTrackReplay,
   replayActive = false,
 }) => {
   const cat = categorize(vessel.shipType);
@@ -47,6 +53,9 @@ export const VesselCard: React.FC<VesselCardProps> = ({
         onToggleTrail={onToggleTrail}
         trailWindowSec={trailWindowSec}
         onSetTrailWindow={onSetTrailWindow}
+        trackReplayAvailable={trackReplayAvailable}
+        trackReplayActive={trackReplayActive}
+        onToggleTrackReplay={onToggleTrackReplay}
         replayActive={replayActive}
       />
 

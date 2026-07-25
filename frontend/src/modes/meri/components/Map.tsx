@@ -6,7 +6,8 @@ import { lerpAngle } from '../lib/lerp';
 import { deadReckon } from '../lib/geo';
 import { categorize, CATEGORY_COLORS, isStationary, ALL_CATEGORIES } from '../lib/shipTypes';
 import { LocateControl } from '../../../shared/components/LocateControl';
-import type { Vessel, Port, SeaStateFeature, AtonFaultFeature, ReplayPoint } from '../types';
+import type { Vessel, Port, SeaStateFeature, AtonFaultFeature, ReplayPoint, TrailPoint } from '../types';
+import type { TrackReplayControl } from '../hooks/useTrackReplay';
 import type { Webcam } from '../lib/webcams';
 
 const STYLE_URLS = {
@@ -80,8 +81,15 @@ export interface ReplaySelectedPose {
  * ascending-by-time track. Returns null when the vessel isn't present at t —
  * before its first fix, after its last (past the edge hold), or inside a
  * coverage gap — so the caller can drop the marker entirely.
+ *
+ * maxGapSec is what counts as a coverage gap. The fleet replay keeps the
+ * default: its tracks are ~1/min, so a wide spacing really is lost AIS. A
+ * single vessel's track is decimated to span whatever window the user picked
+ * (60 days over 2000 points is ~43 min apart at rest), so there the caller
+ * passes Infinity and the marker slides along the same straight line the trail
+ * is already drawn as.
  */
-function poseAt(pts: ReplayPoint[], t: number): ReplayPose | null {
+function poseAt(pts: ReplayPoint[], t: number, maxGapSec = REPLAY_MAX_GAP_SEC): ReplayPose | null {
   const n = pts.length;
   if (n === 0) return null;
   const first = pts[0];
@@ -106,7 +114,7 @@ function poseAt(pts: ReplayPoint[], t: number): ReplayPose | null {
   const span = b[2] - a[2];
   if (span <= 0) return { lng: a[0], lat: a[1], hdg: a[3], sog: a[4] };
 
-  if (span > REPLAY_MAX_GAP_SEC) {
+  if (span > maxGapSec) {
     // Coverage gap: hold briefly at whichever fix is near, else disappear.
     if (t - a[2] <= REPLAY_EDGE_HOLD_SEC) return { lng: a[0], lat: a[1], hdg: a[3], sog: a[4] };
     if (b[2] - t <= REPLAY_EDGE_HOLD_SEC) return { lng: b[0], lat: b[1], hdg: b[3], sog: b[4] };
@@ -120,6 +128,83 @@ function poseAt(pts: ReplayPoint[], t: number): ReplayPose | null {
     hdg: lerpAngle(a[3], b[3], f),
     sog: a[4] + (b[4] - a[4]) * f,
   };
+}
+
+/**
+ * Paints every recorded vessel at time t into the shared `replay` source. Both
+ * playbacks feed this: the fleet replay passes its whole window, the track
+ * replay passes the traffic around the ship it is following (which is drawn
+ * separately, as the ghost, and so is absent from `tracks`).
+ */
+function drawFleetAt(
+  map: maplibregl.Map,
+  tracks: Record<string, ReplayPoint[]>,
+  t: number,
+  meta: Record<string, { icon: string; name: string }>,
+  selected: number | null
+) {
+  const source = map.getSource('replay') as maplibregl.GeoJSONSource | undefined;
+  if (!source) return;
+
+  const feats: Feature[] = [];
+  for (const [id, pts] of Object.entries(tracks)) {
+    const pose = poseAt(pts, t);
+    if (!pose) continue;
+    const m = meta[id];
+    feats.push({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [pose.lng, pose.lat] },
+      properties: {
+        mmsi: Number(id),
+        hdg: pose.hdg,
+        icon: m?.icon ?? 'vessel-replay',
+        name: m?.name ?? '',
+        selected: selected !== null && Number(id) === selected,
+      },
+    });
+  }
+  source.setData({ type: 'FeatureCollection', features: feats });
+}
+
+/**
+ * Paints one frame of the single-vessel track replay: the stretch of track
+ * already covered, drawn solid over the dimmed full trail, and the ghost marker
+ * at its head. The covered stretch ends on the interpolated position rather
+ * than the last passed fix, so the line and the marker never separate.
+ */
+function drawTrackReplay(
+  map: maplibregl.Map,
+  tr: TrackReplayControl,
+  t: number,
+  pose: ReplayPose | null,
+  icon: string
+) {
+  const progressSource = map.getSource('track-progress') as maplibregl.GeoJSONSource | undefined;
+  const markerSource = map.getSource('track-marker') as maplibregl.GeoJSONSource | undefined;
+  if (!progressSource || !markerSource) return;
+
+  const covered: [number, number][] = [];
+  for (const p of tr.points) {
+    if (p[2] > t) break;
+    covered.push([p[0], p[1]]);
+  }
+  if (pose) covered.push([pose.lng, pose.lat]);
+
+  progressSource.setData(
+    covered.length >= 2
+      ? { type: 'Feature', geometry: { type: 'LineString', coordinates: covered }, properties: {} }
+      : { type: 'FeatureCollection', features: [] }
+  );
+
+  markerSource.setData(
+    pose
+      ? {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [pose.lng, pose.lat] },
+          properties: { hdg: pose.hdg, icon },
+        }
+      : { type: 'FeatureCollection', features: [] }
+  );
 }
 
 interface RenderPos {
@@ -146,8 +231,11 @@ interface MapProps {
   vessels: Record<string, Vessel>;
   selectedMmsi: number | null;
   onSelectVessel: (mmsi: number | null) => void;
-  trailPoints: [number, number][];
+  trailPoints: TrailPoint[];
   trailColor: string;
+  // Playback of the selected vessel's own recorded track, or null when off.
+  // Independent of `replay` below, which animates the whole fleet instead.
+  trackReplay: TrackReplayControl | null;
   ports: Port[];
   showPorts: boolean;
   selectedPortLocode: string | null;
@@ -271,6 +359,7 @@ export function Map({
   onSelectVessel,
   trailPoints,
   trailColor,
+  trackReplay,
   ports,
   showPorts,
   selectedPortLocode,
@@ -312,6 +401,21 @@ export function Map({
   const replayEndedRef = useRef<boolean>(false);
   const replaySeekNonceRef = useRef<number>(-1);
 
+  // Same three pieces of state for the single-vessel track replay, which runs
+  // over the live map rather than replacing it.
+  const trackRef = useRef<TrackReplayControl | null>(trackReplay);
+  const trackClockRef = useRef<number>(0);
+  const trackPrevClockRef = useRef<number>(0);
+  const trackLastProgressRef = useRef<number>(0);
+  const trackEndedRef = useRef<boolean>(false);
+  const trackSeekNonceRef = useRef<number>(-1);
+  // A paused track is the resting state (the user scrubs, then reads the
+  // panel), and neither the overlay nor React needs redrawing while the clock
+  // stands still. These latch the clock having moved — or the style having been
+  // rebuilt under us — so one more frame of work happens and then it stops.
+  const trackPoseDirtyRef = useRef<boolean>(true);
+  const trackDrawDirtyRef = useRef<boolean>(true);
+
   // Bumped every time a style finishes loading (initial + theme swaps) so the
   // overlay-data effects below re-apply their data to the fresh style.
   const [styleEpoch, setStyleEpoch] = useState(0);
@@ -347,6 +451,40 @@ export function Map({
       replaySeekNonceRef.current = replay.seekNonce;
     }
   }, [replay]);
+
+  // Same for the track replay's clock. Note the control object is rebuilt every
+  // time the trail repolls, so entering is detected by the null → control edge
+  // rather than by identity.
+  useEffect(() => {
+    const prev = trackRef.current;
+    trackRef.current = trackReplay;
+    if (!trackReplay) {
+      // Clear the overlay immediately; the rAF loop skips it once the ref is null.
+      const map = mapRef.current;
+      const marker = map?.getSource('track-marker') as maplibregl.GeoJSONSource | undefined;
+      const progress = map?.getSource('track-progress') as maplibregl.GeoJSONSource | undefined;
+      marker?.setData({ type: 'FeatureCollection', features: [] });
+      progress?.setData({ type: 'FeatureCollection', features: [] });
+      return;
+    }
+
+    if (!prev) {
+      trackClockRef.current = trackReplay.from;
+      trackEndedRef.current = false;
+      trackSeekNonceRef.current = trackReplay.seekNonce;
+      trackPoseDirtyRef.current = true;
+      trackDrawDirtyRef.current = true;
+    } else if (trackReplay.seekNonce !== trackSeekNonceRef.current) {
+      trackClockRef.current = trackReplay.seekTs;
+      trackEndedRef.current = false;
+      trackSeekNonceRef.current = trackReplay.seekNonce;
+      trackPoseDirtyRef.current = true;
+      trackDrawDirtyRef.current = true;
+    } else if (prev.points !== trackReplay.points) {
+      // The trail repolled: same playhead, more track to draw behind it.
+      trackDrawDirtyRef.current = true;
+    }
+  }, [trackReplay]);
 
   // Ingest new vessel targets. receivedAt only advances when the fix's ts
   // changed, so dead reckoning projects from the true fix age.
@@ -439,32 +577,70 @@ export function Map({
         if (now - lastSetDataRef.current < SET_DATA_INTERVAL_MS) return;
         lastSetDataRef.current = now;
 
-        const replaySource = map.getSource('replay') as maplibregl.GeoJSONSource | undefined;
-        if (!replaySource) return;
-        const meta = replayMetaRef.current;
-        const feats: Feature[] = [];
-        for (const [id, pts] of Object.entries(rp.data)) {
-          const pose = poseAt(pts, t);
-          if (!pose) continue;
-          const m = meta[id];
-          feats.push({
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: [pose.lng, pose.lat] },
-            properties: {
-              mmsi: Number(id),
-              hdg: pose.hdg,
-              icon: m?.icon ?? 'vessel-replay',
-              name: m?.name ?? '',
-              selected: selectedInReplay !== null && Number(id) === selectedInReplay,
-            },
-          });
-        }
-        replaySource.setData({ type: 'FeatureCollection', features: feats });
+        drawFleetAt(map, rp.data, t, replayMetaRef.current, selectedInReplay);
         return;
+      }
+
+      // Track replay winds the whole scene back with the followed ship: the
+      // ghost retraces its recorded path and the traffic around it is redrawn
+      // from the same history, so nothing on the map is still running live. The
+      // clock advances every frame (not only on the setData ticks below) so
+      // playback speed doesn't ride on the throttle.
+      const tr = trackRef.current;
+      let trackPose: ReplayPose | null = null;
+      if (tr) {
+        if (tr.playing && !trackEndedRef.current) {
+          trackClockRef.current += (dtMs / 1000) * tr.rate;
+          if (trackClockRef.current >= tr.to) {
+            trackClockRef.current = tr.to;
+            trackEndedRef.current = true;
+            tr.onProgress(tr.to);
+            tr.onEnded();
+          }
+        }
+        if (trackClockRef.current !== trackPrevClockRef.current) {
+          trackPrevClockRef.current = trackClockRef.current;
+          trackPoseDirtyRef.current = true;
+          trackDrawDirtyRef.current = true;
+        }
+
+        trackPose = poseAt(tr.points, trackClockRef.current, Infinity);
+        if (trackPoseDirtyRef.current && now - trackLastProgressRef.current >= REPLAY_PROGRESS_INTERVAL_MS) {
+          trackLastProgressRef.current = now;
+          trackPoseDirtyRef.current = false;
+          if (tr.playing) tr.onProgress(trackClockRef.current);
+          tr.onPose(
+            trackPose
+              ? {
+                  mmsi: tr.mmsi,
+                  lat: trackPose.lat,
+                  lng: trackPose.lng,
+                  cog: trackPose.hdg,
+                  sog: trackPose.sog,
+                  ts: trackClockRef.current,
+                }
+              : null
+          );
+        }
       }
 
       if (now - lastSetDataRef.current < SET_DATA_INTERVAL_MS) return;
       lastSetDataRef.current = now;
+
+      if (tr) {
+        if (trackDrawDirtyRef.current) {
+          trackDrawDirtyRef.current = false;
+          const icon = replayMetaRef.current[String(tr.mmsi)]?.icon ?? 'vessel-replay';
+          drawTrackReplay(map, tr, trackClockRef.current, trackPose, icon);
+          drawFleetAt(map, tr.fleet, trackClockRef.current, replayMetaRef.current, null);
+        }
+        // The live layers are hidden, so the ghost is what the chase cam has
+        // to follow — the real ship is wherever it is now, off in the future.
+        if (followRef.current && trackPose && selectedRef.current === tr.mmsi) {
+          map.jumpTo({ center: [trackPose.lng, trackPose.lat] });
+        }
+        return;
+      }
 
       const k = 1 - Math.exp(-dtMs / SMOOTHING_TAU_MS);
       const render = renderRef.current;
@@ -667,6 +843,8 @@ export function Map({
     if (!map.getSource('aton')) map.addSource('aton', { type: 'geojson', data: empty });
     if (!map.getSource('cameras')) map.addSource('cameras', { type: 'geojson', data: empty });
     if (!map.getSource('trail')) map.addSource('trail', { type: 'geojson', data: empty });
+    if (!map.getSource('track-progress')) map.addSource('track-progress', { type: 'geojson', data: empty });
+    if (!map.getSource('track-marker')) map.addSource('track-marker', { type: 'geojson', data: empty });
     if (!map.getSource('replay')) map.addSource('replay', { type: 'geojson', data: empty });
 
     const dark = document.documentElement.getAttribute('data-theme') !== 'light';
@@ -760,6 +938,56 @@ export function Map({
           'line-color': DEFAULT_TRAIL_COLOR,
           'line-width': ['interpolate', ['linear'], ['zoom'], 5, 2, 12, 4],
           'line-dasharray': [0, 2],
+        },
+      });
+    }
+
+    // Track-replay layers, all hidden until the user starts playback. The
+    // covered stretch is a solid line over the dotted trail (which dims while
+    // this runs), and the ghost is the vessel's own category icon inside a ring
+    // so it reads as a second, historical copy of the selected ship.
+    if (!map.getLayer('track-progress-line')) {
+      map.addLayer({
+        id: 'track-progress-line',
+        type: 'line',
+        source: 'track-progress',
+        layout: { visibility: 'none', 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': DEFAULT_TRAIL_COLOR,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 5, 2.5, 12, 5],
+          'line-opacity': 0.9,
+        },
+      });
+    }
+
+    if (!map.getLayer('track-ghost-halo')) {
+      map.addLayer({
+        id: 'track-ghost-halo',
+        type: 'circle',
+        source: 'track-marker',
+        layout: { visibility: 'none' },
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 10, 12, 18],
+          'circle-color': 'rgba(45, 212, 191, 0.12)',
+          'circle-stroke-color': DEFAULT_TRAIL_COLOR,
+          'circle-stroke-width': 2,
+        },
+      });
+    }
+
+    if (!map.getLayer('track-ghost')) {
+      map.addLayer({
+        id: 'track-ghost',
+        type: 'symbol',
+        source: 'track-marker',
+        layout: {
+          visibility: 'none',
+          'icon-image': ['get', 'icon'],
+          'icon-rotate': ['get', 'hdg'],
+          'icon-rotation-alignment': 'map',
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+          'icon-size': ['interpolate', ['linear'], ['zoom'], 4, 0.45, 9, 0.75, 14, 1.1],
         },
       });
     }
@@ -930,24 +1158,35 @@ export function Map({
     if (!map || styleEpoch === 0) return;
     const source = map.getSource('trail') as maplibregl.GeoJSONSource | undefined;
     if (!source) return;
-    // A LineString needs at least two points; otherwise clear the trail.
+    // A LineString needs at least two points; otherwise clear the trail. The
+    // stored points carry course/speed too — the geometry takes lng/lat only.
     source.setData(
       trailPoints.length >= 2
         ? {
             type: 'Feature',
-            geometry: { type: 'LineString', coordinates: trailPoints },
+            geometry: {
+              type: 'LineString',
+              coordinates: trailPoints.map((p) => [p[0], p[1]]),
+            },
             properties: {},
           }
         : { type: 'FeatureCollection', features: [] }
     );
   }, [trailPoints, styleEpoch]);
 
-  // Tint the trail to the selected vessel's category colour.
+  // Tint the trail — and the replay overlay drawn on top of it — to the
+  // selected vessel's category colour.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || styleEpoch === 0) return;
     if (map.getLayer('trail-line')) {
       map.setPaintProperty('trail-line', 'line-color', trailColor);
+    }
+    if (map.getLayer('track-progress-line')) {
+      map.setPaintProperty('track-progress-line', 'line-color', trailColor);
+    }
+    if (map.getLayer('track-ghost-halo')) {
+      map.setPaintProperty('track-ghost-halo', 'circle-stroke-color', trailColor);
     }
   }, [trailColor, styleEpoch]);
 
@@ -1019,8 +1258,12 @@ export function Map({
     vis('cameras-layer', showWebcams);
   }, [showPorts, showBuoys, showAton, showWebcams, styleEpoch]);
 
-  // Replay mode swaps the live fleet (and its trail) for the playback overlay.
+  // Either playback swaps the live fleet for the recorded overlay. They differ
+  // in what else is on screen: the fleet replay drops the trail entirely, while
+  // the track replay is *about* one trail — it keeps it, dimmed under the
+  // stretch already covered, with the ghost at the head.
   const replayActive = replay !== null;
+  const trackActive = trackReplay !== null && !replayActive;
   useEffect(() => {
     const map = mapRef.current;
     if (!map || styleEpoch === 0) return;
@@ -1029,17 +1272,31 @@ export function Map({
         map.setLayoutProperty(layer, 'visibility', on ? 'visible' : 'none');
       }
     };
-    for (const l of ['vessels-moving', 'vessels-stationary', 'vessel-labels', 'vessel-selection', 'trail-line']) {
-      vis(l, !replayActive);
+    const historical = replayActive || trackActive;
+    for (const l of ['vessels-moving', 'vessels-stationary', 'vessel-labels', 'vessel-selection']) {
+      vis(l, !historical);
     }
-    for (const l of ['replay-vessels', 'replay-selection', 'replay-labels']) {
-      vis(l, replayActive);
+    for (const l of ['replay-vessels', 'replay-labels']) {
+      vis(l, historical);
     }
-    if (!replayActive) {
+    // The track replay's selection ring belongs to the ghost, not to a marker
+    // in the surrounding traffic.
+    vis('replay-selection', replayActive);
+    vis('trail-line', !replayActive);
+    for (const l of ['track-progress-line', 'track-ghost-halo', 'track-ghost']) {
+      vis(l, trackActive);
+    }
+    if (map.getLayer('trail-line')) {
+      map.setPaintProperty('trail-line', 'line-opacity', trackActive ? 0.35 : 1);
+    }
+    if (!historical) {
       const src = map.getSource('replay') as maplibregl.GeoJSONSource | undefined;
       src?.setData({ type: 'FeatureCollection', features: [] });
     }
-  }, [replayActive, styleEpoch]);
+    // A style swap hands back empty sources, so the next frame must repaint
+    // even if the playhead hasn't moved since.
+    trackDrawDirtyRef.current = true;
+  }, [replayActive, trackActive, styleEpoch]);
 
   // Fly to a selected port
   useEffect(() => {
