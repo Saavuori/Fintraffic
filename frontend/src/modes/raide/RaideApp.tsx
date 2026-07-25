@@ -1,9 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { TrainFront, TramFront, Container, Wrench } from 'lucide-react';
 import Map from './components/Map';
+import { INITIAL_CENTER } from './lib/mapView';
 import { FilterPanel } from './components/FilterPanel';
+import { TrainSearch } from './components/TrainSearch';
+import { FilterStrip, type FilterChip } from '../../shared/components/FilterStrip';
 import { DetailPanel } from './components/DetailPanel';
 import { SelectedCard } from './components/SelectedCard';
-import { useIsMobile, MOBILE_QUERY } from '../../shared/hooks/useMediaQuery';
+import {
+  useIsMobile,
+  useMediaQuery,
+  MOBILE_QUERY,
+  SHORT_LANDSCAPE_QUERY,
+} from '../../shared/hooks/useMediaQuery';
 import { useSheetView } from '../../shared/hooks/useSheetView';
 import { type Theme } from './lib/theme';
 import {
@@ -11,10 +20,23 @@ import {
   type StationMeta,
   type Board,
   type TrainGroup,
+  groupColors,
   trainGroup,
   trainTitle,
+  CATEGORY_LABELS,
 } from './lib/trains';
 import { type LayerKey, type LayerVisibility, DEFAULT_LAYER_VISIBILITY } from './lib/layers';
+
+const GROUP_ORDER: TrainGroup[] = ['longDistance', 'commuter', 'cargo', 'other'];
+
+// The pictogram each group wears on the map (see lib/mapIcons), so a chip in
+// the filter rail reads as the marker it switches off.
+const GROUP_ICONS: Record<TrainGroup, React.ComponentType<{ size?: number }>> = {
+  longDistance: TrainFront,
+  commuter: TramFront,
+  cargo: Container,
+  other: Wrench,
+};
 import './raide.css';
 
 const trainKey = (t: Pick<Train, 'trainNumber' | 'departureDate'>) =>
@@ -34,6 +56,9 @@ interface RaideAppProps {
 
 function RaideApp({ theme, onToggleTheme }: RaideAppProps) {
   const isMobile = useIsMobile();
+  // Sideways the panels are rails again (see Panel), and the floating search
+  // pill would sit on top of them.
+  const shortLandscape = useMediaQuery(SHORT_LANDSCAPE_QUERY);
   const [trains, setTrains] = useState<Train[]>([]);
   // Kept here rather than only in the map, so search can reach them.
   const [stations, setStations] = useState<StationMeta[]>([]);
@@ -50,7 +75,12 @@ function RaideApp({ theme, onToggleTheme }: RaideAppProps) {
 
   // Viewport centre for the "nearest trains" list, on the mobile sheet and in
   // the desktop rail alike.
-  const [mapCenter, setMapCenter] = useState<{ lng: number; lat: number } | null>(null);
+  // Seeded with the map's opening view: search offers the nearest trains the
+  // first time it is tapped, not only after something has panned the map.
+  const [mapCenter, setMapCenter] = useState<{ lng: number; lat: number } | null>({
+    lng: INITIAL_CENTER[0],
+    lat: INITIAL_CENTER[1],
+  });
   const handleMoveEnd = useCallback((center: { lng: number; lat: number }) => {
     setMapCenter(center);
   }, []);
@@ -147,6 +177,39 @@ function RaideApp({ theme, onToggleTheme }: RaideAppProps) {
     : selectedStation?.name ?? '';
   const sheet = useSheetView(isMobile, selectionKey);
 
+  // The pill belongs to the map, so it is only up while the map is: a panel
+  // page covers the screen whole, and search goes with what it is covering.
+  const pageUp =
+    (hasSelection && sheet.detailOpen) || (sheet.browseOpen && !isFilterCollapsed);
+  const searchOnMap = isMobile && !shortLandscape;
+  const onMap = searchOnMap && !pageUp;
+
+  // The phone's filter rail: the same types the desktop rail lists, on the map
+  // where the effect of switching one off is visible.
+  const typeChips = useMemo<FilterChip[]>(() => {
+    const colors = groupColors(theme);
+    return GROUP_ORDER.map(group => ({
+      id: group,
+      label: CATEGORY_LABELS[group],
+      color: colors[group],
+      icon: GROUP_ICONS[group],
+      count: counts[group] ?? 0,
+      active: layerVisibility[group],
+    }));
+  }, [counts, layerVisibility, theme]);
+
+  const showAllGroups = useCallback(
+    () =>
+      setLayerVisibility(prev => ({
+        ...prev,
+        longDistance: true,
+        commuter: true,
+        cargo: true,
+        other: true,
+      })),
+    []
+  );
+
   return (
     <div className="dashboard-container mode-raide">
       <Map
@@ -158,6 +221,30 @@ function RaideApp({ theme, onToggleTheme }: RaideAppProps) {
         theme={theme}
         onMoveEnd={handleMoveEnd}
       />
+
+      {/* On a phone search is a floating pill over the map — the map is what is
+          being searched, and the tab bar freed the top of the screen for it.
+          Desktop keeps the box inside the filter rail. */}
+      {onMap && (
+        <TrainSearch
+          trains={trains}
+          stations={stations}
+          onSelectTrain={selectTrain}
+          onSelectStation={selectStation}
+          mapCenter={mapCenter}
+          theme={theme}
+          variant="floating"
+        />
+      )}
+
+      {onMap && (
+        <FilterStrip
+          chips={typeChips}
+          onToggle={id => toggleLayer(id as LayerKey)}
+          onShowAll={showAllGroups}
+          ariaLabel="Train types"
+        />
+      )}
 
       <FilterPanel
         /* The filters and the selection take turns in the phone's one sheet:
@@ -180,6 +267,7 @@ function RaideApp({ theme, onToggleTheme }: RaideAppProps) {
         isCollapsed={isFilterCollapsed}
         onToggleCollapse={() => setIsFilterCollapsed(v => !v)}
         isMobile={isMobile}
+        asRail={!searchOnMap}
       />
 
       {hasSelection && (

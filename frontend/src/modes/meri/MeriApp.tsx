@@ -12,15 +12,24 @@ import {
 } from '../../shared/hooks/useMediaQuery';
 import { useSheetView } from '../../shared/hooks/useSheetView';
 import { Map } from './components/Map';
+import { INITIAL_CENTER } from './lib/mapView';
 import { FilterPanel } from './components/FilterPanel';
 import { VesselSearch } from './components/VesselSearch';
+import { FilterStrip, type FilterChip } from '../../shared/components/FilterStrip';
 import { VesselPopup } from './components/VesselPopup';
 import { VesselCard } from './components/VesselCard';
 import { PortPopup } from './components/PortPopup';
 import { WebcamPopup } from './components/WebcamPopup';
 import { ReplayBar } from './components/ReplayBar';
+import { TrackReplayPanel } from './components/TrackReplayPanel';
 import { fetchPorts, fetchSeaState, fetchSeaConditions, fetchAtonFaults } from './lib/api';
-import { categorize, CATEGORY_COLORS, type ShipCategory } from './lib/shipTypes';
+import {
+  ALL_CATEGORIES,
+  categorize,
+  CATEGORY_COLORS,
+  CATEGORY_LABELS,
+  type ShipCategory,
+} from './lib/shipTypes';
 import { WEBCAMS } from './lib/webcams';
 import type { Webcam } from './lib/webcams';
 import type {
@@ -130,14 +139,19 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   );
 
   const isMobile = useIsMobile();
-  // Sideways, the panels are rails again (see BottomSheet) and the floating
+  // Sideways, the panels are rails again (see Panel) and the floating
   // search pill would sit on top of them.
   const shortLandscape = useMediaQuery(SHORT_LANDSCAPE_QUERY);
 
   // Viewport centre, refreshed on map moveend, used to list the vessels nearest
   // to what the user is currently looking at — the mobile sheet's glanceable
   // peek and the desktop rail's "Nearest" section.
-  const [mapCenter, setMapCenter] = useState<{ lng: number; lat: number } | null>(null);
+  // Seeded with the map's opening view: search offers the nearest ships the
+  // first time it is tapped, not only after something has panned the map.
+  const [mapCenter, setMapCenter] = useState<{ lng: number; lat: number } | null>({
+    lng: INITIAL_CENTER[0],
+    lat: INITIAL_CENTER[1],
+  });
   const handleMoveEnd = useCallback((center: { lng: number; lat: number }) => {
     setMapCenter(center);
   }, []);
@@ -148,10 +162,19 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
     typeof window !== 'undefined' ? window.matchMedia(MOBILE_QUERY).matches : false
   );
 
+  /**
+   * Phone only: whether the selected vessel's full page is up. Selecting a ship
+   * puts its summary on the map (VesselCard) rather than a page over it — you
+   * picked something on a map to see where it is — and the page is one tap
+   * behind that card. Ports and webcams have no card and open theirs directly.
+   */
+  const [vesselPageOpen, setVesselPageOpen] = useState(false);
+
   const onSelectionMade = useCallback(() => {
     setIsDetailCollapsed(false);
     if (window.matchMedia(MOBILE_QUERY).matches) {
       setIsFilterCollapsed(true);
+      setVesselPageOpen(false);
     }
   }, []);
 
@@ -302,6 +325,37 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
     : selectedPort?.name ?? selectedWebcam?.name ?? '';
   const sheet = useSheetView(isMobile, selectionKey);
 
+  // A port or a webcam takes the whole screen on a phone; a vessel does not —
+  // its details unfold from the bar at the top and stop well above the bottom,
+  // so the docked transport and the map underneath both stay.
+  const fullPageOpen =
+    selectedPort !== null || selectedWebcam !== null || (displayedVessel !== null && !isMobile);
+  const vesselExpanded = isMobile && displayedVessel !== null && vesselPageOpen && sheet.detailOpen;
+
+  // The map's own chrome is only up while the map is: a page covers the screen
+  // whole, and everything floating over the map goes with it.
+  const pageUp = (fullPageOpen && sheet.detailOpen) || (sheet.browseOpen && !isFilterCollapsed);
+  const onMap = isMobile && !shortLandscape && !pageUp;
+  // The bar's own slot in the strip: the expanded details stand in it, between
+  // the search button on one side and the settings and filter ones on the other,
+  // so everything around it stays where it was.
+  const barFree = onMap && !vesselExpanded;
+
+  // The phone's filter rail: the same categories the desktop rail lists, on the
+  // map where the effect of switching one off is visible.
+  const categoryChips = useMemo<FilterChip[]>(
+    () =>
+      ALL_CATEGORIES.map((cat) => ({
+        id: cat,
+        label: CATEGORY_LABELS[cat],
+        color: CATEGORY_COLORS[cat],
+        count: categoryCounts[cat] ?? 0,
+        // No selection at all means every category is drawn.
+        active: selectedCategories.length === 0 || selectedCategories.includes(cat),
+      })),
+    [categoryCounts, selectedCategories]
+  );
+
   // The trail is drawn in the selected vessel's category colour.
   const trailColor = displayedVessel
     ? CATEGORY_COLORS[categorize(displayedVessel.shipType)]
@@ -322,9 +376,12 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   const toggleDetailCollapsed = useCallback(() => setIsDetailCollapsed((v) => !v), []);
   const toggleFollowing = useCallback(() => setIsFollowing((v) => !v), []);
   const disableFollowing = useCallback(() => setIsFollowing(false), []);
+  const openVesselPage = useCallback(() => setVesselPageOpen(true), []);
+  const closeVesselPage = useCallback(() => setVesselPageOpen(false), []);
   const handleCloseVessel = useCallback(() => {
     setSelectedMmsi(null);
     setIsFollowing(false);
+    setVesselPageOpen(false);
   }, []);
   const handleClosePort = useCallback(() => setSelectedPort(null), []);
   const handleCloseWebcam = useCallback(() => setSelectedWebcam(null), []);
@@ -361,16 +418,31 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
 
       {/* On mobile, search is a floating pill over the map (the bottom tab bar
           freed the top of the screen). Desktop keeps it inside the filter rail. */}
-      {isMobile && !shortLandscape && !replay.active && (
-        <VesselSearch vessels={vessels} onSelectVessel={handleSelectVessel} variant="floating" />
+      {onMap && !replay.active && (
+        <VesselSearch
+          vessels={vessels}
+          onSelectVessel={handleSelectVessel}
+          mapCenter={mapCenter}
+          variant="floating"
+        />
+      )}
+
+      {onMap && !replay.active && (
+        <FilterStrip
+          chips={categoryChips}
+          onToggle={(id) => handleToggleCategory(id as ShipCategory)}
+          onShowAll={selectedCategories.length > 0 ? handleClearFilters : undefined}
+          ariaLabel="Vessel categories"
+        />
       )}
 
       <FilterPanel
-        /* Two sheets can't share one bottom edge on a phone, so the filters and
-           the selection take turns in the one slot — the detail header's
-           filters button swaps to this, and the row at the top of it swaps
-           back. Desktop shows both rails at once as before. */
-        open={sheet.browseOpen}
+        /* The filters and the selection take turns in the phone's one slot — the
+           detail page's filters button swaps to this, and the row at the top of
+           it swaps back. `onMap` adds the case the sheet never had: a vessel
+           selected but only its card up, where the map is still the view and its
+           launcher belongs on it. Desktop shows both rails at once as before. */
+        open={sheet.browseOpen || onMap}
         selectionLabel={detailOpen ? selectionLabel : null}
         onBackToSelection={sheet.showDetail}
         vessels={vessels}
@@ -384,7 +456,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         isCollapsed={isFilterCollapsed}
         onToggleCollapse={toggleFilterCollapsed}
         isMobile={isMobile}
-        searchInPanel={!isMobile || shortLandscape}
+        asRail={!isMobile || shortLandscape}
         mapCenter={mapCenter}
         mapTheme={mapTheme}
         setMapTheme={setMapTheme}
@@ -401,7 +473,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         onEnterReplay={handleEnterReplay}
       />
 
-      {displayedVessel && (
+      {displayedVessel && (!isMobile || barFree) && (
         <VesselCard
           vessel={displayedVessel}
           onClose={handleCloseVessel}
@@ -413,7 +485,23 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
           onSetTrailWindow={setTrailWindowSec}
           trackReplay={trackReplay}
           replayActive={replay.active}
+          compact={isMobile}
+          onOpenDetails={openVesselPage}
         />
+      )}
+
+      {/* The track transport, docked across the bottom of the phone's screen:
+          the scrubber is the control you drag, so it gets the full width rather
+          than the slot left over inside a card. Desktop unfolds it in the card
+          itself, where there is room beside the ship's name. */}
+      {onMap && displayedVessel && showTrail && !replay.active && (
+        <div className="replay-bar replay-bar--track">
+          <TrackReplayPanel
+            replay={trackReplay}
+            trailWindowSec={trailWindowSec}
+            onSetTrailWindow={setTrailWindowSec}
+          />
+        </div>
       )}
 
       {displayedVessel && (
@@ -421,7 +509,9 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
           vessel={displayedVessel}
           onClose={handleCloseVessel}
           isCollapsed={isDetailCollapsed}
-          onToggleCollapse={toggleDetailCollapsed}
+          /* On a phone this folds the details back into the bar they unfolded
+             from; on desktop it is the rail's collapse sliver as before. */
+          onToggleCollapse={isMobile ? closeVesselPage : toggleDetailCollapsed}
           isMobile={isMobile}
           isFollowing={isFollowing}
           onToggleFollow={toggleFollowing}
@@ -429,10 +519,10 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
           onToggleTrail={toggleTrail}
           trailWindowSec={trailWindowSec}
           onSetTrailWindow={setTrailWindowSec}
-          trackReplay={trackReplay}
           replayActive={replay.active}
-          open={sheet.detailOpen}
-          onShowBrowse={sheet.showBrowse}
+          /* No filters button in here: the expanded bar sits beside the
+             settings launcher, which is the way to them. */
+          open={sheet.detailOpen && (!isMobile || vesselPageOpen)}
         />
       )}
 

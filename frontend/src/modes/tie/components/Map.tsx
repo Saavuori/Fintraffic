@@ -16,7 +16,6 @@ import { type ChargingStation, chargingLevel, availabilityText } from '../lib/ch
 import { type LayerKey, LAYER_ORDER, type LayerVisibility, poiColors } from '../lib/layers';
 import { type Theme, BASEMAP_STYLES } from '../lib/theme';
 import { LocateControl } from '../../../shared/components/LocateControl';
-import { useSheetCameraPadding } from '../../../shared/hooks/useSheetCameraPadding';
 
 /** The map's live feeds, handed up so the app can search them. */
 export interface TieData {
@@ -138,8 +137,6 @@ const Map: React.FC<MapProps> = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
 
-  // Keep whatever is centred above the phone's sheet rather than behind it.
-  useSheetCameraPadding(() => map.current);
   // The polls are registered once inside the mount effect, so they read the
   // callback through a ref rather than closing over the mounting render's copy.
   const onDataUpdateRef = useRef(onDataUpdate);

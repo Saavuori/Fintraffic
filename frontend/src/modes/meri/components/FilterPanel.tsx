@@ -1,15 +1,12 @@
-import React, { useMemo } from 'react';
-import { Ship, Anchor, Waves, TriangleAlert, Moon, Sun, ChevronLeft, History, Video } from 'lucide-react';
+import React from 'react';
+import { Ship, Anchor, Waves, TriangleAlert, Moon, Sun, ChevronLeft, History, Video, X } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
-import { BottomSheet } from '../../../shared/components/BottomSheet';
+import { Panel } from '../../../shared/components/Panel';
 import { BackToSelection } from '../../../shared/components/SheetViewSwitch';
 import { VesselSearch } from './VesselSearch';
-import { nearestTo, formatDistanceKm } from '../lib/geo';
-import { ALL_CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS, categorize, type ShipCategory } from '../lib/shipTypes';
+import { ALL_CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS, type ShipCategory } from '../lib/shipTypes';
 import type { ConnectionStatus } from '../hooks/useWebSocket';
 import type { AtonFaultFeature, Vessel } from '../types';
-
-const NEAREST_COUNT = 5;
 
 interface FilterPanelProps {
   vessels: Record<string, Vessel>;
@@ -23,10 +20,15 @@ interface FilterPanelProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   isMobile: boolean;
-  /** False while a detail sheet is up on mobile — see BottomSheet's `open`. */
+  /** False while a detail page is up on mobile — see Panel's `open`. */
   open?: boolean;
-  /** True wherever this panel renders as a rail; the phone's pill floats instead. */
-  searchInPanel: boolean;
+  /**
+   * True wherever this panel renders as a rail — desktop, and a phone held
+   * sideways. The phone's upright layout keeps search and the type filter on the
+   * map instead (a floating pill and the filter strip), so the rail-only blocks
+   * are the ones that would otherwise be duplicated.
+   */
+  asRail: boolean;
   /** What is selected behind this sheet on a phone, if anything — offers a way back. */
   selectionLabel?: string | null;
   onBackToSelection?: () => void;
@@ -59,7 +61,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   onToggleCollapse,
   isMobile,
   open = true,
-  searchInPanel,
+  asRail,
   selectionLabel,
   onBackToSelection,
   mapCenter,
@@ -81,23 +83,21 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   // peek); only desktop unmounts the body when collapsed.
   const bodyCollapsed = !isMobile && isCollapsed;
 
-  // Vessels nearest the viewport centre — the sheet's glanceable content on
-  // mobile, the top of the rail on desktop. Computed once the map has reported
-  // a centre; vessels without a fix are skipped.
-  const nearest = useMemo(() => {
-    if (!mapCenter) return [];
-    const located = Object.values(vessels).filter(
-      (v) => Number.isFinite(v.lat) && Number.isFinite(v.lng)
-    );
-    return nearestTo(mapCenter, located, NEAREST_COUNT);
-  }, [mapCenter, vessels]);
+  // On a phone the header button is the way out of a full-screen page: back to
+  // the selection it is covering if there is one (the map still has it), and
+  // otherwise back to the map, where the launcher takes its place.
+  const closePanel = () => {
+    // Back to whatever the page is covering: the selection if there is one, and
+    // the map either way — a collapsed filter panel is the launcher on it.
+    if (isMobile && selectionLabel && onBackToSelection) onBackToSelection();
+    onToggleCollapse();
+  };
 
   return (
-    <BottomSheet
+    <Panel
       variant="filter"
       isMobile={isMobile}
       open={open}
-      className={selectionLabel ? 'has-back' : undefined}
       ariaLabel="Open filters panel"
       collapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
@@ -112,11 +112,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             className="icon-btn"
             onClick={(e) => {
               e.stopPropagation();
-              onToggleCollapse();
+              closePanel();
             }}
-            aria-label="Collapse filters panel"
+            aria-label={isMobile ? 'Close filters panel' : 'Collapse filters panel'}
           >
-            <ChevronLeft size={16} />
+            {isMobile ? <X size={18} /> : <ChevronLeft size={16} />}
           </button>
         )}
       </div>
@@ -148,56 +148,45 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               moves out to a floating pill over the map (rendered by MeriApp) so
               it isn't buried under the sheet's peek; held sideways the panel is
               a rail again and takes the box back. */}
-          {searchInPanel && <VesselSearch vessels={vessels} onSelectVessel={onSelectVessel} />}
+          {asRail && (
+            <VesselSearch
+              vessels={vessels}
+              onSelectVessel={onSelectVessel}
+              mapCenter={mapCenter}
+            />
+          )}
 
           <div className="filter-scroll-area">
-            {nearest.length > 0 && (
+            {/* The nearest vessels are what the search box offers before anything
+                is typed (VesselSearch) — the same list, at the point where you
+                are asking the question rather than a section you scroll to. */}
+            {/* On a phone the categories are the filter strip on the map, where
+                you can see what switching one off actually did. */}
+            {asRail && (
               <>
-                <div className="filter-section-title">Nearest</div>
-                <div className="nearest-list">
-                  {nearest.map(({ item: v, km }) => (
-                    <button
-                      key={v.mmsi}
-                      className="nearest-row"
-                      onClick={() => onSelectVessel(v.mmsi)}
-                    >
-                      <span
-                        className="nearest-dot"
-                        style={{ background: CATEGORY_COLORS[categorize(v.shipType)] }}
-                      />
-                      <span className="nearest-name">{v.name || `MMSI ${v.mmsi}`}</span>
-                      <span className="nearest-dist">{formatDistanceKm(km)}</span>
-                      <span className="nearest-speed">
-                        {Number.isFinite(v.sog) ? `${v.sog!.toFixed(1)} kn` : '—'}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-                <div className="filter-section-title" style={{ marginTop: 14 }}>
-                  Vessel categories
+                <div className="filter-section-title">Vessel categories</div>
+                <div className="category-list">
+                  {ALL_CATEGORIES.map((cat) => {
+                    const active =
+                      selectedCategories.length === 0 || selectedCategories.includes(cat);
+                    return (
+                      <button
+                        key={cat}
+                        className={`category-row ${active ? '' : 'inactive'}`}
+                        onClick={() => onToggleCategory(cat)}
+                      >
+                        <span
+                          className="category-swatch"
+                          style={{ background: CATEGORY_COLORS[cat] }}
+                        />
+                        <span className="category-label">{CATEGORY_LABELS[cat]}</span>
+                        <span className="category-count">{categoryCounts[cat] ?? 0}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </>
             )}
-            {nearest.length === 0 && (
-              <div className="filter-section-title">Vessel categories</div>
-            )}
-            <div className="category-list">
-              {ALL_CATEGORIES.map((cat) => {
-                const active =
-                  selectedCategories.length === 0 || selectedCategories.includes(cat);
-                return (
-                  <button
-                    key={cat}
-                    className={`category-row ${active ? '' : 'inactive'}`}
-                    onClick={() => onToggleCategory(cat)}
-                  >
-                    <span className="category-swatch" style={{ background: CATEGORY_COLORS[cat] }} />
-                    <span className="category-label">{CATEGORY_LABELS[cat]}</span>
-                    <span className="category-count">{categoryCounts[cat] ?? 0}</span>
-                  </button>
-                );
-              })}
-            </div>
 
             <div className="filter-section-title" style={{ marginTop: 14 }}>
               Map layers
@@ -282,6 +271,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           </div>
         </div>
       )}
-    </BottomSheet>
+    </Panel>
   );
 };

@@ -1,0 +1,240 @@
+/* The phone's panel chrome. Everything here is phone-only: held sideways, and
+   above the breakpoint, the Panel component renders the desktop `.glass-panel`
+   rail instead, so none of these rules apply.
+
+   The mobile panel is a full-screen page, not a bottom sheet. There is no drag,
+   no snap point and no resting height, which means nothing has to be published
+   back to the layout: while the page is up it owns the screen, and while it is
+   not the map has all of it. */
+
+@media (max-width: 768px) {
+  .mobile-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    /* Stops above the tab bar rather than covering it. Fintraffic still has
+       three modes to switch between, and switching one while reading a panel is
+       a real thing to do — the page's own header is what closes it. */
+    bottom: var(--tabbar-height);
+    z-index: 15;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    padding: calc(10px + env(safe-area-inset-top)) var(--gutter) var(--gap-sm);
+    /* Opaque, as the sheet was: a full-screen surface over a moving map is
+       unreadable through glass, and the blur would cost a composite a frame. */
+    background: var(--ink-900);
+    color: var(--text-primary);
+    animation: mobile-panel-in 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  @keyframes mobile-panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+  }
+
+  /* --- the settings panel ---
+     A selection's page takes the screen: it is the thing you asked for, and
+     there is nothing behind it to keep. The filters are the opposite — you open
+     them to change what the map is drawing, so the map has to stay in the room.
+     They drop from the top edge as a rounded glass panel, sized to what they
+     hold, leaving the bottom of the map visible and lit underneath. */
+  .mobile-panel--filter {
+    bottom: auto;
+    left: var(--gap-sm);
+    right: var(--gap-sm);
+    max-height: min(72dvh, calc(100dvh - var(--tabbar-height) - var(--gutter)));
+    padding-bottom: var(--gap-md);
+    /* Glass here and nowhere else on the phone: this panel is deliberately not
+       the whole screen, so the composite it costs is bounded — and seeing the
+       map move under it is the point of the shape. */
+    background: var(--bg-panel);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid var(--border-glow);
+    border-top: none;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    box-shadow: 0 18px 44px -18px rgba(0, 0, 0, 0.85);
+    animation: mobile-panel-drop 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  @keyframes mobile-panel-drop {
+    from {
+      opacity: 0;
+      transform: translateY(-12px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-panel--filter {
+      animation: none;
+    }
+  }
+
+  /* --- the vessel's details ---
+     Not a page either: the bar at the top of the map unfolds downward into it,
+     so it starts where the bar was, keeps the bar's width and column, and stops
+     well short of the bottom — the docked track transport and a band of map stay visible
+     underneath, which is the whole reason the transport moved down there. */
+  .mobile-panel--detail.vessel-sheet {
+    top: calc(env(safe-area-inset-top) + 12px);
+    bottom: auto;
+    /* The bar's own column, kept: search stays reachable on its left and the
+       settings and filter buttons on its right, with the details in between. */
+    left: calc(var(--gap-md) + var(--tap-min) + var(--gap-sm));
+    right: calc(var(--gap-md) + var(--tap-min) + var(--gap-sm));
+    /* Tall enough for everything the fold holds, and still short enough to clear
+       the docked transport with a band of map between them. */
+    max-height: min(
+      72dvh,
+      calc(100dvh - env(safe-area-inset-top) - var(--tabbar-height) - 170px)
+    );
+    padding: 0 var(--gap-md) var(--gap-md);
+    border: 1px solid var(--seam-strong);
+    border-radius: var(--radius-md);
+    box-shadow: 0 18px 44px -18px rgba(0, 0, 0, 0.85);
+    animation: mobile-panel-drop 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /* Its first row is the bar it grew out of, at the same height, so unfolding
+     reads as the bar getting taller rather than a new thing appearing. */
+  .mobile-panel--detail.vessel-sheet .detail-header {
+    min-height: var(--tap-min);
+    padding-bottom: var(--gap-sm);
+    cursor: pointer;
+  }
+
+  /* The identity block behind the fold is reference data — eight short rows of
+     it — so in a 247px column it is set tighter than a page's rows: the label
+     and the value share a line, and the line is only as tall as it needs to be.
+     That is what lets the whole fold open without the panel scrolling. */
+  .mobile-panel--detail.vessel-sheet .detail-facts {
+    margin-top: var(--gap-xs);
+  }
+
+  .mobile-panel--detail.vessel-sheet .fact-row {
+    min-height: 0;
+    padding: 5px 0;
+    gap: var(--gap-sm);
+  }
+
+  .mobile-panel--detail.vessel-sheet .fact-row span {
+    font-size: var(--text-2xs);
+  }
+
+  .mobile-panel--detail.vessel-sheet .fact-row b {
+    font-size: var(--text-2xs);
+    text-align: right;
+  }
+
+  /* The fold's own control gives up the padding a full-width page could afford;
+     it is still a 44px target. */
+  .mobile-panel--detail.vessel-sheet .detail-more-btn {
+    margin-top: var(--gap-sm);
+  }
+
+  /* The panel's own header is the page's title bar, and its button is the only
+     way out — so it is a seam in the mode's accent, the way the sheet's top edge
+     used to be, and it stays put while the body scrolls. */
+  .mobile-panel .panel-header,
+  .mobile-panel .detail-header {
+    flex: none;
+    align-items: center;
+    gap: var(--gap-sm);
+    padding-bottom: var(--gap-sm);
+    margin-bottom: var(--gap-sm);
+    border-bottom: 2px solid var(--accent);
+  }
+
+  /* The close button belongs at the far edge of a full-width bar, and the title
+     block takes the slack — in a 320px desktop rail the two sat next to each
+     other because neither had anywhere to go. */
+  .mobile-panel .panel-header {
+    justify-content: space-between;
+  }
+
+  .mobile-panel .detail-header > .detail-title {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* The filter page's title was hidden on the sheet — the tab bar named the mode
+     and the one visible row was too expensive to spend on saying it twice. A
+     page has room, and its title bar is what carries the close button. */
+  .mobile-panel .panel-title {
+    font-size: 1.05rem;
+  }
+
+  /* Full thumb target for the header's buttons. */
+  .mobile-panel .icon-btn {
+    width: var(--tap-min);
+    height: var(--tap-min);
+  }
+
+  /* The chevron that folds a desktop rail into its sliver has no meaning here —
+     there is no sliver to fold into, and the X beside it is the way out. */
+  .mobile-panel .panel-collapse-btn {
+    display: none;
+  }
+
+  /* The body fills what's left of the page and owns the scroll. */
+  .mobile-panel > .filter-content,
+  .mobile-panel > .detail-content {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .mobile-panel .filter-scroll-area,
+  .mobile-panel .detail-content,
+  .mobile-panel .port-calls-list {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* The webcam detail is a fixed-width card on desktop; edge-to-edge here. */
+  .mobile-panel.webcam-popup {
+    width: auto;
+  }
+
+  /* --- launcher ---
+     The collapsed state of a filter panel: the one piece of chrome the map
+     carries besides search. Top right, opposite the search pill, and clear of
+     everything docked at the bottom. */
+  .panel-launcher {
+    position: fixed;
+    z-index: 14;
+    top: calc(env(safe-area-inset-top) + 12px);
+    right: 12px;
+    width: var(--tap-min);
+    height: var(--tap-min);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    border: 1px solid var(--seam-strong);
+    border-radius: 12px;
+    background: var(--ink-900);
+    box-shadow: 0 8px 28px -12px rgba(0, 0, 0, 0.7);
+    color: var(--text-body);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, transform 0.15s;
+  }
+
+  .panel-launcher:active {
+    transform: scale(0.94);
+    color: var(--text-primary);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-panel {
+      animation: none;
+    }
+
+    .panel-launcher:active {
+      transform: none;
+    }
+  }
+}

@@ -1,21 +1,55 @@
-import { useCallback, useMemo, useState } from 'react';
-import { Moon, Sun } from 'lucide-react';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  Moon,
+  Sun,
+  Gauge,
+  Construction,
+  TriangleAlert,
+  Signpost,
+  SquareParking,
+  Camera,
+  Zap,
+} from 'lucide-react';
 import Map, { type TieData } from './components/Map';
 import { FilterPanel } from './components/FilterPanel';
 import { DetailPanel, type Selection } from './components/DetailPanel';
 import { SelectedCard } from './components/SelectedCard';
-import { useIsMobile, MOBILE_QUERY } from '../../shared/hooks/useMediaQuery';
+import {
+  useIsMobile,
+  useMediaQuery,
+  MOBILE_QUERY,
+  SHORT_LANDSCAPE_QUERY,
+} from '../../shared/hooks/useMediaQuery';
 import { useSheetView } from '../../shared/hooks/useSheetView';
-import type { SearchItem } from '../../shared/components/EntitySearch';
+import { EntitySearch, type SearchItem } from '../../shared/components/EntitySearch';
+import { FilterStrip, type FilterChip } from '../../shared/components/FilterStrip';
 import { type Theme } from './lib/theme';
 import { congestionColors, directionalStatuses, type Station } from './lib/traffic';
 import { parkingColors, parkingLevel, type ParkingFacility } from './lib/parking';
 import { weathercamColor, type WeathercamStation } from './lib/weathercam';
 import { chargingColors, chargingLevel, type ChargingStation } from './lib/charging';
-import { type LayerKey, type LayerVisibility, DEFAULT_LAYER_VISIBILITY } from './lib/layers';
+import {
+  type LayerKey,
+  type LayerVisibility,
+  DEFAULT_LAYER_VISIBILITY,
+  LAYER_ORDER,
+  LAYER_LABELS,
+} from './lib/layers';
 import './tie.css';
 
 const EMPTY_DATA: TieData = { stations: [], facilities: [], cameras: [], chargers: [] };
+
+// Pictogram per layer, mirroring what the map draws — Tie keys its layers by
+// shape rather than by one colour each, so the strip does too.
+const LAYER_ICONS: Record<LayerKey, React.ComponentType<{ size?: number }>> = {
+  stations: Gauge,
+  roadworks: Construction,
+  incidents: TriangleAlert,
+  speedlimits: Signpost,
+  parking: SquareParking,
+  weathercams: Camera,
+  charging: Zap,
+};
 
 interface TieAppProps {
   theme: Theme;
@@ -24,6 +58,9 @@ interface TieAppProps {
 
 function TieApp({ theme, onToggleTheme }: TieAppProps) {
   const isMobile = useIsMobile();
+  // Sideways the panels are rails again (see Panel), and the floating search
+  // pill would sit on top of them.
+  const shortLandscape = useMediaQuery(SHORT_LANDSCAPE_QUERY);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>(DEFAULT_LAYER_VISIBILITY);
   // The map's feeds, mirrored here so search can reach them.
@@ -163,6 +200,28 @@ function TieApp({ theme, onToggleTheme }: TieAppProps) {
     : '';
   const sheet = useSheetView(isMobile, selectionKey);
 
+  // The pill belongs to the map, so it is only up while the map is: a panel
+  // page covers the screen whole, and search goes with what it is covering.
+  const pageUp =
+    (selection !== null && sheet.detailOpen) || (sheet.browseOpen && !isFilterCollapsed);
+  const searchOnMap = isMobile && !shortLandscape;
+  const onMap = searchOnMap && !pageUp;
+
+  // The phone's filter rail: the same layers the desktop rail lists, on the map
+  // where the effect of switching one off is visible.
+  const layerChips = useMemo<FilterChip[]>(
+    () =>
+      LAYER_ORDER.map(key => ({
+        id: key,
+        label: LAYER_LABELS[key],
+        icon: LAYER_ICONS[key],
+        active: layerVisibility[key],
+      })),
+    [layerVisibility]
+  );
+
+  const showAllLayers = useCallback(() => setLayerVisibility(DEFAULT_LAYER_VISIBILITY), []);
+
   return (
     <div className="dashboard-container mode-tie">
       <Map
@@ -174,6 +233,29 @@ function TieApp({ theme, onToggleTheme }: TieAppProps) {
         visibility={layerVisibility}
         theme={theme}
       />
+
+      {/* On a phone search is a floating pill over the map — the map is what is
+          being searched, and the tab bar freed the top of the screen for it.
+          Desktop keeps the box inside the filter rail. */}
+      {onMap && (
+        <EntitySearch
+          items={searchItems}
+          onPick={pickSearchResult}
+          placeholder="Search stations, cameras, parking"
+          ariaLabel="Search measurement stations, weather cameras and car parks"
+          emptyText="Nothing on the map matches."
+          variant="floating"
+        />
+      )}
+
+      {onMap && (
+        <FilterStrip
+          chips={layerChips}
+          onToggle={id => toggleLayer(id as LayerKey)}
+          onShowAll={showAllLayers}
+          ariaLabel="Map layers"
+        />
+      )}
 
       <FilterPanel
         /* The filters and the selection take turns in the phone's one sheet;
@@ -190,6 +272,7 @@ function TieApp({ theme, onToggleTheme }: TieAppProps) {
         isCollapsed={isFilterCollapsed}
         onToggleCollapse={() => setIsFilterCollapsed(v => !v)}
         isMobile={isMobile}
+        asRail={!searchOnMap}
       />
 
       <button

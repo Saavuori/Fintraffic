@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   TrainFront,
   TramFront,
@@ -9,51 +9,21 @@ import {
   Moon,
   Sun,
   ChevronLeft,
+  X,
 } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
-import { BottomSheet } from '../../../shared/components/BottomSheet';
+import { Panel } from '../../../shared/components/Panel';
 import { BackToSelection } from '../../../shared/components/SheetViewSwitch';
-import { EntitySearch, type SearchItem } from '../../../shared/components/EntitySearch';
+import { TrainSearch } from './TrainSearch';
 import {
   type Train,
   type TrainGroup,
   type StationMeta,
   groupColors,
-  trainGroup,
-  trainLabel,
-  trainTitle,
-  STATION_COLORS,
   CATEGORY_LABELS,
 } from '../lib/trains';
 import { type LayerKey, type LayerVisibility } from '../lib/layers';
 import type { Theme } from '../lib/theme';
-
-const NEAREST_COUNT = 5;
-const DEG = Math.PI / 180;
-
-/** Trains closest to `center`, each with an equirectangular distance in km. */
-function nearestTrains(
-  center: { lng: number; lat: number },
-  trains: Train[],
-  count: number
-): Array<{ train: Train; km: number }> {
-  return trains
-    .filter((t) => Number.isFinite(t.latitude) && Number.isFinite(t.longitude))
-    .map((train) => {
-      const meanLat = ((center.lat + train.latitude) / 2) * DEG;
-      const dx = (center.lng - train.longitude) * Math.cos(meanLat);
-      const dy = center.lat - train.latitude;
-      return { train, km: Math.sqrt(dx * dx + dy * dy) * DEG * 6371 };
-    })
-    .sort((a, b) => a.km - b.km)
-    .slice(0, count);
-}
-
-function formatDistanceKm(km: number): string {
-  if (km < 1) return `${Math.round(km * 1000)} m`;
-  if (km < 10) return `${km.toFixed(1)} km`;
-  return `${Math.round(km)} km`;
-}
 
 interface FilterPanelProps {
   total: number;
@@ -74,8 +44,15 @@ interface FilterPanelProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   isMobile: boolean;
-  /** False while a detail sheet is up on mobile — see BottomSheet's `open`. */
+  /** False while a detail page is up on mobile — see Panel's `open`. */
   open?: boolean;
+  /**
+   * True wherever this panel renders as a rail — desktop, and a phone held
+   * sideways. The phone's upright layout keeps search and the type filter on the
+   * map instead (a floating pill and the filter strip), so the rail-only blocks
+   * are the ones that would otherwise be duplicated.
+   */
+  asRail: boolean;
 }
 
 const GROUP_ORDER: TrainGroup[] = ['longDistance', 'commuter', 'cargo', 'other'];
@@ -107,59 +84,27 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   onToggleCollapse,
   isMobile,
   open = true,
+  asRail,
 }) => {
   const bodyCollapsed = !isMobile && isCollapsed;
   const colors = groupColors(theme);
   const anyHidden = GROUP_ORDER.some(g => !visibility[g]);
 
-  // Trains nearest the viewport centre — the sheet's glanceable content on
-  // mobile, the top of the rail on desktop. Computed once the map has reported
-  // a centre.
-  const nearest = useMemo(() => {
-    if (!mapCenter) return [];
-    return nearestTrains(mapCenter, trains, NEAREST_COUNT);
-  }, [mapCenter, trains]);
-
-  // Trains by number, line or route, and stations by name or code. Both kinds
-  // in one box: on a phone this is the only way to reach a named train without
-  // panning the map until it appears.
-  const searchItems = useMemo<SearchItem[]>(() => {
-    const items: SearchItem[] = trains.map(t => ({
-      id: `train:${t.trainNumber}/${t.departureDate}`,
-      label: trainTitle(t),
-      meta: t.dest || undefined,
-      accent: colors[trainGroup(t.category)],
-      haystack: `${trainLabel(t)} ${t.trainType} ${t.trainNumber} ${t.commuterLine} ${t.origin} ${t.dest}`.toLowerCase(),
-    }));
-    for (const s of stations) {
-      items.push({
-        id: `station:${s.code}`,
-        label: s.name,
-        meta: s.code,
-        accent: STATION_COLORS[theme],
-        haystack: `${s.name} ${s.code}`.toLowerCase(),
-      });
-    }
-    return items;
-  }, [trains, stations, colors, theme]);
-
-  const pickSearchResult = (id: string) => {
-    const [kind, key] = [id.slice(0, id.indexOf(':')), id.slice(id.indexOf(':') + 1)];
-    if (kind === 'train') {
-      const train = trains.find(t => `${t.trainNumber}/${t.departureDate}` === key);
-      if (train) onSelectTrain(train);
-      return;
-    }
-    const station = stations.find(s => s.code === key);
-    if (station) onSelectStation(station);
+  // On a phone the header button is the way out of a full-screen page: back to
+  // the selection it is covering if there is one (the map still has it), and
+  // otherwise back to the map, where the launcher takes its place.
+  const closePanel = () => {
+    // Back to whatever the page is covering: the selection if there is one, and
+    // the map either way — a collapsed filter panel is the launcher on it.
+    if (isMobile && selectionLabel && onBackToSelection) onBackToSelection();
+    onToggleCollapse();
   };
 
   return (
-    <BottomSheet
+    <Panel
       variant="filter"
       isMobile={isMobile}
       open={open}
-      className={selectionLabel ? 'has-back' : undefined}
       ariaLabel="Open filters panel"
       collapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
@@ -174,11 +119,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             className="icon-btn"
             onClick={e => {
               e.stopPropagation();
-              onToggleCollapse();
+              closePanel();
             }}
-            aria-label="Collapse filters panel"
+            aria-label={isMobile ? 'Close filters panel' : 'Collapse filters panel'}
           >
-            <ChevronLeft size={16} />
+            {isMobile ? <X size={18} /> : <ChevronLeft size={16} />}
           </button>
         )}
       </div>
@@ -202,61 +147,52 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             )}
           </div>
 
-          <EntitySearch
-            items={searchItems}
-            onPick={pickSearchResult}
-            placeholder="Search trains and stations"
-            ariaLabel="Search trains by number or route, stations by name"
-            emptyText="No trains or stations match."
-          />
+          {/* Desktop keeps search inside the rail. On a phone held upright it is a
+              floating pill over the map (rendered by RaideApp) — the map is what
+              you are searching, so the box belongs on it; held sideways the panel
+              is a rail again and takes the box back. */}
+          {asRail && (
+            <TrainSearch
+              trains={trains}
+              stations={stations}
+              onSelectTrain={onSelectTrain}
+              onSelectStation={onSelectStation}
+              mapCenter={mapCenter}
+              theme={theme}
+            />
+          )}
 
           <div className="filter-scroll-area">
-            {nearest.length > 0 && (
+            {/* The nearest trains are what the search box offers before anything
+                is typed (TrainSearch) — the same list, at the point where you are
+                asking the question rather than a section you scroll to. */}
+            {/* On a phone the types are the filter strip on the map, where you
+                can see what switching one off actually did. */}
+            {asRail && (
               <>
-                <div className="filter-section-title">Nearest</div>
-                <div className="nearest-list">
-                  {nearest.map(({ train, km }) => (
-                    <button
-                      key={`${train.trainNumber}/${train.departureDate}`}
-                      className="nearest-row"
-                      onClick={() => onSelectTrain(train)}
-                    >
-                      <span
-                        className="nearest-dot"
-                        style={{ background: colors[trainGroup(train.category)] }}
-                      />
-                      <span className="nearest-name">{trainLabel(train)}</span>
-                      <span className="nearest-dist">{formatDistanceKm(km)}</span>
-                      <span className="nearest-speed">{train.speed} km/h</span>
-                    </button>
-                  ))}
-                </div>
-                <div className="filter-section-title" style={{ marginTop: 14 }}>
-                  Train types
+                <div className="filter-section-title">Train types</div>
+                <div className="category-list">
+                  {GROUP_ORDER.map(group => {
+                    const Icon = GROUP_ICONS[group];
+                    const active = visibility[group];
+                    return (
+                      <button
+                        key={group}
+                        className={`category-row ${active ? '' : 'inactive'}`}
+                        onClick={() => onToggleLayer(group)}
+                        aria-pressed={active}
+                      >
+                        <span className="category-swatch" style={{ background: colors[group] }}>
+                          <Icon size={10} />
+                        </span>
+                        <span className="category-label">{CATEGORY_LABELS[group]}</span>
+                        <span className="category-count">{counts[group] ?? 0}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </>
             )}
-            {nearest.length === 0 && <div className="filter-section-title">Train types</div>}
-            <div className="category-list">
-              {GROUP_ORDER.map(group => {
-                const Icon = GROUP_ICONS[group];
-                const active = visibility[group];
-                return (
-                  <button
-                    key={group}
-                    className={`category-row ${active ? '' : 'inactive'}`}
-                    onClick={() => onToggleLayer(group)}
-                    aria-pressed={active}
-                  >
-                    <span className="category-swatch" style={{ background: colors[group] }}>
-                      <Icon size={10} />
-                    </span>
-                    <span className="category-label">{CATEGORY_LABELS[group]}</span>
-                    <span className="category-count">{counts[group] ?? 0}</span>
-                  </button>
-                );
-              })}
-            </div>
 
             <div className="filter-section-title" style={{ marginTop: 14 }}>
               Map layers
@@ -307,6 +243,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           </div>
         </div>
       )}
-    </BottomSheet>
+    </Panel>
   );
 };

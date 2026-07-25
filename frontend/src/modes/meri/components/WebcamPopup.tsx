@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, ChevronRight, Video } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
-import { BottomSheet } from '../../../shared/components/BottomSheet';
+import { Panel } from '../../../shared/components/Panel';
 import { BrowseButton } from '../../../shared/components/SheetViewSwitch';
 import type { Webcam } from '../lib/webcams';
 
@@ -29,13 +29,11 @@ export const WebcamPopup: React.FC<WebcamPopupProps> = ({
   const bodyCollapsed = !isMobile && isCollapsed;
 
   return (
-    <BottomSheet
+    <Panel
       variant="detail"
       className="webcam-popup"
       isMobile={isMobile}
       open={open}
-      /* Header plus a 16:9 picture across the sheet's width, and nothing else. */
-      restRatio={0.45}
       ariaLabel="Open webcam"
       collapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
@@ -69,6 +67,6 @@ export const WebcamPopup: React.FC<WebcamPopupProps> = ({
           </div>
         </div>
       )}
-    </BottomSheet>
+    </Panel>
   );
 };

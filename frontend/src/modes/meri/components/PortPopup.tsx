@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, ChevronRight, Anchor, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
-import { BottomSheet } from '../../../shared/components/BottomSheet';
+import { Panel } from '../../../shared/components/Panel';
 import { BrowseButton } from '../../../shared/components/SheetViewSwitch';
 import { fetchPortCalls } from '../lib/api';
 import type { Port, PortCall } from '../types';
@@ -108,12 +108,10 @@ export const PortPopup: React.FC<PortPopupProps> = ({
   }, [port.locode]);
 
   return (
-    <BottomSheet
+    <Panel
       variant="detail"
       isMobile={isMobile}
       open={open}
-      /* A board is a list: it earns the tall stop, unlike the vessel sheet. */
-      restRatio={0.72}
       ariaLabel="Open port details"
       collapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
@@ -173,6 +171,6 @@ export const PortPopup: React.FC<PortPopupProps> = ({
           </div>
         </div>
       )}
-    </BottomSheet>
+    </Panel>
   );
 };

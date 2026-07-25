@@ -4,9 +4,9 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Feature } from 'geojson';
 import { lerpAngle } from '../lib/lerp';
 import { deadReckon } from '../lib/geo';
+import { INITIAL_CENTER, INITIAL_ZOOM } from '../lib/mapView';
 import { categorize, CATEGORY_COLORS, isStationary, ALL_CATEGORIES } from '../lib/shipTypes';
 import { LocateControl } from '../../../shared/components/LocateControl';
-import { useSheetCameraPadding } from '../../../shared/hooks/useSheetCameraPadding';
 import { WAVE_RAMP, WIND_RAMP, headlineLabel, seaConditionsPopupHtml } from '../lib/seaConditions';
 import type {
   Vessel,
@@ -26,8 +26,7 @@ const STYLE_URLS = {
 };
 
 // Gulf of Finland + Archipelago Sea + Bothnia in one view
-const INITIAL_CENTER: [number, number] = [23.5, 60.5];
-const INITIAL_ZOOM = 5.5;
+
 
 // Cap dead-reckoning projection so a stale fix doesn't sail off the map
 const MAX_PROJECT_SECONDS = 180;
@@ -458,9 +457,6 @@ export function Map({
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
-
-  // Keep whatever is centred above the phone's sheet rather than behind it.
-  useSheetCameraPadding(() => mapRef.current);
 
   // Everything the rAF loop and event handlers read lives in refs so the map
   // never re-initializes and position updates never re-render React.
