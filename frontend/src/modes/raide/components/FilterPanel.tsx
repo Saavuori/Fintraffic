@@ -91,11 +91,12 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   const anyHidden = GROUP_ORDER.some(g => !visibility[g]);
 
   // Trains nearest the viewport centre — the sheet's glanceable content on
-  // mobile. Computed only there, and only once the map has reported a centre.
+  // mobile, the top of the rail on desktop. Computed once the map has reported
+  // a centre.
   const nearest = useMemo(() => {
-    if (!isMobile || !mapCenter) return [];
+    if (!mapCenter) return [];
     return nearestTrains(mapCenter, trains, NEAREST_COUNT);
-  }, [isMobile, mapCenter, trains]);
+  }, [mapCenter, trains]);
 
   return (
     <BottomSheet

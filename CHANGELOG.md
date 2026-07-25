@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.12.0] - 2026-07-25
+
+### Added
+- **"Nearest" now shows on desktop too, in Meri and Raide**: the list of the five vessels or trains closest to the middle of the map was computed and rendered only when the mobile layout was active, because it was built as the glanceable content for the bottom sheet's peek. Nothing about it was mobile-specific — the map already published its centre after every settled pan and zoom regardless of viewport — so the desktop rail now leads with the same list, and clicking a row opens that vessel or train exactly as it does on mobile. The rows re-lay out for the 210 px rail: the name takes its own line with distance and speed on a second one, rather than being ellipsed down to a few characters by the single-line mobile layout.
+
 ## [v0.11.0] - 2026-07-25
 
 ### Added
