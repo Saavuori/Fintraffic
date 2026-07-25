@@ -6,7 +6,16 @@ import { lerpAngle } from '../lib/lerp';
 import { deadReckon } from '../lib/geo';
 import { categorize, CATEGORY_COLORS, isStationary, ALL_CATEGORIES } from '../lib/shipTypes';
 import { LocateControl } from '../../../shared/components/LocateControl';
-import type { Vessel, Port, SeaStateFeature, AtonFaultFeature, ReplayPoint, TrailPoint } from '../types';
+import { WAVE_RAMP, WIND_RAMP, headlineLabel, seaConditionsPopupHtml } from '../lib/seaConditions';
+import type {
+  Vessel,
+  Port,
+  SeaStateFeature,
+  SeaConditionsStation,
+  AtonFaultFeature,
+  ReplayPoint,
+  TrailPoint,
+} from '../types';
 import type { TrackReplayControl } from '../hooks/useTrackReplay';
 import type { Webcam } from '../lib/webcams';
 
@@ -241,7 +250,11 @@ interface MapProps {
   selectedPortLocode: string | null;
   onSelectPort: (port: Port) => void;
   buoys: SeaStateFeature[];
-  showBuoys: boolean;
+  // FMI marine observations. Shares one toggle with the Digitraffic smart-buoy
+  // sea state above — both answer "what is the sea doing", and the AtoN buoys
+  // are drawn as the lower-fidelity companions they are.
+  seaConditions: SeaConditionsStation[];
+  showSeaConditions: boolean;
   atonFaults: AtonFaultFeature[];
   showAton: boolean;
   webcams: Webcam[];
@@ -353,6 +366,68 @@ function makeCameraImage(): ImageData {
   return ctx.getImageData(0, 0, size, size);
 }
 
+/**
+ * Wind arrow pointing north, to be rotated into the direction the wind is
+ * blowing towards. Drawn once per Beaufort colour band rather than tinted at
+ * draw time: MapLibre can only recolour SDF icons, and an SDF of a thin
+ * arrowhead comes out mushy.
+ */
+function makeWindArrowImage(color: string): ImageData {
+  const size = 40;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  ctx.strokeStyle = 'rgba(2, 11, 23, 0.85)';
+  ctx.lineWidth = 5;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+
+  // Shaft, then head — stroked first as a dark outline so the arrow stays
+  // legible over both the light and the dark basemap.
+  const draw = () => {
+    ctx.beginPath();
+    ctx.moveTo(20, 34);
+    ctx.lineTo(20, 9);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(20, 4);
+    ctx.lineTo(29, 17);
+    ctx.lineTo(20, 13);
+    ctx.lineTo(11, 17);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fill();
+  };
+
+  ctx.fillStyle = 'rgba(2, 11, 23, 0.85)';
+  draw();
+
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 2.5;
+  draw();
+
+  return ctx.getImageData(0, 0, size, size);
+}
+
+/** Image name for a colour band index of the wind ramp. */
+const windArrowImage = (band: number) => `wind-arrow-${band}`;
+
+/**
+ * Builds a `step` expression choosing the arrow image by wind speed, using the
+ * same breakpoints as WIND_RAMP so the arrow and any legend agree.
+ */
+function windArrowExpression(): maplibregl.ExpressionSpecification {
+  const expr: unknown[] = ['step', ['get', 'windSpeed'], windArrowImage(0)];
+  for (let i = 2; i < WIND_RAMP.length; i += 2) {
+    expr.push(WIND_RAMP[i], windArrowImage(i / 2));
+  }
+  return expr as maplibregl.ExpressionSpecification;
+}
+
 export function Map({
   vessels,
   selectedMmsi,
@@ -365,7 +440,8 @@ export function Map({
   selectedPortLocode,
   onSelectPort,
   buoys,
-  showBuoys,
+  seaConditions,
+  showSeaConditions,
   atonFaults,
   showAton,
   webcams,
@@ -767,7 +843,7 @@ export function Map({
 
   /** Click + hover wiring. Registered once; guards against missing layers. */
   function registerInteractions(map: maplibregl.Map) {
-    const interactive = ['vessels-moving', 'vessels-stationary', 'replay-vessels', 'ports-layer', 'buoys-layer', 'aton-layer', 'cameras-layer'];
+    const interactive = ['vessels-moving', 'vessels-stationary', 'replay-vessels', 'ports-layer', 'sea-wind-layer', 'sea-wave-layer', 'sea-level-layer', 'buoys-layer', 'aton-layer', 'cameras-layer'];
 
     map.on('click', (e) => {
       const layers = interactive.filter((l) => map.getLayer(l));
@@ -794,6 +870,9 @@ export function Map({
             lng: Number(props.lng),
           });
           break;
+        case 'sea-wind-layer':
+        case 'sea-wave-layer':
+        case 'sea-level-layer':
         case 'buoys-layer':
         case 'aton-layer': {
           buoyPopupRef.current?.remove();
@@ -835,11 +914,18 @@ export function Map({
     if (!map.hasImage('camera-icon')) {
       map.addImage('camera-icon', makeCameraImage());
     }
+    for (let i = 1; i < WIND_RAMP.length; i += 2) {
+      const name = windArrowImage((i - 1) / 2);
+      if (!map.hasImage(name)) {
+        map.addImage(name, makeWindArrowImage(WIND_RAMP[i] as string));
+      }
+    }
 
     const empty = { type: 'FeatureCollection' as const, features: [] };
     if (!map.getSource('vessels')) map.addSource('vessels', { type: 'geojson', data: empty });
     if (!map.getSource('ports')) map.addSource('ports', { type: 'geojson', data: empty });
     if (!map.getSource('buoys')) map.addSource('buoys', { type: 'geojson', data: empty });
+    if (!map.getSource('sea-conditions')) map.addSource('sea-conditions', { type: 'geojson', data: empty });
     if (!map.getSource('aton')) map.addSource('aton', { type: 'geojson', data: empty });
     if (!map.getSource('cameras')) map.addSource('cameras', { type: 'geojson', data: empty });
     if (!map.getSource('trail')) map.addSource('trail', { type: 'geojson', data: empty });
@@ -883,16 +969,119 @@ export function Map({
       });
     }
 
+    // Digitraffic's AtoN smart buoys: a coarse sea-state class where FMI has
+    // no instrument. Drawn small and desaturated so they read as secondary to
+    // the measured FMI stations above them.
     if (!map.getLayer('buoys-layer')) {
       map.addLayer({
         id: 'buoys-layer',
         type: 'circle',
         source: 'buoys',
         paint: {
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 3.5, 10, 6],
-          'circle-color': 'rgba(253, 203, 110, 0.3)',
-          'circle-stroke-color': '#fdcb6e',
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 2.5, 10, 4.5],
+          'circle-color': 'rgba(148, 163, 184, 0.25)',
+          'circle-stroke-color': 'rgba(148, 163, 184, 0.9)',
+          'circle-stroke-width': 1.2,
+        },
+      });
+    }
+
+    // Sea level at the mareographs: a ring whose colour says which side of the
+    // theoretical mean the water is on. Drawn under the wave and wind marks
+    // because several sites carry more than one instrument.
+    if (!map.getLayer('sea-level-layer')) {
+      map.addLayer({
+        id: 'sea-level-layer',
+        type: 'circle',
+        source: 'sea-conditions',
+        filter: ['has', 'waterLevel'],
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 5, 10, 9],
+          'circle-color': 'transparent',
+          'circle-stroke-width': 2.5,
+          'circle-stroke-color': [
+            'interpolate',
+            ['linear'],
+            ['get', 'waterLevel'],
+            -40, '#60a5fa', // well below mean
+            0, '#94a3b8',
+            40, '#fbbf24', // well above mean
+          ],
+        },
+      });
+    }
+
+    // Wave buoys: area grows with significant wave height, colour steps
+    // through the Douglas scale.
+    if (!map.getLayer('sea-wave-layer')) {
+      map.addLayer({
+        id: 'sea-wave-layer',
+        type: 'circle',
+        source: 'sea-conditions',
+        filter: ['has', 'waveHeight'],
+        paint: {
+          'circle-radius': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            5, ['interpolate', ['linear'], ['get', 'waveHeight'], 0, 4, 2, 9, 5, 14],
+            10, ['interpolate', ['linear'], ['get', 'waveHeight'], 0, 7, 2, 15, 5, 24],
+          ],
+          'circle-color': ['interpolate', ['linear'], ['get', 'waveHeight'], ...WAVE_RAMP],
+          'circle-opacity': 0.45,
           'circle-stroke-width': 1.5,
+          'circle-stroke-color': ['interpolate', ['linear'], ['get', 'waveHeight'], ...WAVE_RAMP],
+        },
+      });
+    }
+
+    // Coastal wind: an arrow pointing where the wind is blowing to, sized by
+    // speed and coloured by Beaufort band.
+    if (!map.getLayer('sea-wind-layer')) {
+      map.addLayer({
+        id: 'sea-wind-layer',
+        type: 'symbol',
+        source: 'sea-conditions',
+        // Both are required: an anemometer that reports speed but not
+        // direction would otherwise be drawn as an arrow pointing nowhere.
+        filter: ['all', ['has', 'windSpeed'], ['has', 'windDir']],
+        layout: {
+          'icon-image': windArrowExpression(),
+          'icon-size': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            5, ['interpolate', ['linear'], ['get', 'windSpeed'], 0, 0.3, 20, 0.55],
+            10, ['interpolate', ['linear'], ['get', 'windSpeed'], 0, 0.5, 20, 0.95],
+          ],
+          // The arrow shows where the air is going; the popup names the
+          // direction it comes from, which is how wind is reported.
+          'icon-rotate': ['+', ['get', 'windDir'], 180],
+          'icon-rotation-alignment': 'map',
+          'icon-allow-overlap': true,
+        },
+      });
+    }
+
+    if (!map.getLayer('sea-conditions-labels')) {
+      map.addLayer({
+        id: 'sea-conditions-labels',
+        type: 'symbol',
+        source: 'sea-conditions',
+        minzoom: 6.5,
+        filter: ['!=', ['get', 'label'], ''],
+        layout: {
+          'text-field': ['get', 'label'],
+          'text-size': 11,
+          'text-offset': [0, 1.3],
+          'text-anchor': 'top',
+          'text-optional': true,
+          'text-allow-overlap': false,
+        },
+        paint: {
+          'text-color': labelColor,
+          'text-halo-color': labelHalo,
+          'text-halo-width': 1.2,
         },
       });
     }
@@ -1212,6 +1401,35 @@ export function Map({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || styleEpoch === 0) return;
+    const source = map.getSource('sea-conditions') as maplibregl.GeoJSONSource | undefined;
+    if (!source) return;
+    source.setData({
+      type: 'FeatureCollection',
+      features: seaConditions.map((s) => {
+        // Only measured values go into properties: the layer filters are
+        // `['has', ...]`, so writing an explicit undefined (or 0) would put a
+        // wave marker on a station that has no wave sensor.
+        const properties: Record<string, string | number> = {
+          label: headlineLabel(s),
+          popupHtml: seaConditionsPopupHtml(s),
+        };
+        if (s.waveHeight !== undefined) properties.waveHeight = s.waveHeight;
+        if (s.windSpeed !== undefined) properties.windSpeed = s.windSpeed;
+        if (s.windDir !== undefined) properties.windDir = s.windDir;
+        if (s.waterLevel !== undefined) properties.waterLevel = s.waterLevel;
+
+        return {
+          type: 'Feature' as const,
+          geometry: { type: 'Point' as const, coordinates: [s.lon, s.lat] },
+          properties,
+        };
+      }),
+    });
+  }, [seaConditions, styleEpoch]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || styleEpoch === 0) return;
     const source = map.getSource('aton') as maplibregl.GeoJSONSource | undefined;
     if (!source) return;
     source.setData({
@@ -1253,10 +1471,16 @@ export function Map({
     };
     vis('ports-layer', showPorts);
     vis('ports-labels', showPorts);
-    vis('buoys-layer', showBuoys);
+    // One toggle drives the whole "what is the sea doing" set: the FMI
+    // stations and the Digitraffic smart buoys behind them.
+    vis('buoys-layer', showSeaConditions);
+    vis('sea-level-layer', showSeaConditions);
+    vis('sea-wave-layer', showSeaConditions);
+    vis('sea-wind-layer', showSeaConditions);
+    vis('sea-conditions-labels', showSeaConditions);
     vis('aton-layer', showAton);
     vis('cameras-layer', showWebcams);
-  }, [showPorts, showBuoys, showAton, showWebcams, styleEpoch]);
+  }, [showPorts, showSeaConditions, showAton, showWebcams, styleEpoch]);
 
   // Either playback swaps the live fleet for the recorded overlay. They differ
   // in what else is on screen: the fleet replay drops the trail entirely, while

@@ -119,6 +119,47 @@ export interface SeaStateResponse {
   features: SeaStateFeature[];
 }
 
+/**
+ * One FMI marine observation site. Every measurement is optional: a wave buoy
+ * has no anemometer, a mareograph has no wave sensor, and the buoys are lifted
+ * out of the water for the winter. Absent must stay distinguishable from zero.
+ *
+ * Mirrors fmi.Station in backend/internal/meri/fmi — change one, change both.
+ */
+export interface SeaConditionsStation {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  kinds: SeaConditionKind[];
+  observed: string;
+  waveHeight?: number; // significant wave height, m
+  wavePeriod?: number; // modal period, s
+  waveDir?: number; // degrees the waves travel FROM
+  waterTemp?: number; // °C
+  windSpeed?: number; // m/s, 10 min mean
+  windGust?: number; // m/s, 10 min max
+  windDir?: number; // degrees the wind blows FROM
+  airTemp?: number; // °C
+  waterLevel?: number; // cm from theoretical mean sea level
+}
+
+export type SeaConditionKind = 'wave' | 'wind' | 'waterLevel';
+
+/** Per-source status, so an empty layer can be explained rather than guessed at. */
+export interface SeaConditionsSource {
+  key: SeaConditionKind;
+  ok: boolean;
+  stations: number;
+  error?: string;
+}
+
+export interface SeaConditionsResponse {
+  updated: string;
+  stations: SeaConditionsStation[];
+  sources: SeaConditionsSource[];
+}
+
 export interface AtonFaultFeature {
   geometry: { coordinates: [number, number] } | null;
   properties: {

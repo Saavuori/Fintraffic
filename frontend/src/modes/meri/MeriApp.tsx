@@ -14,11 +14,17 @@ import { PortPopup } from './components/PortPopup';
 import { WebcamPopup } from './components/WebcamPopup';
 import { ReplayBar } from './components/ReplayBar';
 import { TrackReplayBar } from './components/TrackReplayBar';
-import { fetchPorts, fetchSeaState, fetchAtonFaults } from './lib/api';
+import { fetchPorts, fetchSeaState, fetchSeaConditions, fetchAtonFaults } from './lib/api';
 import { categorize, CATEGORY_COLORS, type ShipCategory } from './lib/shipTypes';
 import { WEBCAMS } from './lib/webcams';
 import type { Webcam } from './lib/webcams';
-import type { Port, SeaStateFeature, AtonFaultFeature, Vessel } from './types';
+import type {
+  Port,
+  SeaStateFeature,
+  SeaConditionsStation,
+  AtonFaultFeature,
+  Vessel,
+} from './types';
 
 interface MeriAppProps {
   theme: 'light' | 'dark';
@@ -32,6 +38,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   // Static-ish overlay data
   const [ports, setPorts] = useState<Port[]>([]);
   const [buoys, setBuoys] = useState<SeaStateFeature[]>([]);
+  const [seaConditions, setSeaConditions] = useState<SeaConditionsStation[]>([]);
   const [atonFaults, setAtonFaults] = useState<AtonFaultFeature[]>([]);
 
   useEffect(() => {
@@ -45,6 +52,9 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
       fetchSeaState()
         .then((data) => setBuoys(data.features ?? []))
         .catch((err) => console.error('Failed to fetch sea state:', err));
+      fetchSeaConditions()
+        .then((data) => setSeaConditions(data.stations ?? []))
+        .catch((err) => console.error('Failed to fetch sea conditions:', err));
       fetchAtonFaults()
         .then((data) => setAtonFaults(data.features ?? []))
         .catch((err) => console.error('Failed to fetch AtoN faults:', err));
@@ -56,7 +66,13 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
 
   // Settings with localStorage persistence (theme is shell-owned)
   const [showPorts, setShowPorts] = useState<boolean>(() => localStorage.getItem('showPorts') !== 'false');
-  const [showBuoys, setShowBuoys] = useState<boolean>(() => localStorage.getItem('showBuoys') === 'true');
+  // Renamed from showBuoys when the layer grew from Digitraffic's sea-state
+  // buoys into the full FMI picture; the old key is still honoured so anyone
+  // who had the layer on keeps it on.
+  const [showSeaConditions, setShowSeaConditions] = useState<boolean>(() => {
+    const stored = localStorage.getItem('showSeaConditions') ?? localStorage.getItem('showBuoys');
+    return stored === 'true';
+  });
   const [showAton, setShowAton] = useState<boolean>(() => localStorage.getItem('showAton') === 'true');
   const [showWebcams, setShowWebcams] = useState<boolean>(() => localStorage.getItem('showWebcams') !== 'false');
 
@@ -64,8 +80,8 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
     localStorage.setItem('showPorts', String(showPorts));
   }, [showPorts]);
   useEffect(() => {
-    localStorage.setItem('showBuoys', String(showBuoys));
-  }, [showBuoys]);
+    localStorage.setItem('showSeaConditions', String(showSeaConditions));
+  }, [showSeaConditions]);
   useEffect(() => {
     localStorage.setItem('showAton', String(showAton));
   }, [showAton]);
@@ -305,7 +321,8 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         selectedPortLocode={selectedPort?.locode ?? null}
         onSelectPort={handleSelectPort}
         buoys={buoys}
-        showBuoys={showBuoys}
+        seaConditions={seaConditions}
+        showSeaConditions={showSeaConditions}
         atonFaults={atonFaults}
         showAton={showAton}
         webcams={WEBCAMS}
@@ -348,8 +365,8 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         setMapTheme={setMapTheme}
         showPorts={showPorts}
         setShowPorts={setShowPorts}
-        showBuoys={showBuoys}
-        setShowBuoys={setShowBuoys}
+        showSeaConditions={showSeaConditions}
+        setShowSeaConditions={setShowSeaConditions}
         showAton={showAton}
         setShowAton={setShowAton}
         atonFaults={atonFaults}

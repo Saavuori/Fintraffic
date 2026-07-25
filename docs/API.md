@@ -55,6 +55,7 @@ primary feed has been failing for several poll cadences).
 | `GET` | `/api/meri/vessel/{mmsi}/trail` | Recorded track for one vessel |
 | `GET` | `/api/meri/replay` | All vessels' recorded tracks in a time window (fleet replay) |
 | `GET` | `/api/meri/sea-state` | Smart-buoy sea state measurements (15 min cache) |
+| `GET` | `/api/meri/sea-conditions` | FMI marine observations: waves, coastal wind, sea level (polled every 10 min) |
 | `GET` | `/api/meri/aton-faults` | Active aids-to-navigation faults (5 min cache) |
 | `GET` | `/api/meri/stream` | WebSocket stream of live vessel positions |
 
@@ -70,6 +71,34 @@ Query parameters:
 
 Returns `{ "mmsi": 230123456, "points": [[lng, lat, ts], ...] }` ascending by
 time — ready to drop into a GeoJSON LineString.
+
+### `GET /api/meri/sea-conditions`
+
+Three FMI observation networks folded into one list of stations. Every
+measurement is optional and omitted when absent — a wave buoy has no
+anemometer, and the buoys are lifted out of the water for the winter, so a
+missing field must not be read as zero.
+
+```json
+{ "updated": "2026-07-25T14:10:00Z",
+  "sources": [{ "key": "wave", "ok": true, "stations": 10 }],
+  "stations": [
+    { "id": "59.2482,20.9983", "name": "Pohjois-Itämeri aaltopoiju",
+      "lat": 59.24817, "lon": 20.99833, "kinds": ["wave"],
+      "observed": "2026-07-25T13:30:00Z",
+      "waveHeight": 1.4, "wavePeriod": 5.7, "waveDir": 213, "waterTemp": 16.2 }
+  ] }
+```
+
+Units: `waveHeight` m, `wavePeriod` s, `waveDir`/`windDir` degrees the waves or
+wind come **from**, `windSpeed`/`windGust` m/s, `waterLevel` cm from theoretical
+mean sea level, temperatures °C.
+
+`sources` reports each upstream query separately, and carries an `error` string
+when one failed. It exists so an empty layer can be explained: FMI's wave buoys
+going quiet in November is normal, a broken query is not. One failing source
+does not fail the request — the others are still served. `503` means nothing is
+cached yet at all.
 
 ### `GET /api/meri/replay`
 

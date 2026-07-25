@@ -23,15 +23,17 @@ type Handlers struct {
 	mqtt  interface {
 		IsConnected() bool
 	}
-	trail *trail.Store // nil when trail recording is disabled; nil-safe
+	trail      *trail.Store // nil when trail recording is disabled; nil-safe
+	conditions *ConditionsStore
 }
 
-func NewHandlers(c cache.Cache, proxy *upstream.CachedProxy, mqtt interface{ IsConnected() bool }, tr *trail.Store) *Handlers {
+func NewHandlers(c cache.Cache, proxy *upstream.CachedProxy, mqtt interface{ IsConnected() bool }, tr *trail.Store, conditions *ConditionsStore) *Handlers {
 	return &Handlers{
-		cache: c,
-		proxy: proxy,
-		mqtt:  mqtt,
-		trail: tr,
+		cache:      c,
+		proxy:      proxy,
+		mqtt:       mqtt,
+		trail:      tr,
+		conditions: conditions,
 	}
 }
 
@@ -58,6 +60,22 @@ func (h *Handlers) Health(ctx context.Context) server.ModeHealth {
 		}
 	}
 
+	// Sea conditions: report each FMI source separately. A failing source is
+	// worth seeing in health, but it doesn't degrade the mode — the vessel
+	// map, which is what meri is for, is unaffected.
+	seaSources := map[string]any{}
+	seaStations := 0
+	if data, ok := h.conditions.Get(ctx); ok {
+		seaStations = len(data.Stations)
+		for _, src := range data.Sources {
+			if src.OK {
+				seaSources[src.Key] = src.Stations
+			} else {
+				seaSources[src.Key] = src.Error
+			}
+		}
+	}
+
 	status := "healthy"
 	if !mqttConnected {
 		status = "degraded"
@@ -71,6 +89,8 @@ func (h *Handlers) Health(ctx context.Context) server.ModeHealth {
 			"trail_enabled":           trailEnabled,
 			"trail_points":            trailPoints,
 			"trail_newest_ts_age_sec": trailAge, // seconds since newest point; -1 when none
+			"sea_conditions_stations": seaStations,
+			"sea_conditions_sources":  seaSources,
 		},
 	}
 }
