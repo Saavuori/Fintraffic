@@ -1,5 +1,5 @@
 import React from 'react';
-import { Crosshair, Route } from 'lucide-react';
+import { Crosshair, Route, Rewind } from 'lucide-react';
 
 interface VesselActionsProps {
   isFollowing: boolean;
@@ -8,6 +8,11 @@ interface VesselActionsProps {
   onToggleTrail: () => void;
   trailWindowSec: number;
   onSetTrailWindow: (sec: number) => void;
+  // Replay of the selected vessel's own recorded track. Only offered while the
+  // track is on screen — it animates the very points the trail is drawn from.
+  trackReplayAvailable: boolean;
+  trackReplayActive: boolean;
+  onToggleTrackReplay: () => void;
   // Follow and trail act on the live layers, which are hidden during replay —
   // render nothing so callers stay info-only while playback runs.
   replayActive?: boolean;
@@ -32,6 +37,9 @@ export const VesselActions: React.FC<VesselActionsProps> = ({
   onToggleTrail,
   trailWindowSec,
   onSetTrailWindow,
+  trackReplayAvailable,
+  trackReplayActive,
+  onToggleTrackReplay,
   replayActive = false,
 }) => {
   if (replayActive) return null;
@@ -50,6 +58,25 @@ export const VesselActions: React.FC<VesselActionsProps> = ({
             </button>
           ))}
         </span>
+      )}
+      {/* Stays mounted but disabled when there's nothing recorded yet, so the
+          row doesn't reflow the instant a first fix lands. */}
+      {showTrail && (
+        <button
+          className={`icon-btn track-replay-btn ${trackReplayActive ? 'active' : ''}`}
+          onClick={onToggleTrackReplay}
+          disabled={!trackReplayAvailable}
+          aria-label={trackReplayActive ? 'Stop track replay' : 'Replay recorded track'}
+          title={
+            !trackReplayAvailable
+              ? 'No recorded track for this window yet'
+              : trackReplayActive
+                ? 'Stop track replay'
+                : 'Replay recorded track'
+          }
+        >
+          <Rewind size={15} />
+        </button>
       )}
       <button
         className={`icon-btn trail-btn ${showTrail ? 'active' : ''}`}

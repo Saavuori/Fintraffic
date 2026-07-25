@@ -51,6 +51,7 @@ Modes implement the `server.Mode` interface (`Name`, `Register`, `Health`); the 
 * **Real-time AIS vessel tracking** streamed over MQTT from `wss://meri.digitraffic.fi:443/mqtt`, with REST hydration on boot and snapshot + delta WebSocket streaming to clients.
 * **Dead-reckoning animation** between sparse AIS fixes; follow (chase-cam) mode.
 * **Vessel trails** — every fix recorded to an on-disk SQLite store (60-day retention, 1 pt/min/vessel); selected vessels draw their dotted history track.
+* **Track replay** — rewind the selected vessel along its own recorded track, with the traffic around it wound back to the same moment; play/pause/restart/scrub/speed transport, and the detail panel reports the pose at the playhead.
 * **Fleet replay** — animated playback of all vessels' recorded tracks with play/pause/scrub/speed transport.
 * **Ports & port calls, sea state buoys, AtoN faults** as toggleable layers.
 * **Länsisatama LT1/LT2 webcams** — live YouTube streams from Port of Helsinki's passenger terminal cameras, plotted next to the Länsisatama port pin.

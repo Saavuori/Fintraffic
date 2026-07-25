@@ -32,9 +32,11 @@ export interface Port {
   lng: number;
 }
 
-// Recorded vessel track history. Each point is [lng, lat, ts] — lng-first so it
-// drops straight into a GeoJSON LineString.
-export type TrailPoint = [number, number, number];
+// Recorded vessel track history. Each point is [lng, lat, ts, cog, sog] —
+// lng-first so the leading pair drops straight into a GeoJSON LineString, with
+// course/speed trailing so the same points can be replayed as movement. Same
+// layout as ReplayPoint, deliberately: one interpolator serves both.
+export type TrailPoint = [number, number, number, number, number];
 
 export interface VesselTrailResponse {
   mmsi: number;
@@ -44,7 +46,7 @@ export interface VesselTrailResponse {
 // One recorded fix in a fleet replay: [lng, lat, ts, cog, sog]. cog (course
 // over ground, degrees) drives the marker heading during playback; sog (knots)
 // feeds the detail panel while a vessel is selected during replay.
-export type ReplayPoint = [number, number, number, number, number];
+export type ReplayPoint = TrailPoint;
 
 export interface FleetReplayResponse {
   from: number; // window start, epoch seconds

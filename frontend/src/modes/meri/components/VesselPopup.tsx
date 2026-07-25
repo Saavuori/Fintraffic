@@ -21,6 +21,9 @@ interface VesselPopupProps {
   onToggleTrail: () => void;
   trailWindowSec: number;
   onSetTrailWindow: (sec: number) => void;
+  trackReplayAvailable: boolean;
+  trackReplayActive: boolean;
+  onToggleTrackReplay: () => void;
   // During replay the selected vessel may not be transmitting live AIS at
   // all, so skip the live metadata fetch rather than show an unrelated ship.
   replayActive?: boolean;
@@ -48,6 +51,9 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
   onToggleTrail,
   trailWindowSec,
   onSetTrailWindow,
+  trackReplayAvailable,
+  trackReplayActive,
+  onToggleTrackReplay,
   replayActive = false,
 }) => {
   const bodyCollapsed = !isMobile && isCollapsed;
@@ -145,6 +151,9 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
                 onToggleTrail={onToggleTrail}
                 trailWindowSec={trailWindowSec}
                 onSetTrailWindow={onSetTrailWindow}
+                trackReplayAvailable={trackReplayAvailable}
+                trackReplayActive={trackReplayActive}
+                onToggleTrackReplay={onToggleTrackReplay}
                 replayActive={replayActive}
               />
             </div>

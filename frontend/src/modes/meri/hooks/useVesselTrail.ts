@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
 import { fetchVesselTrail } from '../lib/api';
+import type { TrailPoint } from '../types';
 
 interface TrailState {
   mmsi: number | null;
-  points: [number, number][];
+  points: TrailPoint[];
 }
+
+const EMPTY: TrailPoint[] = [];
 
 /**
  * Fetches the recorded track for a vessel when trail display is enabled,
- * returning [lng, lat] coordinate pairs ready for a GeoJSON LineString.
+ * returning [lng, lat, ts, cog, sog] points — the leading pair draws the
+ * GeoJSON LineString, the rest lets the track replay animate along it.
  *
  * Refetches when the vessel, enabled flag, or window changes, and polls every
  * 30s so the head of the track keeps up with the vessel's live movement. State
@@ -20,7 +24,7 @@ export function useVesselTrail(
   mmsi: number | null,
   enabled: boolean,
   windowSec: number
-): [number, number][] {
+): TrailPoint[] {
   const [state, setState] = useState<TrailState>({ mmsi: null, points: [] });
 
   useEffect(() => {
@@ -32,13 +36,13 @@ export function useVesselTrail(
       fetchVesselTrail(mmsi, from)
         .then((res) => {
           if (!cancelled) {
-            setState({ mmsi, points: res.points.map((p) => [p[0], p[1]]) });
+            setState({ mmsi, points: res.points });
           }
         })
         .catch((err) => {
           if (!cancelled) {
             console.error('Failed to fetch vessel trail:', err);
-            setState({ mmsi, points: [] });
+            setState({ mmsi, points: EMPTY });
           }
         });
     };
@@ -51,6 +55,8 @@ export function useVesselTrail(
     };
   }, [mmsi, enabled, windowSec]);
 
-  // Only surface points that belong to the current, enabled selection.
-  return enabled && state.mmsi === mmsi ? state.points : [];
+  // Only surface points that belong to the current, enabled selection. The
+  // shared EMPTY keeps the "no trail" identity stable, so consumers that key
+  // off the array (the map source, the replay clock) don't churn every render.
+  return enabled && state.mmsi === mmsi ? state.points : EMPTY;
 }

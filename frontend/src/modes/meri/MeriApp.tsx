@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useVesselData } from './hooks/useVesselData';
 import { useVesselTrail } from './hooks/useVesselTrail';
+import { useTrackReplay } from './hooks/useTrackReplay';
 import { useFleetReplay } from './hooks/useFleetReplay';
 import { useIsMobile, MOBILE_QUERY } from '../../shared/hooks/useMediaQuery';
 import { Map } from './components/Map';
@@ -12,6 +13,7 @@ import { VesselCard } from './components/VesselCard';
 import { PortPopup } from './components/PortPopup';
 import { WebcamPopup } from './components/WebcamPopup';
 import { ReplayBar } from './components/ReplayBar';
+import { TrackReplayBar } from './components/TrackReplayBar';
 import { fetchPorts, fetchSeaState, fetchAtonFaults } from './lib/api';
 import { categorize, CATEGORY_COLORS, type ShipCategory } from './lib/shipTypes';
 import { WEBCAMS } from './lib/webcams';
@@ -95,6 +97,16 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
 
   // Fleet-wide animated replay of recorded tracks.
   const replay = useFleetReplay();
+
+  // Playback of the selected vessel's own track — the same points the trail
+  // draws, rewound as movement. Only offered while the trail is on screen and
+  // the fleet replay isn't (that one hides the live layers wholesale).
+  const trackReplay = useTrackReplay(
+    selectedMmsi,
+    trailPoints,
+    trailWindowSec,
+    showTrail && !replay.active
+  );
 
   const isMobile = useIsMobile();
 
@@ -230,7 +242,27 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
     };
   }, [selectedMmsi, replayPose, vessels, replayMeta]);
 
-  const displayedVessel = replay.active ? replayVessel : liveVessel;
+  // The same substitution for the single-vessel track replay: while the ghost
+  // retraces the path, the panel reports the pose *it* is at, so speed, course
+  // and fix time read as the history being watched rather than the live feed
+  // (which is still updating the ship's real marker on the map behind it).
+  const trackPose = trackReplay.pose;
+  const trackVessel: Vessel | null = useMemo(() => {
+    if (selectedMmsi === null || !trackPose || trackPose.mmsi !== selectedMmsi) return null;
+    const known = vessels[String(selectedMmsi)];
+    if (!known) return null;
+    return {
+      ...known,
+      lat: trackPose.lat,
+      lng: trackPose.lng,
+      cog: trackPose.cog,
+      hdg: trackPose.cog,
+      sog: trackPose.sog,
+      ts: trackPose.ts,
+    };
+  }, [selectedMmsi, trackPose, vessels]);
+
+  const displayedVessel = replay.active ? replayVessel : trackVessel ?? liveVessel;
 
   // Whether any detail sheet/panel is up (vessel, port or webcam).
   const detailOpen = displayedVessel !== null || selectedPort !== null || selectedWebcam !== null;
@@ -270,6 +302,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         onSelectVessel={handleSelectVessel}
         trailPoints={trailPoints}
         trailColor={trailColor}
+        trackReplay={trackReplay.control}
         ports={ports}
         showPorts={showPorts}
         selectedPortLocode={selectedPort?.locode ?? null}
@@ -339,6 +372,9 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
           onToggleTrail={toggleTrail}
           trailWindowSec={trailWindowSec}
           onSetTrailWindow={setTrailWindowSec}
+          trackReplayAvailable={trackReplay.available}
+          trackReplayActive={trackReplay.active || trackReplay.loading}
+          onToggleTrackReplay={trackReplay.toggle}
           replayActive={replay.active}
         />
       )}
@@ -356,6 +392,9 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
           onToggleTrail={toggleTrail}
           trailWindowSec={trailWindowSec}
           onSetTrailWindow={setTrailWindowSec}
+          trackReplayAvailable={trackReplay.available}
+          trackReplayActive={trackReplay.active || trackReplay.loading}
+          onToggleTrackReplay={trackReplay.toggle}
           replayActive={replay.active}
         />
       )}
@@ -382,6 +421,13 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
       )}
 
       {replay.visible && <ReplayBar replay={replay} />}
+
+      {(trackReplay.active || trackReplay.loading) && displayedVessel && (
+        <TrackReplayBar
+          replay={trackReplay}
+          vesselName={displayedVessel.name || `MMSI ${displayedVessel.mmsi}`}
+        />
+      )}
     </div>
   );
 }

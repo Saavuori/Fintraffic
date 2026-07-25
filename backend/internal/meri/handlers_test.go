@@ -83,6 +83,51 @@ func TestFleetReplayHandler(t *testing.T) {
 	}
 }
 
+func TestVesselTrailHandler(t *testing.T) {
+	store := seedTrailStore(t, []struct {
+		mmsi     int
+		ts       int64
+		lat, lng float64
+	}{
+		{mmsi: 42, ts: 1000, lat: 60.10, lng: 24.90},
+		{mmsi: 42, ts: 1060, lat: 60.20, lng: 24.95},
+		{mmsi: 99, ts: 1000, lat: 59.00, lng: 22.00},
+	})
+	h := &Handlers{trail: store}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/meri/vessel/42/trail?from=1&to=2000", nil)
+	req.SetPathValue("mmsi", "42")
+	rec := httptest.NewRecorder()
+	h.VesselTrail(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+
+	var resp struct {
+		MMSI   int          `json:"mmsi"`
+		Points [][5]float64 `json:"points"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.MMSI != 42 {
+		t.Fatalf("mmsi = %d, want 42", resp.MMSI)
+	}
+	if len(resp.Points) != 2 {
+		t.Fatalf("expected 2 points for vessel 42, got %d: %+v", len(resp.Points), resp.Points)
+	}
+	// Tuple order is [lng, lat, ts, cog, sog], ascending by ts. The seeder
+	// records every point at 5 kn / 90°, which the replay marker reads back.
+	p := resp.Points[0]
+	if p[0] != 24.90 || p[1] != 60.10 || p[2] != 1000 || p[3] != 90 || p[4] != 5 {
+		t.Fatalf("tuple layout wrong: %+v", p)
+	}
+	if resp.Points[1][2] != 1060 {
+		t.Fatalf("track not ascending by ts: %+v", resp.Points)
+	}
+}
+
 func TestFleetReplayHandlerRejectsBadWindow(t *testing.T) {
 	h := &Handlers{trail: seedTrailStore(t, nil)}
 	req := httptest.NewRequest(http.MethodGet, "/api/meri/replay?from=2000&to=1000", nil)
