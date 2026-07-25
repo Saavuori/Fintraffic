@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.10.4] - 2026-07-25
+
+### Fixed
+- **Release builds no longer compile the backend under emulation**: the frontend build stage was pinned to the native build platform but the Go stage was not, so the `linux/arm64` half of every multi-arch release ran `go mod download` and `go build` through QEMU — and that one step accounted for essentially the whole 8-minute release build. The Go stage now builds natively and cross-compiles via `GOARCH`, which costs nothing because `CGO_ENABLED=0` was already required by the pure-Go SQLite driver. `TARGETARCH` is declared immediately before the build rather than beside the `FROM`, since an argument joins the cache key of every instruction after it and declaring it early would have split the shared module download and source copy into a separate copy per architecture. No change to the images produced: both architectures still ship, verified down to the ELF machine type.
+
 ## [v0.10.3] - 2026-07-24
 
 ### Changed
