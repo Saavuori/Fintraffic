@@ -15,7 +15,10 @@ permissions:
   contents: write
 
 jobs:
-  changelog:
+  # Not named `changelog`: that context is the required status check from
+  # pr-checks.yml, and two jobs reporting the same name would make which one
+  # main's protection is actually gating on ambiguous.
+  write-entry:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
