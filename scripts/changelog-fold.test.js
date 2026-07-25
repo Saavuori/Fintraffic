@@ -111,6 +111,33 @@ test('the intro and untouched releases survive verbatim', () => {
   assert.match(out, /## \[v0\.12\.0\] - 2026-07-24\n\n### Added\n- \*\*Nearest on desktop\*\*/);
 });
 
+// A Windows checkout leaves CRLF in the file. `.` does not match `\r`, so a
+// heading matcher ending in `(.+)$` matched nothing, every version parsed as ""
+// and the new release was appended to the *end* of the changelog — silently,
+// because an unparseable version compares equal to everything.
+test('a CRLF changelog still puts the new release at the top', () => {
+  const crlf = CHANGELOG.replace(/\n/g, '\r\n');
+  const out = foldInto(crlf, group('v0.14.0', '### Changed\n- **Top bar**: replay moved.\n'), dateFor);
+  assert.deepStrictEqual(parseChangelog(out).releases.map((r) => r.version), [
+    'v0.14.0',
+    'v0.13.0',
+    'v0.12.0',
+  ]);
+});
+
+test('a CRLF fragment parses into the same sections as an LF one', () => {
+  const text = '### Changed\n- **One**: first.\n- **Two**: second.\n';
+  assert.deepStrictEqual(parseSections(text.replace(/\n/g, '\r\n')), parseSections(text));
+});
+
+test('a changelog whose headings do not parse is refused, not appended to', () => {
+  const broken = '# Title\n\n## [not-a-version]\n\n### Added\n- **X**: y.\n';
+  assert.throws(
+    () => foldInto(broken, group('v0.14.0', '### Changed\n- **X**: y.\n'), dateFor),
+    /none parse as/
+  );
+});
+
 test('the file ends with exactly one newline', () => {
   const out = foldInto(CHANGELOG, group('v0.14.0', '### Changed\n- **X**: y.\n'), dateFor);
   assert.ok(out.endsWith('\n') && !out.endsWith('\n\n'));

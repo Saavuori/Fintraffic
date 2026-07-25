@@ -36,6 +36,17 @@ function git(args) {
   }
 }
 
+/**
+ * Splits into lines with the line endings gone. A Windows checkout leaves CRLF
+ * in the file, and `.` in a regex does not match `\r` — so a heading matcher
+ * ending in `(.+)$` silently fails on every line, which is not the sort of thing
+ * that announces itself: the parse simply returns nothing and the fold appends
+ * to the end of the file instead of the top.
+ */
+function lines(text) {
+  return text.split(/\r?\n/);
+}
+
 /** [major, minor, patch] for comparison; null for anything not vX.Y.Z. */
 function parseVersion(tag) {
   const m = /^v(\d+)\.(\d+)\.(\d+)$/.exec(tag);
@@ -62,7 +73,7 @@ function parseSections(text) {
   const sections = new Map();
   let current = null;
 
-  for (const raw of text.split('\n')) {
+  for (const raw of lines(text)) {
     const line = raw.trimEnd();
 
     const heading = /^###\s+(.+)$/.exec(line);
@@ -127,17 +138,17 @@ function renderRelease(version, date, sections) {
  * that is actually being folded into gets re-rendered.
  */
 function parseChangelog(text) {
-  const lines = text.split('\n');
+  const rows = lines(text);
   const starts = [];
-  lines.forEach((line, i) => {
+  rows.forEach((line, i) => {
     if (/^## \[/.test(line)) starts.push(i);
   });
 
-  const intro = lines.slice(0, starts.length ? starts[0] : lines.length).join('\n');
+  const intro = rows.slice(0, starts.length ? starts[0] : rows.length).join('\n');
   const releases = starts.map((start, i) => {
-    const end = i + 1 < starts.length ? starts[i + 1] : lines.length;
-    const body = lines.slice(start, end).join('\n');
-    const m = /^## \[([^\]]+)\]\s*-\s*(.+)$/.exec(lines[start]);
+    const end = i + 1 < starts.length ? starts[i + 1] : rows.length;
+    const body = rows.slice(start, end).join('\n');
+    const m = /^## \[([^\]]+)\]\s*-\s*(.+)$/.exec(rows[start]);
     return { version: m ? m[1] : '', date: m ? m[2].trim() : '', body };
   });
 
@@ -156,6 +167,16 @@ function serialize(intro, releases) {
  */
 function foldInto(changelogText, groups, dateFor) {
   const { intro, releases } = parseChangelog(changelogText);
+
+  // A release heading that doesn't parse compares equal to everything, so a
+  // wholesale parse failure would quietly append every entry to the end of the
+  // file rather than the top — which is precisely what a CRLF checkout used to
+  // do. Fail the job instead of publishing a mangled changelog.
+  if (releases.length > 0 && !releases.some((r) => parseVersion(r.version))) {
+    throw new Error(
+      `CHANGELOG.md has ${releases.length} release heading(s) but none parse as "## [vX.Y.Z] - date" — refusing to fold.`
+    );
+  }
 
   for (const version of [...groups.keys()].sort(compareVersions)) {
     const incoming = groups.get(version);
@@ -241,8 +262,12 @@ function main() {
 
   if (folded.length === 0) return report([]);
 
-  const next = foldInto(fs.readFileSync(mdPath, 'utf8'), groups, (v) => dates.get(v) || today());
-  fs.writeFileSync(mdPath, next, 'utf8');
+  const before = fs.readFileSync(mdPath, 'utf8');
+  const next = foldInto(before, groups, (v) => dates.get(v) || today());
+  // Keep whatever the checkout uses, so a fold from a Windows working copy
+  // doesn't rewrite every line of the file as a diff.
+  const eol = /\r\n/.test(before) ? '\r\n' : '\n';
+  fs.writeFileSync(mdPath, eol === '\n' ? next : next.replace(/\n/g, '\r\n'), 'utf8');
   for (const file of folded) fs.rmSync(file);
 
   const versions = [...groups.keys()].sort(compareVersions);
