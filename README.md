@@ -36,7 +36,8 @@ Fintraffic/
 │           ├── meri/            # the marine map app
 │           ├── raide/           # the railway map app
 │           └── tie/             # the road map app
-├── scripts/                     # CHANGELOG.md -> changelog site generator
+├── changelog.d/                 # pending changelog entries, one file per PR
+├── scripts/                     # changelog fold + CHANGELOG.md -> site generator
 ├── .github/workflows/           # Multi-arch image build + Pages deploy
 ├── deploy/                      # Production docker-compose.yml + update.sh
 └── Dockerfile                   # Multi-stage build (frontend embedded via go:embed)
@@ -214,7 +215,7 @@ Two scripts in `deploy/`:
 
 Renovate opens one grouped pull request every Monday morning covering all five places the repo pins a version — `backend/go.mod`, `frontend/package.json`, the GitHub Actions in `.github/workflows/`, the `Dockerfile` build and runtime stages, and the images in `deploy/docker-compose.yml`. Major updates come as their own PR. Config lives in [`renovate.json5`](renovate.json5); the schedule is the cron in [`.github/workflows/renovate.yml`](.github/workflows/renovate.yml).
 
-Each PR writes its own `CHANGELOG.md` entry: Renovate runs [`scripts/changelog-entry.js`](scripts/changelog-entry.js) as a post-upgrade task, which reads the pending diff and lists what moved. That text is factual only — expand it by hand when a bump actually matters.
+Each PR writes its own changelog entry: Renovate runs [`scripts/changelog-entry.js`](scripts/changelog-entry.js) as a post-upgrade task, which reads the pending diff and lists what moved into `changelog.d/<branch>.md`. That text is factual only — expand it by hand when a bump actually matters.
 
 ### Required setup
 

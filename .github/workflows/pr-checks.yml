@@ -67,20 +67,56 @@ jobs:
   changelog:
     runs-on: ubuntu-latest
     steps:
+      # Full history: the fragment check diffs against the PR's base commit.
       - name: Checkout Code
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: 24
 
+      # A PR describes its change in changelog.d/<branch>.md rather than editing
+      # CHANGELOG.md, so two open PRs never touch the same lines and neither has
+      # to predict the version CI mints after the merge. See changelog.d/README.md.
+      - name: Require a changelog entry
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-changelog') }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          entries=$(git diff --name-only --diff-filter=AM "${BASE_SHA}...HEAD" -- 'changelog.d/*.md' \
+            | grep -v '^changelog.d/README.md$' || true)
+          if [ -z "${entries}" ]; then
+            echo "::error::This PR adds no changelog entry. Add changelog.d/<branch>.md with '### Section' headings and '- **Title**: …' bullets — see changelog.d/README.md. Apply the 'no-changelog' label if the PR genuinely has nothing user- or ops-facing in it."
+            exit 1
+          fi
+          echo "Changelog entries in this PR:"
+          echo "${entries}"
+
+      # The version is CI's to mint, after the merge. A hand-written one is a
+      # guess that goes stale as soon as another PR merges first — which is the
+      # whole reason entries stopped living in CHANGELOG.md.
+      - name: Reject a version heading in an entry
+        run: |
+          if grep -rn '^## \[' changelog.d --include='*.md' | grep -v '^changelog.d/README.md:'; then
+            echo "::error::A changelog entry must not carry a '## [vX.Y.Z]' heading — CI attaches the version when it folds the entry after the merge."
+            exit 1
+          fi
+
+      # Kept from when entries were written straight into CHANGELOG.md: it now
+      # guards the fold's output and any hand edit, rather than the PR's own text.
       - name: Reject [Unreleased] placeholder
         run: |
           if grep -q '\[Unreleased\]' CHANGELOG.md; then
             echo "::error file=CHANGELOG.md::CHANGELOG.md must use a real versioned heading (## [vX.Y.Z] - date), not [Unreleased]."
             exit 1
           fi
+
+      # The fold rewrites the project's public record on main, unattended.
+      - name: Test the fold script
+        run: node --test scripts/changelog-fold.test.js
 
       - name: Render changelog
         run: node scripts/build-changelog.js

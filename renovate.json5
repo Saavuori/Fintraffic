@@ -16,8 +16,8 @@
   semanticCommitScope: 'deps',
 
   // `chore(deps)` is neither `feat:` nor breaking, so paulhatch/semantic-version
-  // gives a merged update a patch bump — which is the heading scripts/changelog-entry.js
-  // predicts from.
+  // gives a merged update a patch bump. Nothing here has to know that any more:
+  // the changelog entry carries no version, and CI attaches the tag after merge.
 
   prConcurrentLimit: 5,
 
@@ -41,20 +41,23 @@
   // Runs once per branch after all updates are applied and before the commit, so
   // the entry lands inside Renovate's own commit. That is the whole point of the
   // switch from Dependabot: because the changelog edit is Renovate's own and not a
-  // foreign push, Renovate keeps rebasing the branch and regenerates the entry — so
-  // the predicted version corrects itself when a sibling PR merges first.
+  // foreign push, Renovate keeps rebasing the branch and regenerating the entry as
+  // the dependency list changes underneath it.
   //
   // `commands` must also match RENOVATE_ALLOWED_COMMANDS in the workflow; that
   // allow-list, not this block, is what actually permits the command to run.
   postUpgradeTasks: {
     commands: ['node scripts/changelog-entry.js'],
-    fileFilters: ['CHANGELOG.md'],
+    // The entry is now a file of its own under changelog.d/ rather than an edit to
+    // CHANGELOG.md, so a dependency PR can't collide with a hand-written one. Only
+    // files matching this filter make it into Renovate's commit.
+    fileFilters: ['changelog.d/**'],
     executionMode: 'branch',
   },
 
   packageRules: [
     // One PR a week across every manager — Go, npm, Actions, Docker. One PR means
-    // one predicted version heading, so siblings can't claim the same one. Majors
+    // one entry to read and one review, rather than up to five. Majors
     // stay separate (Renovate splits them by default): those need a real look, and
     // MapLibre 5 → 6 in v0.10.3 is what that looks like when it lands.
     {
