@@ -32,7 +32,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
     -o fintraffic ./cmd/fintraffic
 
 # Stage 3: Minimal runtime
-FROM alpine:3.23
+FROM alpine:3.24
 RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /app
 COPY --from=backend-builder /app/fintraffic .
