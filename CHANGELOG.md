@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.10.12] - 2026-07-25
+
+### Fixed
+- **Renovate's own commit statuses are switched off**: it reports progress (such as "waiting for minimumReleaseAge") as commit statuses, which the app has no permission to write. The 403 isn't a soft failure — Renovate reads it as the repository changing underneath it and aborts, which it did *after* pushing the update branch and *before* opening the pull request, so a run could push a branch that never became a PR. The statuses are informational and the PR body carries the same information, so dropping them is cheaper than widening the app's permissions.
+- **Renovate now authenticates as a GitHub App**: the workflow read a `RENOVATE_TOKEN` secret that was never created — the credentials configured for it are an app (`RENOVATE_APP_ID` / `RENOVATE_APP_PRIVATE_KEY`), so the run failed its own token check. It now mints a short-lived installation token per run instead, which is better than the PAT it originally asked for: nothing long-lived is stored, and PRs opened by an app still trigger the `pull_request` checks that `main` requires. Renovate can't call `/user` with an installation token, so the workflow resolves the app's `[bot]` identity and hands it over as the commit author.
+
 ## [v0.10.11] - 2026-07-25
 
 ### Fixed

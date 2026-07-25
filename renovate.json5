@@ -21,6 +21,19 @@
 
   prConcurrentLimit: 5,
 
+  // Renovate normally reports its own progress as commit statuses (e.g. "waiting
+  // for minimumReleaseAge"). Our GitHub App has no `statuses: write`, and a 403
+  // there isn't a soft failure — Renovate reads it as the repo changing underneath
+  // it and aborts the whole run *after* pushing the branch but *before* opening the
+  // PR. Turning the statuses off is cheaper than widening the app's permissions:
+  // they're informational, and the PR body says the same thing.
+  statusCheckNames: {
+    artifactError: null,
+    configValidation: null,
+    mergeConfidence: null,
+    minimumReleaseAge: null,
+  },
+
   // Don't propose a release until it has survived three days in the wild, so a
   // version that gets yanked shortly after publishing never reaches a PR.
   minimumReleaseAge: '3 days',

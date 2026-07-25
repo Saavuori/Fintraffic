@@ -207,10 +207,11 @@ Each PR writes its own `CHANGELOG.md` entry: Renovate runs [`scripts/changelog-e
 
 ### Required setup
 
-The workflow needs a `RENOVATE_TOKEN` repository secret, and **it cannot be `GITHUB_TOKEN`**: pull requests opened with the built-in token don't trigger `pull_request` workflows, so the `backend` / `frontend` / `changelog` checks that `main`'s branch protection requires would never report and every dependency PR would sit blocked forever. Use either:
+The workflow runs as a **GitHub App**, and needs two repository secrets: `RENOVATE_APP_ID` and `RENOVATE_APP_PRIVATE_KEY`. The app needs `contents: write`, `pull-requests: write` and `workflows: write` on this repository, and has to be installed on it. The workflow mints a short-lived installation token per run, so nothing long-lived is stored.
 
-* a classic **personal access token** with `repo` scope, or
-* a **GitHub App** installation token (finer-grained; needs `contents: write`, `pull-requests: write`, `workflows: write`).
+It **cannot** run as `GITHUB_TOKEN`: pull requests opened with the built-in token don't trigger `pull_request` workflows, so the `backend` / `frontend` / `changelog` checks that `main`'s branch protection requires would never report and every dependency PR would sit blocked forever. App-opened PRs do trigger them. (A classic PAT with `repo` scope works too, but then the token is long-lived and commits are attributed to a human.)
+
+Because an installation token can't call `/user`, Renovate can't infer its own commit identity — the workflow resolves the app's `[bot]` user and passes it as `RENOVATE_GIT_AUTHOR` / `RENOVATE_USERNAME`.
 
 Renovate is self-hosted here rather than the Mend-hosted app because writing the changelog entry needs `postUpgradeTasks`, and running arbitrary commands is a self-hosted-only capability. The command allow-list is `RENOVATE_ALLOWED_COMMANDS` in the workflow — Renovate runs nothing that doesn't match it, so that env var, not `renovate.json5`, is the security boundary.
 
