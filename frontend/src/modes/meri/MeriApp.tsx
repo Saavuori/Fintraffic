@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { History, Moon, Sun } from 'lucide-react';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useVesselData } from './hooks/useVesselData';
 import { useVesselTrail } from './hooks/useVesselTrail';
@@ -107,7 +108,6 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   const [selectedMmsi, setSelectedMmsi] = useState<number | null>(null);
   const [selectedPort, setSelectedPort] = useState<Port | null>(null);
   const [selectedWebcam, setSelectedWebcam] = useState<Webcam | null>(null);
-  const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [selectedCategories, setSelectedCategories] = useState<ShipCategory[]>([]);
 
   // Trail (vessel track history) display, persisted across sessions.
@@ -183,7 +183,6 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
       setSelectedPort(null);
       setSelectedWebcam(null);
       setSelectedMmsi(mmsi);
-      setIsFollowing(false);
       if (mmsi !== null) onSelectionMade();
     },
     [onSelectionMade]
@@ -193,7 +192,6 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
     (port: Port) => {
       setSelectedMmsi(null);
       setSelectedWebcam(null);
-      setIsFollowing(false);
       setSelectedPort(port);
       onSelectionMade();
     },
@@ -204,7 +202,6 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
     (webcam: Webcam) => {
       setSelectedMmsi(null);
       setSelectedPort(null);
-      setIsFollowing(false);
       setSelectedWebcam(webcam);
       onSelectionMade();
     },
@@ -215,7 +212,6 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
     setSelectedMmsi(null);
     setSelectedPort(null);
     setSelectedWebcam(null);
-    setIsFollowing(false);
   }, []);
 
   const handleToggleCategory = useCallback((cat: ShipCategory) => {
@@ -367,20 +363,21 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   const handleEnterReplay = useCallback(() => {
     setSelectedMmsi(null);
     setSelectedPort(null);
-    setIsFollowing(false);
     replayEnter(3 * 3600);
   }, [replayEnter]);
+
+  const toggleTheme = useCallback(
+    () => setMapTheme(mapTheme === 'dark' ? 'light' : 'dark'),
+    [mapTheme, setMapTheme]
+  );
 
   const toggleTrail = useCallback(() => setShowTrail((v) => !v), []);
   const toggleFilterCollapsed = useCallback(() => setIsFilterCollapsed((v) => !v), []);
   const toggleDetailCollapsed = useCallback(() => setIsDetailCollapsed((v) => !v), []);
-  const toggleFollowing = useCallback(() => setIsFollowing((v) => !v), []);
-  const disableFollowing = useCallback(() => setIsFollowing(false), []);
   const openVesselPage = useCallback(() => setVesselPageOpen(true), []);
   const closeVesselPage = useCallback(() => setVesselPageOpen(false), []);
   const handleCloseVessel = useCallback(() => {
     setSelectedMmsi(null);
-    setIsFollowing(false);
     setVesselPageOpen(false);
   }, []);
   const handleClosePort = useCallback(() => setSelectedPort(null), []);
@@ -408,8 +405,6 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         showWebcams={showWebcams}
         onSelectWebcam={handleSelectWebcam}
         mapTheme={mapTheme}
-        isFollowing={isFollowing}
-        onDisableFollowing={disableFollowing}
         onBackgroundClick={handleBackgroundClick}
         replay={replay.control}
         replayMeta={replayMeta}
@@ -473,12 +468,38 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         onEnterReplay={handleEnterReplay}
       />
 
+      {/* Desktop only: the theme switch as a pill in the corner, the same one
+          Tie has. On a phone it stays a row in the filter sheet — the corners
+          there belong to the map and the mode switcher. */}
+      {!isMobile && (
+        <button
+          className="theme-toggle"
+          onClick={toggleTheme}
+          aria-label={`Switch to ${mapTheme === 'dark' ? 'light' : 'dark'} theme`}
+        >
+          {mapTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
+      )}
+
+      {/* The way into fleet replay, parked where the transport bar it opens
+          into will be. It steps aside once that bar is up. */}
+      {!isMobile && !replay.visible && (
+        <div className="replay-launcher">
+          <button
+            className="replay-launcher-btn"
+            onClick={handleEnterReplay}
+            title="Replay recorded vessel movement"
+          >
+            <History size={14} />
+            <span>Replay recorded movement</span>
+          </button>
+        </div>
+      )}
+
       {displayedVessel && (!isMobile || barFree) && (
         <VesselCard
           vessel={displayedVessel}
           onClose={handleCloseVessel}
-          isFollowing={isFollowing}
-          onToggleFollow={toggleFollowing}
           showTrail={showTrail}
           onToggleTrail={toggleTrail}
           trailWindowSec={trailWindowSec}
@@ -513,8 +534,6 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
              from; on desktop it is the rail's collapse sliver as before. */
           onToggleCollapse={isMobile ? closeVesselPage : toggleDetailCollapsed}
           isMobile={isMobile}
-          isFollowing={isFollowing}
-          onToggleFollow={toggleFollowing}
           showTrail={showTrail}
           onToggleTrail={toggleTrail}
           trailWindowSec={trailWindowSec}

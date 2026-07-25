@@ -96,43 +96,24 @@
     border: 1px solid var(--seam-strong);
     border-radius: var(--radius-md);
     box-shadow: 0 18px 44px -18px rgba(0, 0, 0, 0.85);
-    animation: mobile-panel-drop 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+    /* No entry animation: this is the bar it grew out of, still on screen at the
+       same place — anything that flies in reads as a second window opening over
+       the first. Only the body below the header is new. */
+    animation: none;
   }
 
   /* Its first row is the bar it grew out of, at the same height, so unfolding
      reads as the bar getting taller rather than a new thing appearing. */
   .mobile-panel--detail.vessel-sheet .detail-header {
+    /* The row is the bar's own 44px, with nothing added below it: the gap to
+       the body belongs to the body, or the headline rides lower than it did
+       folded and the whole thing jumps as it opens. */
     min-height: var(--tap-min);
-    padding-bottom: var(--gap-sm);
+    padding-bottom: 0;
     cursor: pointer;
   }
 
-  /* The identity block behind the fold is reference data — eight short rows of
-     it — so in a 247px column it is set tighter than a page's rows: the label
-     and the value share a line, and the line is only as tall as it needs to be.
-     That is what lets the whole fold open without the panel scrolling. */
-  .mobile-panel--detail.vessel-sheet .detail-facts {
-    margin-top: var(--gap-xs);
-  }
-
-  .mobile-panel--detail.vessel-sheet .fact-row {
-    min-height: 0;
-    padding: 5px 0;
-    gap: var(--gap-sm);
-  }
-
-  .mobile-panel--detail.vessel-sheet .fact-row span {
-    font-size: var(--text-2xs);
-  }
-
-  .mobile-panel--detail.vessel-sheet .fact-row b {
-    font-size: var(--text-2xs);
-    text-align: right;
-  }
-
-  /* The fold's own control gives up the padding a full-width page could afford;
-     it is still a 44px target. */
-  .mobile-panel--detail.vessel-sheet .detail-more-btn {
+  .mobile-panel--detail.vessel-sheet .detail-content > * + * {
     margin-top: var(--gap-sm);
   }
 

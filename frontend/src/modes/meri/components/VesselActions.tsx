@@ -1,10 +1,8 @@
 import React from 'react';
-import { Crosshair, Route, Rewind } from 'lucide-react';
+import { Route, Rewind } from 'lucide-react';
 import { TRAIL_WINDOWS } from '../lib/trailWindows';
 
 interface VesselActionsProps {
-  isFollowing: boolean;
-  onToggleFollow: () => void;
   showTrail: boolean;
   onToggleTrail: () => void;
   trailWindowSec: number;
@@ -17,19 +15,17 @@ interface VesselActionsProps {
   // The desktop card unfolds a full replay panel below this row, which owns the
   // window buttons and its own transport; there the row keeps only the toggles.
   showTrackControls?: boolean;
-  // Follow and trail act on the live layers, which are hidden during replay —
-  // render nothing so callers stay info-only while playback runs.
+  // The trail acts on the live layers, which are hidden during replay — render
+  // nothing so callers stay info-only while playback runs.
   replayActive?: boolean;
 }
 
 /**
- * The follow / track-history controls shared by the floating vessel card
- * (desktop) and the detail sheet header (mobile). Kept in one place so the two
- * surfaces can't drift apart.
+ * The track-history controls shared by the floating vessel card (desktop) and
+ * the detail sheet header (mobile). Kept in one place so the two surfaces can't
+ * drift apart.
  */
 export const VesselActions: React.FC<VesselActionsProps> = ({
-  isFollowing,
-  onToggleFollow,
   showTrail,
   onToggleTrail,
   trailWindowSec,
@@ -83,14 +79,6 @@ export const VesselActions: React.FC<VesselActionsProps> = ({
         title={showTrail ? 'Hide track history' : 'Show track history'}
       >
         <Route size={15} />
-      </button>
-      <button
-        className={`icon-btn follow-btn ${isFollowing ? 'active' : ''}`}
-        onClick={onToggleFollow}
-        aria-label={isFollowing ? 'Stop following' : 'Follow vessel'}
-        title={isFollowing ? 'Stop following' : 'Follow vessel'}
-      >
-        <Crosshair size={15} />
       </button>
     </>
   );

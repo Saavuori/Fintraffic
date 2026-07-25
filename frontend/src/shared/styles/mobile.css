@@ -99,7 +99,8 @@
     max-width: none;
     transform: none;
     box-sizing: border-box;
-    padding: 0 var(--gap-xs) 0 10px;
+    /* The sheet's own insets: unfolding must not shift the row sideways. */
+    padding: 0 var(--gap-md);
     background: var(--ink-900);
     border-color: var(--seam-strong);
     border-radius: var(--radius-md);
@@ -109,19 +110,7 @@
 
   .vessel-card-overlay--compact .vessel-card-row {
     height: 100%;
-    gap: 6px;
-  }
-
-  /* A 247px bar on a 375px screen: the name and the numbers are what a glance
-     is for, and the destination is a line of its own in the details below. */
-  .vessel-card-overlay--compact .vessel-card-dest {
-    display: none;
-  }
-
-  /* Says the bar has more underneath it. */
-  .vessel-card-chevron {
-    flex: none;
-    color: var(--text-muted);
+    gap: var(--gap-xs);
   }
 
   /* The summary is a button into the page, so it takes the row and stays a row:
@@ -129,7 +118,7 @@
   .vessel-card-open {
     display: flex;
     align-items: center;
-    gap: var(--gap-sm);
+    gap: var(--gap-xs);
     flex: 1;
     min-width: 0;
     min-height: var(--tap-min);
@@ -142,18 +131,6 @@
     cursor: pointer;
   }
 
-  .vessel-card-overlay--compact .vessel-card-name {
-    font-size: var(--text-sm);
-    font-weight: 700;
-  }
-
-  .vessel-card-overlay--compact .vessel-card-stat,
-  .vessel-card-overlay--compact .vessel-card-dest {
-    font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
-    font-size: var(--text-2xs);
-  }
-
   /* Inside a 44px strip the close button takes the height it can and stays a
      real target: the whole card is one row, so there is nothing to mis-hit. */
   .vessel-card-overlay--compact .icon-btn {
@@ -162,20 +139,36 @@
     flex: none;
   }
 
-  /* Panel icon buttons (header close, relocated follow/trail) get the full 44px
+  /* Panel icon buttons (header close, relocated trail controls) get the full 44px
      thumb target. On mobile the panels render as `.mobile-panel`. */
   .mobile-panel .icon-btn {
     width: 44px;
     height: 44px;
   }
 
-  /* Meri's relocated follow / track-history controls, in the detail sheet. */
-  .vessel-actions-row {
+  /* Meri's track-history toggle, in the detail header. One button is not worth
+     a row of its own, and the header is where the folded bar carries it — the
+     two states have to agree, since one unfolds into the other. */
+  .header-actions {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 10px;
+    gap: var(--gap-xs);
+    flex: none;
+  }
+
+  /* This column is 247px wide on a 375px screen and carries a rose, a name and
+     type, a readout and two controls. Every px the chrome gives back is one the
+     name and the ship type get: the sheet's buttons take the bar's 36px rather
+     than a page's 44px, and both the bar and the header set their rows at the
+     tighter gap — they must match each other in any case, since one unfolds
+     into the other. */
+  .vessel-sheet .detail-header .icon-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .vessel-sheet .detail-header {
+    gap: var(--gap-xs);
   }
 
   /* ---- Meri vessel page: compact by design ----
@@ -183,11 +176,33 @@
      two callouts and six identity rows. The page leads with what you watch (the
      readout in the header, then the voyage line), with the rest a tap away, so
      that the answer is above the fold and the map is one tap behind it. */
-  .mobile-panel .detail-subtitle {
-    display: block;
+  .mobile-panel .detail-subtitle,
+  .vessel-card-open .detail-subtitle {
+    display: flex;
+    align-items: baseline;
+    gap: var(--gap-xs);
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
+  }
+
+  /* The type is what gives way when the column is narrow; the call sign is a
+     fixed four characters and keeps them. */
+  .headline-type {
+    min-width: 0;
+    overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .headline-callsign {
+    flex: none;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'zero' 1;
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--text-body);
   }
 
   /* The voyage in one wrapping line: what the ship is doing, where it is headed
@@ -223,7 +238,7 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Discloses the identity block (MMSI, IMO, dimensions, position, fix age). */
+  /* The shared fold's control (Raide's and Tie's detail sections). */
   .detail-more-btn {
     display: flex;
     align-items: center;
@@ -246,9 +261,88 @@
     background: var(--bg-button-hover);
   }
 
-  /* Unfolded, the rows sit right under the button. */
   .detail-more-btn + .detail-facts {
     margin-top: 4px;
+  }
+
+  /* What the ship is doing, measured: four tiles instead of four rows, so the
+     block is read across as well as down and the page keeps the map behind it.
+     Speed and course are in the headline above and aren't repeated here. */
+  .vessel-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    margin-bottom: 10px;
+    background: var(--seam);
+    border: 1px solid var(--seam);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .vessel-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    background: var(--bg-card);
+  }
+
+  .vessel-stat-label {
+    font-size: var(--text-2xs);
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .vessel-stat-value {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'zero' 1;
+    font-size: var(--text-sm);
+    font-weight: 700;
+    color: var(--text-strong);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* What the ship *is*: reference numbers you read off once, so they get the
+     quieter treatment and two to a row — the same six values the old list spent
+     six full-width rows on. */
+  .vessel-ident {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--gap-sm) var(--gap-md);
+  }
+
+  .ident-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  /* The position is the one value that needs the width of the page. */
+  .ident-cell--wide {
+    grid-column: 1 / -1;
+  }
+
+  .ident-label {
+    font-size: var(--text-2xs);
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .ident-value {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'zero' 1;
+    font-size: var(--text-xs);
+    color: var(--text-body);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* Category filters (Meri ship types, Raide train types) become horizontal
@@ -580,8 +674,8 @@
 
 @media (max-width: 768px) {
   .course-rose {
-    width: 34px;
-    height: 34px;
+    width: 30px;
+    height: 30px;
     flex: none;
     align-self: center;
   }
@@ -625,11 +719,15 @@
     gap: var(--gap-sm);
   }
 
-  .mobile-panel .detail-title h3 {
+  /* The folded bar carries the same headline component, so it takes the same
+     type — otherwise the name and the ship type shift as the bar unfolds. */
+  .mobile-panel .detail-title h3,
+  .vessel-card-open .detail-title h3 {
     font-size: var(--text-sm);
   }
 
-  .mobile-panel .detail-subtitle {
+  .mobile-panel .detail-subtitle,
+  .vessel-card-open .detail-subtitle {
     font-size: var(--text-2xs);
   }
 

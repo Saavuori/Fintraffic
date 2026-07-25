@@ -6,11 +6,15 @@ import { fmtClock, fmtStamp } from '../lib/replayTime';
 
 // Fleet playback keeps its own short windows: every active vessel contributes
 // points, so the track history's 7d/60d spans are nothing like an affordable
-// request here.
+// request here. A day is as far back as it goes — the server clamps anything
+// wider (replayMaxWindowSec) and thins what it returns, saying so in the bar's
+// "history capped" note.
 const WINDOWS: { label: string; sec: number }[] = [
   { label: '1h', sec: 3600 },
   { label: '3h', sec: 3 * 3600 },
   { label: '6h', sec: 6 * 3600 },
+  { label: '12h', sec: 12 * 3600 },
+  { label: '24h', sec: 24 * 3600 },
 ];
 
 interface ReplayBarProps {

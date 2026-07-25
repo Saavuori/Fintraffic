@@ -1114,7 +1114,6 @@ a,
   text-overflow: ellipsis;
 }
 
-.follow-btn.active,
 .trail-btn.active,
 .track-replay-btn.active {
   color: var(--accent-teal);
@@ -1158,6 +1157,73 @@ a,
   background: rgba(45, 212, 191, 0.12);
 }
 
+/* ---------- Theme toggle (floating pill, desktop) ---------- */
+
+.mode-meri .theme-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glow);
+  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.2s;
+}
+
+.mode-meri .theme-toggle:hover {
+  border-color: var(--border-button-hover);
+}
+
+/* ---------- Replay launcher (desktop) ---------- */
+
+/* Same glass and the same spot as the transport bar below, so entering replay
+   expands this in place rather than moving the controls somewhere new. */
+.replay-launcher {
+  position: absolute;
+  z-index: 12;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glow);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
+  padding: 5px;
+}
+
+.replay-launcher-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.replay-launcher-btn:hover {
+  background: var(--bg-button-hover);
+  color: var(--text-primary);
+}
+
 /* ---------- Replay transport bar ---------- */
 
 .replay-bar {
@@ -1179,9 +1245,12 @@ a,
   padding: 10px 14px;
 }
 
+/* Wraps rather than overflows: five window buttons plus the transport is more
+   than a phone's width can hold on one line. */
 .replay-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -1447,12 +1516,13 @@ a,
   box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.3);
 }
 
-/* ---------- MapLibre attribution (compact ⓘ, bottom-left) ---------- */
+/* ---------- MapLibre attribution (compact ⓘ) ---------- */
 
-/* We add a compact AttributionControl at bottom-left so the required OSM/CARTO
-   credit stays present but tucks above the version badge, out of the way of the
-   bottom-right locate control. MapLibre renders it as a <details> with the
-   .maplibregl-ctrl-attrib class (collapsed to an ⓘ button in compact mode). */
+/* We add a compact AttributionControl so the required OSM/CARTO credit stays
+   present without a strip of text across the map. MapLibre renders it as a
+   <details> with the .maplibregl-ctrl-attrib class (collapsed to an ⓘ button in
+   compact mode), added to the bottom-left slot — where the phone keeps it,
+   clear of the tab bar (see mobile.css). */
 .maplibregl-ctrl-bottom-left {
   z-index: 8;
 }
@@ -1463,6 +1533,29 @@ a,
   border-radius: 6px;
   font-size: 10px;
   opacity: 0.75;
+}
+
+/* Desktop moves the ⓘ across to the bottom-right corner, beside the locate
+   button: the bottom-left there belongs to the version badge, and credit is
+   the kind of thing you go looking for in the corner. MapLibre's slot spans the
+   map and lays its controls out with floats, so switching sides is a matter of
+   floating this one right — the control stays where MapLibre put it in the DOM,
+   which is what keeps the phone layout above untouched. */
+@media (min-width: 769px) {
+  /* The slot is only as wide as its contents by default, so it has to reach the
+     other edge before anything inside it can sit there. It stays a zero-height
+     box around a floated control either way — nothing for the map to catch on. */
+  .maplibregl-ctrl-bottom-left {
+    right: 0;
+  }
+
+  /* Left of the locate control (40px wide, 16px in) and centred against it.
+     Two classes on the control itself: MapLibre's own compact rules are equally
+     specific and load after this file, so a single class would lose to them. */
+  .maplibregl-ctrl-bottom-left .maplibregl-ctrl.maplibregl-ctrl-attrib {
+    float: right;
+    margin: 0 64px 32px 0;
+  }
 }
 
 /* Nothing to credit (e.g. before the basemap's TileJSON loads) → hide the

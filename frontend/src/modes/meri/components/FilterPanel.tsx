@@ -216,39 +216,48 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               </button>
             </div>
 
-            <div className="filter-section-title" style={{ marginTop: 14 }}>
-              Appearance
-            </div>
-            <div className="layer-toggles">
-              <button
-                className={`layer-toggle ${mapTheme === 'dark' ? 'on' : ''}`}
-                onClick={() => setMapTheme('dark')}
-                aria-pressed={mapTheme === 'dark'}
-              >
-                <Moon size={14} />
-                <span>Dark</span>
-              </button>
-              <button
-                className={`layer-toggle ${mapTheme === 'light' ? 'on' : ''}`}
-                onClick={() => setMapTheme('light')}
-                aria-pressed={mapTheme === 'light'}
-              >
-                <Sun size={14} />
-                <span>Light</span>
-              </button>
-            </div>
+            {/* Appearance and replay are settings rather than layers, so on
+                desktop they live on the map itself — a theme pill in the top
+                corner (as in Tie) and a replay section along the bottom, where
+                the transport bar it opens into appears. The phone's sheet has
+                no such margins to spare, so it keeps them both in here. */}
+            {isMobile && (
+              <>
+                <div className="filter-section-title" style={{ marginTop: 14 }}>
+                  Appearance
+                </div>
+                <div className="layer-toggles">
+                  <button
+                    className={`layer-toggle ${mapTheme === 'dark' ? 'on' : ''}`}
+                    onClick={() => setMapTheme('dark')}
+                    aria-pressed={mapTheme === 'dark'}
+                  >
+                    <Moon size={14} />
+                    <span>Dark</span>
+                  </button>
+                  <button
+                    className={`layer-toggle ${mapTheme === 'light' ? 'on' : ''}`}
+                    onClick={() => setMapTheme('light')}
+                    aria-pressed={mapTheme === 'light'}
+                  >
+                    <Sun size={14} />
+                    <span>Light</span>
+                  </button>
+                </div>
 
-            <div className="layer-toggles" style={{ marginTop: 8 }}>
-              <button
-                className={`layer-toggle ${replayActive ? 'on' : ''}`}
-                style={{ gridColumn: '1 / -1' }}
-                onClick={onEnterReplay}
-                title="Replay recorded vessel movement"
-              >
-                <History size={14} />
-                <span>Replay recorded movement</span>
-              </button>
-            </div>
+                <div className="layer-toggles" style={{ marginTop: 8 }}>
+                  <button
+                    className={`layer-toggle ${replayActive ? 'on' : ''}`}
+                    style={{ gridColumn: '1 / -1' }}
+                    onClick={onEnterReplay}
+                    title="Replay recorded vessel movement"
+                  >
+                    <History size={14} />
+                    <span>Replay recorded movement</span>
+                  </button>
+                </div>
+              </>
+            )}
 
             {showAton && atonFaults.length > 0 && (
               <>

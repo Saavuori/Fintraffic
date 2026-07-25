@@ -60,45 +60,6 @@
   line-height: 1.4;
 }
 
-/* Legend folded into the filter panel */
-.mode-tie .legend-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.mode-tie .legend-group-title {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
-  margin-bottom: 5px;
-}
-
-.mode-tie .legend-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.74rem;
-  color: var(--text-body);
-  padding: 2px 0;
-}
-
-.mode-tie .legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.mode-tie .legend-hint {
-  font-size: 0.68rem;
-  color: var(--text-muted);
-  font-style: italic;
-  margin-top: 4px;
-}
-
 .mode-tie .section-label {
   display: flex;
   align-items: center;
