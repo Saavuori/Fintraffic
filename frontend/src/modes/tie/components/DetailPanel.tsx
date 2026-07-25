@@ -2,6 +2,8 @@ import React from 'react';
 import { X, ChevronRight, Gauge, SquareParking, Camera, Zap } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { BottomSheet } from '../../../shared/components/BottomSheet';
+import { BrowseButton } from '../../../shared/components/SheetViewSwitch';
+import { Fold } from '../../../shared/components/Fold';
 import { type Station, directionalStatuses, stationVolume, congestionColors } from '../lib/traffic';
 import type { Theme } from '../lib/theme';
 import {
@@ -31,14 +33,19 @@ interface DetailPanelProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   isMobile: boolean;
+  /** False while the phone's one sheet is showing the filters instead. */
+  open?: boolean;
+  /** Switches the phone's sheet to the filters without dropping the selection. */
+  onShowBrowse?: () => void;
 }
 
-function StationDetail({ station, theme }: { station: Station; theme: Theme }) {
+function StationDetail({ station, theme, isMobile }: { station: Station; theme: Theme; isMobile: boolean }) {
   const [dir1, dir2] = directionalStatuses(station);
   const volume = stationVolume(station);
   const colors = congestionColors(theme);
   return (
     <>
+      {!isMobile && (
       <div className="telemetry-grid">
         <div className="telemetry-item">
           <span className="telemetry-label">Direction 1</span>
@@ -53,6 +60,7 @@ function StationDetail({ station, theme }: { station: Station; theme: Theme }) {
           </span>
         </div>
       </div>
+      )}
 
       <div className="detail-facts">
         <div className="fact-row">
@@ -73,6 +81,7 @@ function StationDetail({ station, theme }: { station: Station; theme: Theme }) {
         )}
       </div>
 
+      <Fold folded={isMobile} label="All sensors">
       <div className="section-label">Sensors</div>
       <div className="detail-facts">
         {station.data?.length ? (
@@ -92,13 +101,15 @@ function StationDetail({ station, theme }: { station: Station; theme: Theme }) {
           <p className="panel-note">No sensor readings.</p>
         )}
       </div>
+      </Fold>
     </>
   );
 }
 
-function ParkingDetail({ facility }: { facility: ParkingFacility }) {
+function ParkingDetail({ facility, isMobile }: { facility: ParkingFacility; isMobile: boolean }) {
   return (
     <>
+      {!isMobile && (
       <div className="telemetry-grid">
         <div className="telemetry-item">
           <span className="telemetry-label">Available</span>
@@ -113,7 +124,9 @@ function ParkingDetail({ facility }: { facility: ParkingFacility }) {
           </span>
         </div>
       </div>
+      )}
 
+      <Fold folded={isMobile} label="Capacity and opening hours">
       <div className="detail-facts">
         {facility.builtCapacity &&
           Object.entries(facility.builtCapacity).map(([capType, cap]) => (
@@ -181,11 +194,12 @@ function ParkingDetail({ facility }: { facility: ParkingFacility }) {
         )}
       </div>
       {facility.paymentInfo && <p className="panel-note">{facility.paymentInfo}</p>}
+      </Fold>
     </>
   );
 }
 
-function CameraDetail({ camera }: { camera: WeathercamStation }) {
+function CameraDetail({ camera, isMobile }: { camera: WeathercamStation; isMobile: boolean }) {
   return (
     <>
       <div className="camera-grid">
@@ -196,6 +210,7 @@ function CameraDetail({ camera }: { camera: WeathercamStation }) {
         ))}
       </div>
 
+      <Fold folded={isMobile} label="Weather and location">
       {camera.weather && (
         <>
           <div className="section-label">
@@ -220,13 +235,15 @@ function CameraDetail({ camera }: { camera: WeathercamStation }) {
           </b>
         </div>
       </div>
+      </Fold>
     </>
   );
 }
 
-function ChargerDetail({ charger }: { charger: ChargingStation }) {
+function ChargerDetail({ charger, isMobile }: { charger: ChargingStation; isMobile: boolean }) {
   return (
     <>
+      {!isMobile && (
       <div className="telemetry-grid">
         <div className="telemetry-item">
           <span className="telemetry-label">Availability</span>
@@ -241,7 +258,9 @@ function ChargerDetail({ charger }: { charger: ChargingStation }) {
           </span>
         </div>
       </div>
+      )}
 
+      <Fold folded={isMobile} label="Address and operator">
       <div className="detail-facts">
         {(charger.address || charger.city) && (
           <div className="fact-row">
@@ -260,6 +279,7 @@ function ChargerDetail({ charger }: { charger: ChargingStation }) {
           </div>
         )}
       </div>
+      </Fold>
 
       {charger.connectors.length > 0 && (
         <>
@@ -317,6 +337,58 @@ function header(selection: Selection): {
   }
 }
 
+/**
+ * The live number this selection is watched for, in the row the peek shows. A
+ * TMS station's is the map marker itself: both directions' speeds, each in its
+ * own congestion colour, split by a hairline the way the marker's halves are.
+ */
+function Readout({ selection, theme }: { selection: Selection; theme: Theme }) {
+  switch (selection.kind) {
+    case 'station': {
+      const [dir1, dir2] = directionalStatuses(selection.station);
+      const colors = congestionColors(theme);
+      return (
+        <div className="vessel-readout">
+          <span className="readout-value readout-split">
+            <span style={{ color: colors[dir1.level] }}>
+              {dir1.speed != null ? Math.round(dir1.speed) : '—'}
+            </span>
+            <i aria-hidden="true">│</i>
+            <span style={{ color: colors[dir2.level] }}>
+              {dir2.speed != null ? Math.round(dir2.speed) : '—'}
+            </span>
+            <small>km/h</small>
+          </span>
+          <span className="readout-sub">{stationVolume(selection.station)} /5 min</span>
+        </div>
+      );
+    }
+    case 'parking':
+      return (
+        <div className="vessel-readout">
+          <span className="readout-value">
+            {selection.facility.spacesAvailable ?? '—'}
+            <small>free</small>
+          </span>
+          <span className="readout-sub">of {selection.facility.capacity}</span>
+        </div>
+      );
+    case 'charger':
+      return (
+        <div className="vessel-readout">
+          <span className="readout-value">
+            {selection.charger.maxPowerKw >= 1 ? Math.round(selection.charger.maxPowerKw) : '—'}
+            <small>kW</small>
+          </span>
+          <span className="readout-sub">{availabilityText(selection.charger)}</span>
+        </div>
+      );
+    // A camera's readout is the picture itself.
+    case 'camera':
+      return null;
+  }
+}
+
 export const DetailPanel: React.FC<DetailPanelProps> = ({
   selection,
   theme,
@@ -324,6 +396,8 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   isCollapsed,
   onToggleCollapse,
   isMobile,
+  open = true,
+  onShowBrowse,
 }) => {
   const bodyCollapsed = !isMobile && isCollapsed;
 
@@ -333,7 +407,10 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     <BottomSheet
       variant="detail"
       isMobile={isMobile}
-      open
+      open={open}
+      /* A camera is a picture, a charger is a connector list, and a station or
+         a car park is a readout plus a fold. */
+      restRatio={selection.kind === 'camera' ? 0.55 : selection.kind === 'charger' ? 0.5 : 0.38}
       ariaLabel="Open details panel"
       collapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
@@ -348,6 +425,8 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
               <h3>{title}</h3>
               <span className="detail-subtitle">{subtitle}</span>
             </div>
+            {isMobile && <Readout selection={selection} theme={theme} />}
+            {isMobile && onShowBrowse && <BrowseButton onClick={onShowBrowse} />}
             <button className="icon-btn panel-collapse-btn" onClick={onToggleCollapse} aria-label="Collapse panel">
               <ChevronRight size={16} />
             </button>
@@ -356,10 +435,12 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
             </button>
           </div>
 
-          {selection.kind === 'station' && <StationDetail station={selection.station} theme={theme} />}
-          {selection.kind === 'parking' && <ParkingDetail facility={selection.facility} />}
-          {selection.kind === 'camera' && <CameraDetail camera={selection.camera} />}
-          {selection.kind === 'charger' && <ChargerDetail charger={selection.charger} />}
+          {selection.kind === 'station' && (
+            <StationDetail station={selection.station} theme={theme} isMobile={isMobile} />
+          )}
+          {selection.kind === 'parking' && <ParkingDetail facility={selection.facility} isMobile={isMobile} />}
+          {selection.kind === 'camera' && <CameraDetail camera={selection.camera} isMobile={isMobile} />}
+          {selection.kind === 'charger' && <ChargerDetail charger={selection.charger} isMobile={isMobile} />}
         </div>
       )}
     </BottomSheet>

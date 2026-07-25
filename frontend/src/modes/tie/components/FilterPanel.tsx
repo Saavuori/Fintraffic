@@ -14,6 +14,9 @@ import {
 } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { BottomSheet } from '../../../shared/components/BottomSheet';
+import { BackToSelection } from '../../../shared/components/SheetViewSwitch';
+import { EntitySearch, type SearchItem } from '../../../shared/components/EntitySearch';
+import { Fold } from '../../../shared/components/Fold';
 import { type LayerKey, type LayerVisibility, LAYER_ORDER, LAYER_LABELS, poiColors } from '../lib/layers';
 import { congestionColors } from '../lib/traffic';
 import { parkingColors } from '../lib/parking';
@@ -23,6 +26,12 @@ import { SPEED_SIGN_RING } from '../lib/speedLimits';
 import type { Theme } from '../lib/theme';
 
 interface FilterPanelProps {
+  /** Everything searchable the map has fetched, flattened by TieApp. */
+  searchItems: SearchItem[];
+  onPickSearchResult: (id: string) => void;
+  /** What is selected behind this sheet on a phone, if anything. */
+  selectionLabel?: string | null;
+  onBackToSelection?: () => void;
   visibility: LayerVisibility;
   onToggleLayer: (key: LayerKey) => void;
   theme: Theme;
@@ -93,6 +102,10 @@ function legendItems(key: LayerKey, theme: Theme): LegendItem[] {
 }
 
 export const FilterPanel: React.FC<FilterPanelProps> = ({
+  searchItems,
+  onPickSearchResult,
+  selectionLabel,
+  onBackToSelection,
   visibility,
   onToggleLayer,
   theme,
@@ -111,6 +124,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       variant="filter"
       isMobile={isMobile}
       open={open}
+      className={selectionLabel ? 'has-back' : undefined}
       ariaLabel="Open layers panel"
       collapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
@@ -136,10 +150,22 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
       {!bodyCollapsed && (
         <div className="filter-content" onClick={stopPanelClick}>
+          {selectionLabel && onBackToSelection && (
+            <BackToSelection label={selectionLabel} onClick={onBackToSelection} />
+          )}
+
           <div className="panel-stats">
             <span className="conn-dot" title="Live · Digitraffic" />
             <span>Live · Digitraffic</span>
           </div>
+
+          <EntitySearch
+            items={searchItems}
+            onPick={onPickSearchResult}
+            placeholder="Search stations, cameras, parking"
+            ariaLabel="Search measurement stations, weather cameras and car parks"
+            emptyText="Nothing on the map matches."
+          />
 
           <div className="filter-scroll-area">
             <div className="filter-section-title">Map layers</div>
@@ -180,6 +206,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               </button>
             </div>
 
+            <Fold folded={isMobile} label="Legend">
             <div className="filter-section-title" style={{ marginTop: 14 }}>
               Legend
             </div>
@@ -206,6 +233,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               seasonal free-flow speed (not the legal limit); dot size = volume. Click
               any marker for live details.
             </div>
+            </Fold>
           </div>
         </div>
       )}

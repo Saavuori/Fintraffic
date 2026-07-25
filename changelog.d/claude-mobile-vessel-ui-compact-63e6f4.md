@@ -1,0 +1,22 @@
+### Changed
+- **The phone UI is no longer the desktop app in a drawer**: every mobile surface was a desktop rail — 210px filter, 320px detail, authored for a mouse — pushed into a bottom sheet. Selecting anything unmounted the filters entirely, so changing a map layer meant closing what you were reading; controls were mouse-sized (30px layer toggles, 20px replay chips); the sheet rested at a fixed 56% of the screen whatever it contained; and the marker you tapped was centred behind the sheet that opened to describe it. All three modes now share one phone layer built around what a sheet is actually for.
+- **One sheet, two bodies**: the filters and the selection take turns in the phone's single slot. A control in the detail header swaps to the filters and layers without dropping the selection, and the row at the top of the filters — which is what a minimized sheet shows — swaps back. Desktop keeps both rails side by side.
+- **Sheets rest at the height their content needs**: the middle stop was one fixed fraction for every panel in every mode. Each view now declares its own (`restRatio`, read by `useBottomSheet` through a CSS variable), so a vessel rests at 43% of the sheet's box and a departure board at 72%. On a 812px phone the vessel sheet hands roughly 90px back to the map, and the map keeps 58% of the screen at rest instead of 47%.
+- **Each mode's sheet header is its own instrument**: the one row a minimized sheet shows is now the map marker enlarged rather than a title bar. Meri draws the ship's actual bearing as a rose beside its speed and course; Raide shows speed with the delay signed and coloured; Tie splits a measurement station's two directions the way the marker's halves are split, each in its congestion colour. Live values pulse once when they change.
+- **What you watch is on top, what you look up folds**: vessel identity (MMSI, IMO, dimensions, position, fix age), a station's sensor list, a car park's opening hours and a charger's address all sit behind a tap. A train leads with its route and the stops ahead; a station's board gets a Departures/Arrivals segmented control instead of one list stacked on the other; a webcam leads with the picture.
+- **Raide and Tie can be searched**: only Meri had a search box, so finding a named train meant panning the map until it appeared. Meri's vessel search is now a shared component, and Raide searches trains and stations while Tie searches measurement stations, cameras, car parks and chargers — each row wearing the colour its marker has on the map.
+- **A phone held sideways gets rails, not a sheet**: below 500px of height a bottom sheet at any readable size is the whole screen. Those viewports switch to side panels — the same collapse behaviour the desktop uses — with the mode switcher standing up as a left rail, so the map keeps the middle.
+- **Selections stop landing behind the sheet**: the sheet publishes its height to MapLibre as camera padding once it settles, so what you tapped rises into the visible band. Closing the sheet eases it back.
+- **Every control in a sheet is a thumb target**: 44px minimum, list rows 48px, and the drag handle is the only deliberate exception (a full-width 30px strip whose gesture is a drag).
+
+### Added
+- **A typographic system, app-wide**: Barlow Semi Condensed carries the interface — a signage face, and semi-condensed fits roughly a sixth more characters per row, which is why long vessel and place names stop ellipsing on a 375px screen. JetBrains Mono has exactly one job: values a sensor reported (speeds, delays, times, coordinates, MMSI) and the boards they line up in. If a number was measured it is monospaced; if it was written it is not.
+- **`prefers-reduced-motion` support**, which the app had none of.
+
+### Removed
+- **The floating track-replay bar**: the transport for a vessel's own track now unfolds inside its sheet, next to the ship it is rewinding, instead of floating over the map.
+
+### Notes
+- Typefaces are bundled rather than fetched from Google Fonts: one less third-party request on a phone network, and the app keeps its typography offline.
+- Phone sheets are opaque instead of blurred glass. A translucent surface over a moving map is a full-screen composite every frame, and in daylight the text competes with whatever the map is drawing underneath. Desktop keeps its glass rails.
+- Mobile CSS moved out of `index.css` into `shared/styles/mobile.css`, loaded last, with the shared tokens in `shared/styles/tokens.css`. `index.css` is the desktop stylesheet now.

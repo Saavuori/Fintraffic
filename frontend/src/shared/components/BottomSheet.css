@@ -14,11 +14,11 @@
        declaration below the single source of truth: handle + one summary row +
        the sheet's own bottom padding. Keep it a plain px literal (the hook
        parses it; a calc() would come back unevaluated). */
-    --sheet-handle-height: 24px;
+    --sheet-handle-height: 30px;
     --sheet-pad-bottom: 8px;
     /* Overridden per variant below — minimized, a sheet should read as a summary
        line, not as a second tab bar. */
-    --sheet-peek-height: 82px;
+    --sheet-peek-height: 88px;
     /* What's left for the summary row that the peek shows: the live count on a
        filter sheet, the selected vessel/train on a detail sheet. The 1px is the
        top border, which the peek height (a visible height) includes and the
@@ -26,10 +26,23 @@
     --sheet-peek-row: calc(
       var(--sheet-peek-height) - var(--sheet-handle-height) - var(--sheet-pad-bottom) - 1px
     );
+    /* Fraction of the box the middle stop shows, also read by useBottomSheet.
+       The default suits a sheet you scroll (the filter rail's nearest list); a
+       sheet with a fixed, short body overrides it downwards so the map keeps the
+       room its content doesn't need. Keep it a bare number. */
+    --sheet-half-ratio: 0.56;
 
     position: fixed;
     left: 0;
     right: 0;
+    /* An instrument bolted to the bottom of the screen, not a pane of glass: a
+       blurred translucent surface over a moving map is a full-screen composite
+       every frame, and in daylight the text competes with whatever the map is
+       drawing underneath. Opaque ground, and a seam in the active mode's accent
+       so the sheet is visibly part of the traffic it describes. */
+    background: var(--ink-900);
+    border-top: 2px solid var(--accent);
+    box-shadow: 0 -12px 32px -16px rgba(0, 0, 0, 0.8);
     /* Rest on top of the bottom tab bar rather than under it, so the peek row
        and the nav are both visible. The tab bar owns the home-indicator safe
        area, so the sheet's own bottom padding no longer needs it. */
@@ -40,14 +53,11 @@
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    padding: 0 16px var(--sheet-pad-bottom);
-    background: var(--bg-panel);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--border-glow);
+    padding: 0 var(--gutter) var(--sheet-pad-bottom);
+    border-left: none;
+    border-right: none;
     border-bottom: none;
-    border-radius: 16px 16px 0 0;
-    box-shadow: 0 -8px 40px -10px rgba(0, 0, 0, 0.6);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     color: var(--text-primary);
     /* Off-screen until useBottomSheet's layout effect positions it — that's both
        the first-paint state (no flash at the top of the sheet's 88dvh box) and
@@ -66,8 +76,11 @@
      the two — the same height as the tab bar it sits on. A detail sheet's summary
      is the header row, whose 44px close button sets the floor. */
   .bottom-sheet--filter {
-    --sheet-peek-height: 64px;
+    --sheet-peek-height: 70px;
     z-index: 12;
+    /* The browse sheet is the quieter of the two: a hairline, not the accent
+       seam, so the colour on screen belongs to what you selected. */
+    border-top: 1px solid var(--seam-strong);
   }
 
   .bottom-sheet--detail {
@@ -90,7 +103,8 @@
     justify-content: center;
     height: var(--sheet-handle-height);
     padding-top: 10px;
-    margin: 0 -16px; /* full-width tap zone despite the sheet's side padding */
+    /* full-width tap zone despite the sheet's side padding */
+    margin: 0 calc(var(--gutter) * -1);
     touch-action: none;
     cursor: grab;
     -webkit-tap-highlight-color: transparent;

@@ -12,7 +12,19 @@ import {
 } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { BottomSheet } from '../../../shared/components/BottomSheet';
-import { type Train, type TrainGroup, groupColors, trainGroup, trainLabel, CATEGORY_LABELS } from '../lib/trains';
+import { BackToSelection } from '../../../shared/components/SheetViewSwitch';
+import { EntitySearch, type SearchItem } from '../../../shared/components/EntitySearch';
+import {
+  type Train,
+  type TrainGroup,
+  type StationMeta,
+  groupColors,
+  trainGroup,
+  trainLabel,
+  trainTitle,
+  STATION_COLORS,
+  CATEGORY_LABELS,
+} from '../lib/trains';
 import { type LayerKey, type LayerVisibility } from '../lib/layers';
 import type { Theme } from '../lib/theme';
 
@@ -48,6 +60,12 @@ interface FilterPanelProps {
   counts: Record<TrainGroup, number>;
   trains: Train[];
   onSelectTrain: (train: Train) => void;
+  /** Every passenger station, for search. */
+  stations: StationMeta[];
+  onSelectStation: (station: StationMeta) => void;
+  /** What is selected behind this sheet on a phone, if anything. */
+  selectionLabel?: string | null;
+  onBackToSelection?: () => void;
   mapCenter: { lng: number; lat: number } | null;
   visibility: LayerVisibility;
   onToggleLayer: (key: LayerKey) => void;
@@ -76,6 +94,10 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   counts,
   trains,
   onSelectTrain,
+  stations,
+  onSelectStation,
+  selectionLabel,
+  onBackToSelection,
   mapCenter,
   visibility,
   onToggleLayer,
@@ -98,11 +120,46 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     return nearestTrains(mapCenter, trains, NEAREST_COUNT);
   }, [mapCenter, trains]);
 
+  // Trains by number, line or route, and stations by name or code. Both kinds
+  // in one box: on a phone this is the only way to reach a named train without
+  // panning the map until it appears.
+  const searchItems = useMemo<SearchItem[]>(() => {
+    const items: SearchItem[] = trains.map(t => ({
+      id: `train:${t.trainNumber}/${t.departureDate}`,
+      label: trainTitle(t),
+      meta: t.dest || undefined,
+      accent: colors[trainGroup(t.category)],
+      haystack: `${trainLabel(t)} ${t.trainType} ${t.trainNumber} ${t.commuterLine} ${t.origin} ${t.dest}`.toLowerCase(),
+    }));
+    for (const s of stations) {
+      items.push({
+        id: `station:${s.code}`,
+        label: s.name,
+        meta: s.code,
+        accent: STATION_COLORS[theme],
+        haystack: `${s.name} ${s.code}`.toLowerCase(),
+      });
+    }
+    return items;
+  }, [trains, stations, colors, theme]);
+
+  const pickSearchResult = (id: string) => {
+    const [kind, key] = [id.slice(0, id.indexOf(':')), id.slice(id.indexOf(':') + 1)];
+    if (kind === 'train') {
+      const train = trains.find(t => `${t.trainNumber}/${t.departureDate}` === key);
+      if (train) onSelectTrain(train);
+      return;
+    }
+    const station = stations.find(s => s.code === key);
+    if (station) onSelectStation(station);
+  };
+
   return (
     <BottomSheet
       variant="filter"
       isMobile={isMobile}
       open={open}
+      className={selectionLabel ? 'has-back' : undefined}
       ariaLabel="Open filters panel"
       collapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
@@ -128,6 +185,10 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
       {!bodyCollapsed && (
         <div className="filter-content" onClick={stopPanelClick}>
+          {selectionLabel && onBackToSelection && (
+            <BackToSelection label={selectionLabel} onClick={onBackToSelection} />
+          )}
+
           <div className="panel-stats">
             <span className="conn-dot" title="Live · updates every 10 s" />
             <span>{total} trains</span>
@@ -140,6 +201,14 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               </button>
             )}
           </div>
+
+          <EntitySearch
+            items={searchItems}
+            onPick={pickSearchResult}
+            placeholder="Search trains and stations"
+            ariaLabel="Search trains by number or route, stations by name"
+            emptyText="No trains or stations match."
+          />
 
           <div className="filter-scroll-area">
             {nearest.length > 0 && (

@@ -1,6 +1,7 @@
-import React, { type KeyboardEvent, type ReactNode } from 'react';
+import React, { type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { useCollapsiblePanel } from '../hooks/useCollapsiblePanel';
 import { useBottomSheet } from '../hooks/useBottomSheet';
+import { useMediaQuery, SHORT_LANDSCAPE_QUERY } from '../hooks/useMediaQuery';
 import './BottomSheet.css';
 
 interface BottomSheetProps {
@@ -22,6 +23,13 @@ interface BottomSheetProps {
   collapsed: boolean;
   /** Toggles `collapsed` — reused for the desktop sliver and the header button. */
   onToggleCollapse: () => void;
+  /**
+   * How much of the sheet's box the middle stop shows, 0–1. A sheet should rest
+   * at the height its body actually needs: a scrolling list wants the tall stop,
+   * a fixed handful of rows wants far less, and the difference is map. Views
+   * pass their own; omitted, BottomSheet.css's default applies.
+   */
+  restRatio?: number;
   /**
    * Panel header + body. Components gate their own body on
    * `!isMobile && isCollapsed` so it stays mounted on mobile (the sheet's
@@ -49,15 +57,23 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   className,
   collapsed,
   onToggleCollapse,
+  restRatio,
   children,
 }) => {
+  // A phone held sideways has ~350px of height to spend. A bottom sheet there is
+  // all sheet and no map, so those viewports fall back to the side rails — the
+  // same layout (and the same collapse behaviour) the desktop already uses,
+  // sized down by the phone stylesheet.
+  const shortLandscape = useMediaQuery(SHORT_LANDSCAPE_QUERY);
+  const asRail = !isMobile || shortLandscape;
+
   // Derive a boolean setter from the toggle (flip only when it would change).
   const setCollapsed = (target: boolean) => {
     if (target !== collapsed) onToggleCollapse();
   };
 
   const { snap, sheetRef, handleProps, isDragging } = useBottomSheet({
-    isMobile,
+    isMobile: isMobile && !shortLandscape,
     open,
     collapsed,
     onCollapsedChange: setCollapsed,
@@ -71,10 +87,17 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     ariaLabel
   );
 
-  if (!isMobile) {
+  if (asRail) {
     return (
       <div
-        className={`glass-panel ${DESKTOP_CLASS[variant]} ${className ?? ''} ${collapsedClass}`.trim()}
+        /* The same ref on both branches: React reuses the DOM node when a
+           rotation flips a sheet into a rail, and the sheet's imperative
+           transform would ride along on it. The hook clears those styles when it
+           is not driving a sheet — but only if it can still see the node. */
+        ref={sheetRef}
+        className={`glass-panel ${DESKTOP_CLASS[variant]} ${className ?? ''} ${collapsedClass} ${
+          shortLandscape ? 'rail--short' : ''
+        }`.trim()}
         {...collapsibleProps}
       >
         {children}
@@ -97,6 +120,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       className={`bottom-sheet bottom-sheet--${variant} ${className ?? ''} ${
         isDragging ? 'bottom-sheet--dragging' : ''
       }`.trim()}
+      style={
+        restRatio != null ? ({ '--sheet-half-ratio': String(restRatio) } as CSSProperties) : undefined
+      }
       // `data-snap` lets the stylesheet react to the resting height — minimized,
       // the one visible row must not be scrollable out of view.
       data-snap={snap}
