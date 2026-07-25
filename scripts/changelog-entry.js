@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 //
-// Writes the CHANGELOG.md entry for an automated dependency-update branch.
+// Writes the changelog entry for an automated dependency-update branch, as a
+// pending fragment under changelog.d/ (see changelog.d/README.md).
 //
 // Runs as a Renovate postUpgradeTask (see renovate.json). Renovate writes the
 // manifest updates into the working tree and runs this *before* committing, so
@@ -21,8 +22,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const mdPath = path.join(__dirname, '../CHANGELOG.md');
-const baseBranch = process.env.BASE_BRANCH || 'main';
+const fragmentDir = path.join(__dirname, '../changelog.d');
 
 function git(args) {
   try {
@@ -70,7 +70,7 @@ const SOURCES = [
 let diff = git('diff --unified=0');
 if (!diff.trim()) diff = git('diff --unified=0 HEAD~1 HEAD');
 if (!diff.trim()) {
-  console.log('No pending changes found — leaving CHANGELOG.md alone.');
+  console.log('No pending changes found — writing no changelog entry.');
   process.exit(0);
 }
 
@@ -112,49 +112,26 @@ for (const [label, deps] of groups) {
 }
 
 if (bullets.length === 0) {
-  console.log('No dependency version changes recognised — leaving CHANGELOG.md alone.');
+  console.log('No dependency version changes recognised — writing no changelog entry.');
   process.exit(0);
 }
 
-// The version has to be predicted, same as for a hand-written PR: the real tag is
-// only minted by CI after the merge. `chore(deps)` is neither `feat:` nor a
-// breaking change, and paulhatch/semantic-version treats everything else as a
-// patch — so the prediction is the base branch's top version, patch + 1.
+// No version is written here, and none is predicted. The entry goes into a file
+// of its own under changelog.d/, and CI attaches the real tag when it folds the
+// pending entries after the merge (scripts/changelog-fold.js). That removes the
+// two things this script used to get wrong whenever another PR merged first: the
+// guessed version, and the collision with every other branch editing the top of
+// CHANGELOG.md.
 //
-// Read the heading from the base branch rather than the working copy: on a rerun
-// the working copy already carries the entry from the previous run, and bumping
-// off that would climb a version every time.
-const HEADING = /^## \[v(\d+)\.(\d+)\.(\d+)\]/m;
-const current = fs.readFileSync(mdPath, 'utf8');
-// origin/ first: a local branch of the same name can be stale, and reading a
-// stale base predicts a version that has already been released.
-const base =
-  git(`show origin/${baseBranch}:CHANGELOG.md`) || git(`show ${baseBranch}:CHANGELOG.md`) || current;
+// The filename is the branch, so a split-out major update and the grouped
+// non-major one write separate files instead of fighting over one. Writing the
+// same file on a rerun is the point — it replaces the previous run's text.
+const branch = git('rev-parse --abbrev-ref HEAD').trim();
+const slug = branch.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '') || 'renovate';
+const outPath = path.join(fragmentDir, `${slug}.md`);
 
-const found = base.match(HEADING);
-if (!found) {
-  console.error('No `## [vX.Y.Z]` heading found in the base CHANGELOG.md.');
-  process.exit(1);
-}
-const [, major, minor, patch] = found;
-const version = `v${major}.${minor}.${Number(patch) + 1}`;
-
-const date = new Date().toISOString().slice(0, 10);
-const section = `## [${version}] - ${date}\n\n### Changed\n${bullets.join('\n')}\n`;
-
-// Idempotent: a rerun has to replace the section it wrote last time rather than
-// stack a second copy on top.
-const lines = current.split('\n');
-const start = lines.findIndex((l) => l.startsWith(`## [${version}]`));
-if (start !== -1) {
-  let end = start + 1;
-  while (end < lines.length && !lines[end].startsWith('## ')) end++;
-  lines.splice(start, end - start);
-}
-
-// Insert above the newest existing release, below the file's intro paragraph.
-const firstRelease = lines.findIndex((l) => l.startsWith('## ['));
-lines.splice(firstRelease === -1 ? lines.length : firstRelease, 0, ...section.split('\n'));
-
-fs.writeFileSync(mdPath, lines.join('\n'), 'utf8');
-console.log(`Wrote ${version} entry covering ${bullets.length} dependency group(s).`);
+fs.mkdirSync(fragmentDir, { recursive: true });
+fs.writeFileSync(outPath, `### Changed\n${bullets.join('\n')}\n`, 'utf8');
+console.log(
+  `Wrote ${path.relative(path.join(__dirname, '..'), outPath)} covering ${bullets.length} dependency group(s).`
+);
