@@ -165,6 +165,8 @@ npm run dev
 
 ## Deployment
 
+How a merge becomes the running container — the workflows, how CI picks the version, what the image contains, and how the host picks it up — is documented with diagrams in **[docs/CICD.md](docs/CICD.md)**.
+
 ### Local Deployment (Docker)
 
 ```bash

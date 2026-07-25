@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.10.11] - 2026-07-25
+
+### Added
+- **CI/CD is documented end to end, with diagrams**: `docs/CICD.md` traces a change from pull request to the container serving traffic — the three checks that gate a merge and why they carry no `paths-ignore`, how CI reads commit messages to pick the next version, what the three-stage image build produces and which parts of it are load-bearing (`CGO_ENABLED=0` for the pure-Go SQLite driver, cross-compilation rather than QEMU, ldflags version injection), how the weekly dependency PR assembles itself, and how the production host pulls new images on a five-minute cron rather than being deployed to. Six diagrams carry the parts that are awkward in prose: the pipeline as a whole, the version-bump decision, the build stages, the dependency-update sequence, and the runtime topology of containers, networks and volumes on the Oracle host. It closes with a symptom-to-cause table for the failures that are otherwise puzzling — a pull request stuck pending forever because two jobs report the same required check name, a merge that produces no version because it only touched `paths-ignore` paths, a new image in the registry that hasn't reached the host yet.
+
 ## [v0.10.10] - 2026-07-25
 
 ### Changed
