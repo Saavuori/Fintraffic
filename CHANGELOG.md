@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.10.8] - 2026-07-25
+
+### Changed
+- **`@types/node` 24 → 26**: two majors at once, because `@types/node` majors track Node's own — but the blast radius is one file. `tsconfig.node.json` is the only project that pulls in the Node types, it compiles exactly one file (`vite.config.ts`), and the only Node API that file touches is `process.env.API_PROXY` for the dev proxy override. Nothing in `src/` sees these types (`tsconfig.app.json` takes `vite/client` and `DOM` instead), and none of it reaches the browser bundle. Worth noting the types now describe a newer runtime than the build image runs — the frontend stage is still Node 24 — which is harmless while the typed surface is one environment variable, but the two are best kept moving together.
+
 ## [v0.10.7] - 2026-07-25
 
 ### Changed
