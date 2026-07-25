@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.10.9] - 2026-07-25
+
+### Changed
+- **Frontend build image moves to Node 26**: the `frontend-builder` stage only — Node never ships in the runtime image, which is Alpine plus a static Go binary, so this changes what compiles the bundle and nothing about what runs in production. It also closes the gap v0.10.8 opened, where the Node type definitions described a newer runtime than the image actually ran. One consequence to be aware of: v0.10.3 picked Node 24 specifically because it was Active LTS, and Node 26 doesn't enter LTS until 2026-10-28, so until then the release build runs on the Current line. CI's `setup-node` steps are still pinned to 24 and Dependabot doesn't manage those, so the build image and the checks that gate it are on different majors for now.
+
 ## [v0.10.8] - 2026-07-25
 
 ### Changed
