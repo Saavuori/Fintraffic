@@ -1,0 +1,62 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: ['config:recommended'],
+  timezone: 'Europe/Helsinki',
+
+  // JSON5 rather than renovate.json so this file can carry comments: Renovate
+  // rejects unknown keys, so `_comment` fields would raise config warnings.
+
+  // No `schedule` here on purpose — the cron in .github/workflows/renovate.yml is
+  // the single source of truth for when Renovate runs. Two schedules would have to
+  // intersect for anything to happen, which is a confusing way to get silence.
+
+  labels: ['dependencies'],
+  semanticCommits: 'enabled',
+  semanticCommitType: 'chore',
+  semanticCommitScope: 'deps',
+
+  // `chore(deps)` is neither `feat:` nor breaking, so paulhatch/semantic-version
+  // gives a merged update a patch bump — which is the heading scripts/changelog-entry.js
+  // predicts from.
+
+  prConcurrentLimit: 5,
+
+  // Don't propose a release until it has survived three days in the wild, so a
+  // version that gets yanked shortly after publishing never reaches a PR.
+  minimumReleaseAge: '3 days',
+
+  // Runs once per branch after all updates are applied and before the commit, so
+  // the entry lands inside Renovate's own commit. That is the whole point of the
+  // switch from Dependabot: because the changelog edit is Renovate's own and not a
+  // foreign push, Renovate keeps rebasing the branch and regenerates the entry — so
+  // the predicted version corrects itself when a sibling PR merges first.
+  //
+  // `commands` must also match RENOVATE_ALLOWED_COMMANDS in the workflow; that
+  // allow-list, not this block, is what actually permits the command to run.
+  postUpgradeTasks: {
+    commands: ['node scripts/changelog-entry.js'],
+    fileFilters: ['CHANGELOG.md'],
+    executionMode: 'branch',
+  },
+
+  packageRules: [
+    // One PR a week across every manager — Go, npm, Actions, Docker. One PR means
+    // one predicted version heading, so siblings can't claim the same one. Majors
+    // stay separate (Renovate splits them by default): those need a real look, and
+    // MapLibre 5 → 6 in v0.10.3 is what that looks like when it lands.
+    {
+      matchUpdateTypes: ['minor', 'patch', 'digest'],
+      groupName: 'all non-major dependencies',
+      groupSlug: 'all-minor-patch',
+    },
+    {
+      matchManagers: ['github-actions'],
+      semanticCommitType: 'ci',
+    },
+    // Our own image, pinned to :latest by design — deploy/update.sh is what pulls it.
+    {
+      matchPackageNames: ['ghcr.io/saavuori/fintraffic'],
+      enabled: false,
+    },
+  ],
+}

@@ -1,0 +1,65 @@
+name: Renovate
+
+# Self-hosted Renovate. It has to be self-hosted rather than the Mend-hosted app
+# because `postUpgradeTasks` (which writes the changelog entry) runs arbitrary
+# commands, and the hosted app doesn't allow those — `allowedCommands` is a
+# self-hosted-only setting.
+#
+# This cron is the only schedule; renovate.json5 deliberately sets none.
+on:
+  schedule:
+    - cron: "0 4 * * 1" # Mondays 04:00 UTC — 07:00 Helsinki in summer, 06:00 in winter
+  workflow_dispatch:
+    inputs:
+      dryRun:
+        description: "Run without creating branches or PRs"
+        type: boolean
+        default: false
+      logLevel:
+        description: "Renovate log level"
+        type: choice
+        options: [info, debug]
+        default: info
+
+permissions:
+  contents: read
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      # RENOVATE_TOKEN must be a PAT or GitHub App token, not GITHUB_TOKEN: pull
+      # requests opened with GITHUB_TOKEN don't trigger `pull_request` workflows, so
+      # the backend/frontend/changelog checks that main's protection requires would
+      # never report and every dependency PR would sit blocked. Failing loudly here
+      # beats a run that looks green and silently does nothing.
+      - name: Check the token is configured
+        env:
+          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+        run: |
+          if [ -z "${RENOVATE_TOKEN}" ]; then
+            echo "::error::RENOVATE_TOKEN is not set. Add a PAT (repo scope) or a GitHub App token as a repository secret — see README, Dependency updates."
+            exit 1
+          fi
+
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Renovate
+        uses: renovatebot/github-action@v46
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN }}
+          configurationFile: renovate.json5
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_PLATFORM: github
+          # Matched against the fully resolved command. Renovate runs nothing at
+          # all unless the command it's about to run matches an entry here, so this
+          # is the security boundary — keep it anchored and exact.
+          RENOVATE_ALLOWED_COMMANDS: '["^node scripts/changelog-entry\\.js$"]'
+          RENOVATE_DRY_RUN: ${{ inputs.dryRun && 'full' || '' }}
+          LOG_LEVEL: ${{ inputs.logLevel || 'info' }}

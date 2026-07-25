@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.10.10] - 2026-07-25
+
+### Changed
+- **Dependency updates move from Dependabot to Renovate**: the weekly PR still covers all five places the repo pins a version, but everything non-major now arrives as a single pull request across managers rather than one per ecosystem — so a routine week is one review instead of up to five, and one predicted version heading instead of five racing for the same number. Majors still come separately, since those are the ones that need a real look. New with the move: a release has to be three days old before it's proposed at all, so a version yanked shortly after publishing never reaches a PR.
+- **The changelog entry is now part of the bot's own commit**: this is the reason for the switch. Under Dependabot the entry had to be pushed onto the branch by a second workflow, and pushing to a Dependabot branch stops it rebasing — so a predicted version goes stale the moment a sibling PR merges first, which happened to the pull request that introduced the setup before it had even merged. Renovate generates the entry as a post-upgrade task, after the updates are applied but before the commit, so the branch keeps getting rebased and the entry is regenerated against whatever `main` has become. The version prediction now corrects itself instead of needing a follow-up. The generator also reads the pending diff rather than bot-supplied metadata, which keeps it runnable and testable on its own and makes a new kind of pinned version a pattern in one script rather than a config migration. The text stays deliberately factual — v0.10.6 is what it writes unaided and v0.10.7 is what the same entry looks like once a human explains why the bump matters, which remains the job worth doing.
+- **Setup note**: Renovate runs self-hosted from a scheduled workflow, because generating the entry means running a command and the hosted app doesn't permit that. It needs a `RENOVATE_TOKEN` secret that is *not* `GITHUB_TOKEN` — pull requests opened with the built-in token don't trigger `pull_request` workflows, so the checks `main`'s protection requires would never report and every dependency PR would sit blocked. A personal access token with `repo` scope or a GitHub App token both work, and the workflow fails with an explicit message rather than running to a silent no-op when the secret is missing. Until it's set, no dependency PRs will open at all. See "Dependency updates" in the README.
+
 ## [v0.10.9] - 2026-07-25
 
 ### Changed
