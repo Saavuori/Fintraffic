@@ -25,6 +25,41 @@
     -webkit-backdrop-filter: none;
   }
 
+  /* The selected ship's own transport is docked, not floating: it sits on the
+     tab bar edge to edge, so the scrubber — the thing you actually drag — runs
+     the full width of the screen instead of the slot left inside a card. */
+  .replay-bar--track {
+    left: 0;
+    right: 0;
+    width: auto;
+    transform: none;
+    padding: var(--gap-sm) var(--gutter) var(--gap-md);
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+  }
+
+  /* A thumb, not a mouse pointer: a 14px handle on a 4px rail is hard to catch
+     and easy to lose mid-drag. */
+  .replay-bar--track .replay-scrubber {
+    height: 6px;
+    padding: 12px 0;
+    background-clip: content-box;
+  }
+
+  .replay-bar--track .replay-scrubber::-webkit-slider-thumb {
+    width: 26px;
+    height: 26px;
+    border-width: 3px;
+  }
+
+  .replay-bar--track .replay-scrubber::-moz-range-thumb {
+    width: 26px;
+    height: 26px;
+    border-width: 3px;
+  }
+
   .replay-bar .replay-clock,
   .replay-bar .replay-meta {
     font-family: var(--font-mono);
@@ -39,18 +74,97 @@
     --tabbar-height: calc(64px + env(safe-area-inset-bottom));
   }
 
-  /* The floating summary pills are redundant on mobile — the detail sheet is
-     the single source of selection detail — so hide them (Meri's follow/trail
-     actions move into the sheet header via VesselActions). */
-  .vessel-card-overlay,
+  /* Raide's and Tie's summary pills are redundant on a phone — their detail
+     page is the single source of selection detail. Meri's vessel card is not:
+     it is the selection itself, kept on the map (see below). */
   .train-card-overlay,
   .selected-card-overlay {
     display: none;
   }
 
-  /* Sheet icon buttons (header collapse/close, relocated follow/trail) get the
-     full 44px thumb target. On mobile the panels render as `.bottom-sheet`. */
-  .bottom-sheet .icon-btn {
+  /* --- the selected vessel, on the map ---
+     Selecting a ship used to hand the screen to a page describing it, which is
+     the one thing a map cannot spare: you tapped a marker to see where it is.
+     The card is what is on screen instead — name, speed, course, destination —
+     under the row of map chrome and above everything docked at the bottom, with
+     the full page one tap behind it. */
+  .vessel-card-overlay--compact {
+    /* The top strip, in the gap the search and settings buttons leave: one row
+       of map chrome, and the selection is part of it rather than a band under
+       it. Both insets are 12px + a 44px button + an 8px gap. */
+    top: calc(env(safe-area-inset-top) + 12px);
+    left: calc(var(--gap-md) + var(--tap-min) + var(--gap-sm));
+    right: calc(var(--gap-md) + var(--tap-min) + var(--gap-sm));
+    height: var(--tap-min);
+    max-width: none;
+    transform: none;
+    box-sizing: border-box;
+    padding: 0 var(--gap-xs) 0 10px;
+    background: var(--ink-900);
+    border-color: var(--seam-strong);
+    border-radius: var(--radius-md);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .vessel-card-overlay--compact .vessel-card-row {
+    height: 100%;
+    gap: 6px;
+  }
+
+  /* A 247px bar on a 375px screen: the name and the numbers are what a glance
+     is for, and the destination is a line of its own in the details below. */
+  .vessel-card-overlay--compact .vessel-card-dest {
+    display: none;
+  }
+
+  /* Says the bar has more underneath it. */
+  .vessel-card-chevron {
+    flex: none;
+    color: var(--text-muted);
+  }
+
+  /* The summary is a button into the page, so it takes the row and stays a row:
+     the name gives way first, the numbers never wrap. */
+  .vessel-card-open {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+    flex: 1;
+    min-width: 0;
+    min-height: var(--tap-min);
+    padding: 0;
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .vessel-card-overlay--compact .vessel-card-name {
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  .vessel-card-overlay--compact .vessel-card-stat,
+  .vessel-card-overlay--compact .vessel-card-dest {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-2xs);
+  }
+
+  /* Inside a 44px strip the close button takes the height it can and stays a
+     real target: the whole card is one row, so there is nothing to mis-hit. */
+  .vessel-card-overlay--compact .icon-btn {
+    width: 36px;
+    height: 36px;
+    flex: none;
+  }
+
+  /* Panel icon buttons (header close, relocated follow/trail) get the full 44px
+     thumb target. On mobile the panels render as `.mobile-panel`. */
+  .mobile-panel .icon-btn {
     width: 44px;
     height: 44px;
   }
@@ -64,13 +178,12 @@
     margin-bottom: 10px;
   }
 
-  /* ---- Meri vessel sheet: compact by design ----
+  /* ---- Meri vessel page: compact by design ----
      A phone showed the same blocks as the desktop rail — a 2×2 telemetry grid,
-     two callouts and six identity rows — which is far more than fits above the
-     fold and left the map a strip at the top. The sheet now carries only what
-     you watch (the readout in the header, then the voyage line) and rests at
-     the height that needs, with the rest a tap away. */
-  .bottom-sheet .detail-subtitle {
+     two callouts and six identity rows. The page leads with what you watch (the
+     readout in the header, then the voyage line), with the rest a tap away, so
+     that the answer is above the fold and the map is one tap behind it. */
+  .mobile-panel .detail-subtitle {
     display: block;
     white-space: nowrap;
     overflow: hidden;
@@ -159,56 +272,24 @@
     flex: none;
   }
 
-  /* The bottom tab bar already names the active mode, so the filter sheet's
-     mode title ("Meriliikenne" …) and its desktop collapse chevron are
-     redundant on phones — and they eat the most valuable row, the one visible
-     at peek. Hide the header so the peek leads with real content: the live
-     count, then the nearest list. (Detail sheets keep their header — the
-     selected vessel/train name there is not redundant.) */
-  .bottom-sheet--filter .panel-header {
-    display: none;
-  }
-
-  /* With the title gone, the live count is the sheet's summary line — it's what
-     the peek shows, so BottomSheet.css styles and sizes it alongside the rest of
-     the peek geometry rather than here. */
-
-  /* Bigger tap target, lifted clear of the active sheet AND the tab bar. The
-     sheet rests on the tab bar, so its top edge is (tabbar + sheet) up from the
-     bottom; --tabbar-height already carries the safe-area inset. */
+  /* Bigger tap target, clear of the tab bar (--tabbar-height already carries
+     the home-indicator safe area). Nothing else is anchored down there any
+     more: the panels are pages now, so the map's own controls keep a fixed
+     offset instead of being pushed around by a sheet that changed height under
+     the finger. */
   .locate-control {
     width: 44px;
     height: 44px;
-    bottom: calc(var(--active-sheet-height) + var(--tabbar-height) + 16px);
+    bottom: calc(var(--tabbar-height) + 16px);
   }
 
   .locate-error {
-    bottom: calc(var(--active-sheet-height) + var(--tabbar-height) + 68px);
+    bottom: calc(var(--tabbar-height) + 68px);
   }
 
-  /* Keep the required attribution visible just above the active sheet. */
+  /* Keep the required attribution clear of the tab bar. */
   .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
-    margin-bottom: calc(var(--active-sheet-height) + var(--tabbar-height) + 8px);
-  }
-
-  /* The controls above rebase off --active-sheet-height, which the sheet
-     publishes continuously. While a finger is down that's a live value and they
-     must track it frame-for-frame; when the sheet is settling into a snap it
-     steps once, so they ease along the sheet's own curve instead of jumping
-     ahead of it. useBottomSheet toggles .sheet-dragging on <html>. */
-  .locate-control,
-  .locate-error,
-  .replay-bar,
-  .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
-    transition: bottom 0.28s cubic-bezier(0.32, 0.72, 0, 1),
-      margin-bottom 0.28s cubic-bezier(0.32, 0.72, 0, 1);
-  }
-
-  :root.sheet-dragging .locate-control,
-  :root.sheet-dragging .locate-error,
-  :root.sheet-dragging .replay-bar,
-  :root.sheet-dragging .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
-    transition: none;
+    margin-bottom: calc(var(--tabbar-height) + 8px);
   }
 
   /* Build metadata isn't useful on a phone. */
@@ -216,9 +297,14 @@
     display: none;
   }
 
-  /* Fleet-replay transport bar clears the active sheet and the tab bar. */
+  /* Fleet-replay transport bar clears the tab bar. */
   .replay-bar {
-    bottom: calc(var(--active-sheet-height) + var(--tabbar-height) + 12px);
+    bottom: calc(var(--tabbar-height) + 12px);
+  }
+
+  /* Docked flush on the tab bar, with nothing between them. */
+  .replay-bar--track {
+    bottom: var(--tabbar-height);
   }
 
   /* The mode switcher's transformation into a bottom tab bar lives in its own
@@ -227,9 +313,9 @@
 }
 /* ---- Mobile: the switcher becomes the primary bottom navigation ----
    A fixed, thumb-zone tab bar spanning the full width. Placed after the desktop
-   rules above so these equal-specificity overrides win on phones. It sits above
-   the sheets (z 12/13) so it's always reachable; the sheets rest on top of it
-   (bottom: var(--tabbar-height)) rather than under it, so nothing overlaps. */
+   rules above so these equal-specificity overrides win on phones. A panel page
+   stops at its top edge (bottom: var(--tabbar-height)), so the nav is reachable
+   even with a panel up — you can read a train and still switch to the road. */
 @media (max-width: 768px) {
   .mode-switcher {
     position: fixed;
@@ -245,8 +331,8 @@
     border: none;
     border-top: 1px solid var(--border-glow);
     border-radius: 0;
-    /* Opaque, and no backdrop blur: a minimized sheet's box runs down behind the
-       bar, so anything see-through here shows that overhang bleeding through. */
+    /* Opaque, and no backdrop blur: the bar is the one surface that must read
+       against both the map and a panel page ending flush on its top edge. */
     background: var(--bg-bar);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
@@ -307,86 +393,86 @@
 /* ===========================================================================
    Instrument surfaces
    ===========================================================================
-   The sheet stops being a pane of glass on a phone. Blur over a moving map is a
+   A panel stops being a pane of glass on a phone. Blur over a moving map is a
    full-screen composite every frame, and in daylight it washes the text out
    against whatever the map happens to be showing underneath. So: opaque ground,
-   hairline seams, and a seam of the active mode's accent along the top edge —
-   the sheet reads as an instrument bolted to the bottom of the screen, and the
-   map behind it stays the map. Desktop keeps its glass rails. */
+   hairline seams, and a seam of the active mode's accent under the title — the
+   page reads as an instrument, and the map it covers stays the map. Desktop
+   keeps its glass rails. */
 
-/* The sheet's own surface (opaque ground, accent seam, gutters) lives in
-   BottomSheet.css — that stylesheet is injected with the component, so it lands
-   after this file and would otherwise win the tie. What follows is everything
-   inside a sheet, which is a class deeper and unambiguous. */
+/* The page's own surface (opaque ground, accent seam, gutters) lives in
+   Panel.css — that stylesheet is injected with the component, so it lands after
+   this file and would otherwise win the tie. What follows is everything inside a
+   panel, which is a class deeper and unambiguous. */
 
 @media (max-width: 768px) {
   /* --- thumb targets ---
-     Every control in a sheet was sized for a mouse: 30px layer toggles, 20px
+     Every control in a panel was sized for a mouse: 30px layer toggles, 20px
      trail-window chips. Nothing tappable goes under 44px now, and list rows —
      which are aimed at while walking — get more. */
-  .bottom-sheet .layer-toggle,
-  .bottom-sheet .category-row {
+  .mobile-panel .layer-toggle,
+  .mobile-panel .category-row {
     min-height: var(--chip-min);
     padding: 10px 12px;
     font-size: var(--text-xs);
   }
 
-  .bottom-sheet .nearest-row,
-  .bottom-sheet .vessel-search-result {
+  .mobile-panel .nearest-row,
+  .mobile-panel .vessel-search-result {
     min-height: var(--row-min);
     padding: 10px 12px;
     font-size: var(--text-sm);
   }
 
-  .bottom-sheet .trail-window-btn {
+  .mobile-panel .trail-window-btn {
     min-height: var(--tap-min);
     min-width: var(--tap-min);
     padding: 0 12px;
     font-size: var(--text-xs);
   }
 
-  .bottom-sheet .clear-filters-btn {
+  .mobile-panel .clear-filters-btn {
     min-height: var(--tap-min);
     padding: 0 4px;
     font-size: var(--text-xs);
   }
 
-  /* Sheet type: the interface face at readable phone sizes, measured values in
+  /* Panel type: the interface face at readable phone sizes, measured values in
      the mono face wherever they line up in a column. */
-  .bottom-sheet .filter-section-title {
+  .mobile-panel .filter-section-title {
     font-size: var(--text-2xs);
     margin-bottom: var(--gap-sm);
   }
 
-  .bottom-sheet .detail-subtitle b,
-  .bottom-sheet .nearest-dist,
-  .bottom-sheet .nearest-speed,
-  .bottom-sheet .telemetry-value,
-  .bottom-sheet .fact-row b,
-  .bottom-sheet .board-time,
-  .bottom-sheet .board-track,
-  .bottom-sheet .vessel-search-mmsi {
+  .mobile-panel .detail-subtitle b,
+  .mobile-panel .nearest-dist,
+  .mobile-panel .nearest-speed,
+  .mobile-panel .telemetry-value,
+  .mobile-panel .fact-row b,
+  .mobile-panel .board-time,
+  .mobile-panel .board-track,
+  .mobile-panel .vessel-search-mmsi {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     font-feature-settings: 'zero' 1;
   }
 
-  .bottom-sheet .fact-row {
+  .mobile-panel .fact-row {
     min-height: 38px;
     padding: 8px 2px;
     border-bottom-color: var(--seam);
   }
 
-  .bottom-sheet .fact-row span {
+  .mobile-panel .fact-row span {
     font-size: var(--text-xs);
   }
 
-  .bottom-sheet .fact-row b {
+  .mobile-panel .fact-row b {
     font-size: var(--text-xs);
   }
 
-  /* The floating search pill is the one piece of chrome above the map, so it
-     gets a real input height and the same instrument surface as the sheet. */
+  /* Folded, the search pill and the filters launcher are the only chrome over
+     the map, so the pill wears the same instrument surface as a panel. */
   .vessel-search-overlay .vessel-search {
     min-height: var(--tap-min);
     background: var(--ink-900);
@@ -533,22 +619,22 @@
     color: var(--text-secondary);
   }
 
-  /* The header is the peek row, so it holds the readout and both controls; the
-     name takes what's left and ellipsises rather than pushing anything off. */
-  .bottom-sheet .detail-header {
+  /* The header is the page's title bar: the readout and both controls, with the
+     name taking what's left and ellipsising rather than pushing anything off. */
+  .mobile-panel .detail-header {
     gap: var(--gap-sm);
   }
 
-  .bottom-sheet .detail-title h3 {
+  .mobile-panel .detail-title h3 {
     font-size: var(--text-sm);
   }
 
-  .bottom-sheet .detail-subtitle {
+  .mobile-panel .detail-subtitle {
     font-size: var(--text-2xs);
   }
 
   /* --- the view swap ---
-     One sheet, two bodies: the filters button in a detail header, and the row
+     One slot, two bodies: the filters button in a detail header, and the row
      that goes back to the selection at the top of the filters. */
   .sheet-back-btn {
     display: flex;
@@ -556,9 +642,7 @@
     gap: var(--gap-xs);
     flex: none;
     width: 100%;
-    /* Pinned to the peek row so a minimized browse sheet says what it covers —
-       and the stats row below it gives that height up. */
-    min-height: var(--sheet-peek-row);
+    min-height: var(--tap-min);
     padding: 0;
     background: none;
     border: none;
@@ -576,34 +660,25 @@
     white-space: nowrap;
   }
 
-  /* The back row takes the peek row over, so the live count gives up the height
-     it is pinned to (BottomSheet.css) and follows underneath. */
-  .bottom-sheet--filter .sheet-back-btn + .panel-stats {
-    min-height: 0;
+  .mobile-panel--filter .sheet-back-btn + .panel-stats {
     padding-top: var(--gap-sm);
   }
 
-  /* A browse sheet with something selected behind it peeks one row taller, so
-     that row is a real thumb target rather than a 31px line of text. */
-  .bottom-sheet--filter.has-back {
-    --sheet-peek-height: 86px;
-  }
-
-  /* The port board and the webcam picture want the sheet's full width. */
-  .bottom-sheet .port-calls-list {
+  /* The port board and the webcam picture want the page's full width. */
+  .mobile-panel .port-calls-list {
     gap: var(--gap-xs);
   }
 
-  .bottom-sheet .port-call-row {
+  .mobile-panel .port-call-row {
     min-height: var(--row-min);
   }
 
-  .bottom-sheet .call-time {
+  .mobile-panel .call-time {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
 
-  .bottom-sheet.webcam-popup .webcam-embed {
+  .mobile-panel.webcam-popup .webcam-embed {
     margin: 0 calc(var(--gutter) * -1);
     border-radius: 0;
   }
@@ -645,17 +720,17 @@
     color: var(--accent);
   }
 
-  .bottom-sheet .board-row {
+  .mobile-panel .board-row {
     min-height: var(--row-min);
     border-bottom: 1px solid var(--seam);
   }
 
-  .bottom-sheet .board-train,
-  .bottom-sheet .board-terminus {
+  .mobile-panel .board-train,
+  .mobile-panel .board-terminus {
     font-size: var(--text-xs);
   }
 
-  .bottom-sheet .section-label {
+  .mobile-panel .section-label {
     font-size: var(--text-2xs);
   }
 }

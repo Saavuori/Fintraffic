@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, ChevronRight, ChevronDown, ChevronUp, TrainFront, MapPin } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
-import { BottomSheet } from '../../../shared/components/BottomSheet';
+import { Panel } from '../../../shared/components/Panel';
 import { BrowseButton } from '../../../shared/components/SheetViewSwitch';
 import { useValueTick } from '../../../shared/hooks/useValueTick';
 import {
@@ -283,13 +283,10 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     : station?.code ?? '';
 
   return (
-    <BottomSheet
+    <Panel
       variant="detail"
       isMobile={isMobile}
       open={open}
-      /* A train is a header, a route line and the stops ahead; a station is a
-         board, and a board is a list that earns the taller stop. */
-      restRatio={station ? 0.72 : 0.5}
       ariaLabel="Open details panel"
       collapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
@@ -339,6 +336,6 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
           )}
         </div>
       )}
-    </BottomSheet>
+    </Panel>
   );
 };

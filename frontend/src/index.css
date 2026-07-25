@@ -319,6 +319,16 @@ a,
   padding: 4px;
 }
 
+/* Heading over what the box offers before anything is typed. */
+.vessel-search-group {
+  padding: 6px 8px 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .vessel-search-result {
   display: flex;
   align-items: center;
@@ -364,19 +374,35 @@ a,
 
 /* Floating search pill over the map (mobile only — only mounted there). The
    bottom tab bar cleared the top of the screen, so search lives up here instead
-   of being buried under the sheet's peek. Reuses the .vessel-search internals
-   but wears the full glass-panel treatment rather than the inset field look. */
+   of being buried under a panel. Reuses the .vessel-search internals
+   but wears the full glass-panel treatment rather than the inset field look.
+
+   At rest it is a single icon button: a full-width bar across the top of a map
+   is a band of chrome over the one thing the app is for, and nothing in it is
+   readable until you type. Tapping unfolds the field; leaving it empty folds it
+   back (see EntitySearch). */
 .vessel-search-overlay {
   position: absolute;
-  z-index: 15;
+  /* Above the expanded vessel details, which it unfolds across. */
+  z-index: 16;
   top: calc(env(safe-area-inset-top) + 12px);
   left: 12px;
-  right: 12px;
+  /* A definite width rather than left+right, so the unfold can be animated. */
+  width: calc(100% - 24px);
+  transition: width 0.18s ease;
+}
+
+.vessel-search-overlay.is-collapsed {
+  width: var(--tap-min, 44px);
 }
 
 .vessel-search-overlay .vessel-search {
+  box-sizing: border-box;
   margin-bottom: 0;
-  padding: 11px 12px;
+  /* The toggle owns the left inset — a thumb-sized target, and the same box
+     the folded state is, so folding changes the width and nothing else. */
+  height: var(--tap-min, 44px);
+  padding: 0 12px 0 0;
   border-radius: 12px;
   background: var(--bg-panel);
   border-color: var(--border-glow);
@@ -385,8 +411,53 @@ a,
   box-shadow: 0 8px 28px -12px rgba(0, 0, 0, 0.7);
 }
 
+.vessel-search-overlay.is-collapsed .vessel-search {
+  gap: 0;
+  padding: 0;
+  border-radius: 999px;
+  justify-content: center;
+}
+
+/* Kept in the tree while folded so focus can move into it — hidden by width, not
+   by `display`, and taken out of the tab order in the component. */
+.vessel-search-overlay.is-collapsed .vessel-search-input {
+  flex: 0 0 0;
+  width: 0;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .vessel-search-overlay .vessel-search-input {
   font-size: 0.9rem;
+}
+
+/* The icon is the affordance when folded and the close control when open. */
+.vessel-search-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--tap-min, 44px);
+  height: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 999px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+/* Folded, the button is the whole pill — the entire circle is the tap target. */
+.vessel-search-overlay.is-collapsed .vessel-search-toggle {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  color: var(--text-primary);
+}
+
+.vessel-search-toggle:hover {
+  color: var(--text-primary);
 }
 
 .filter-scroll-area {
@@ -521,7 +592,7 @@ a,
   margin-top: 2px;
 }
 
-/* ---------- Nearest-vessels list (desktop rail + mobile glanceable peek) ---------- */
+/* ---------- Nearest-vessels list (desktop rail + mobile panel) ---------- */
 
 .nearest-list {
   display: flex;
@@ -1471,19 +1542,12 @@ a,
 
 /* ---------- Mobile ---------- */
 
-/* On phones the side panels become draggable bottom sheets (see
-   shared/components/BottomSheet). Each open sheet publishes its live height to
-   --sheet-height-<id>; --active-sheet-height is the taller of the two, so the
-   bottom-anchored map controls below always clear whichever sheet is expanded
-   (the fix for the old buried-locate-button problem). useBottomSheet writes the
-   two inputs; the max() here recomposes without any JS coordination. */
+/* On phones the side panels become full-screen pages (see
+   shared/components/Panel). */
 :root {
-  --sheet-height-filter: 0px;
-  --sheet-height-detail: 0px;
-  --active-sheet-height: max(var(--sheet-height-filter), var(--sheet-height-detail));
   /* Height reserved by the mobile bottom tab bar (0 on desktop, where the
-     switcher is a floating pill). Bottom sheets rest on top of this band and
-     the floating map controls add it into their bottom offset so nothing hides
+     switcher is a floating pill). A panel page stops at its top edge and the
+     floating map controls add it into their bottom offset, so nothing hides
      behind the nav. Includes the home-indicator safe area. */
   --tabbar-height: 0px;
 }

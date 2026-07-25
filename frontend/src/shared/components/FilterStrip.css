@@ -1,0 +1,179 @@
+/* The phone's filter rail. Mounted only under the mobile breakpoint (the apps
+   gate it on the same condition as the search pill), so these rules need no
+   media query — but they are phone rules, and they use the phone's tokens.
+
+   The right edge is the strip's own column: the button sits directly under the
+   settings launcher, and the kinds unfold below it as individual pills, each
+   sized to its own label. There is no panel behind them — a box would be as wide
+   as its longest row for the sake of its shortest, and every pixel of it is map
+   that isn't visible while you filter. */
+
+.filter-strip-btn {
+  position: fixed;
+  /* Above the expanded vessel details (15): the strip sits beside them, and its
+     pills unfold across the gap between the two. */
+  z-index: 16;
+  /* Under the settings launcher: 12px inset + its 44px + an 8px gap. */
+  top: calc(env(safe-area-inset-top) + 64px);
+  right: 12px;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1px solid var(--seam-strong);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ink-900) 82%, transparent);
+  box-shadow: 0 8px 28px -12px rgba(0, 0, 0, 0.7);
+  color: var(--text-body);
+  cursor: pointer;
+  transition: color 0.15s, transform 0.15s;
+}
+
+.filter-strip-btn:active {
+  transform: scale(0.94);
+  color: var(--text-primary);
+}
+
+/* Lit while the pills are showing — the button's own state, not a different
+   button. */
+.filter-strip-btn--on {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, color-mix(in srgb, var(--ink-900) 82%, transparent));
+}
+
+/* Filtering is invisible on the map itself — the ships that aren't there don't
+   announce themselves — so the button carries the fact. */
+.filter-strip-btn__dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* A column of pills, not a panel: transparent, right-aligned, each row only as
+   wide as what it says. */
+.filter-strip {
+  position: fixed;
+  z-index: 16;
+  top: calc(env(safe-area-inset-top) + 116px);
+  right: 12px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(
+    100dvh - env(safe-area-inset-top) - 116px - var(--tabbar-height) - var(--gap-md)
+  );
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Room for the pills' own shadows inside the scroll box. */
+  padding: 2px;
+  animation: filter-strip-in 0.16s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes filter-strip-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* Each kind is its own pill: shrink-wrapped to its label, and no wider. Small
+   and slightly see-through — this is a column of labels standing on the map, and
+   the map is what you are filtering. Under the 44px thumb floor the rest of the
+   phone UI keeps, which is the trade for pills this size. */
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  gap: 5px;
+  max-width: 100%;
+  min-height: 30px;
+  padding: 0 9px;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--ink-900) 82%, transparent);
+  border: 1px solid var(--seam-strong);
+  border-radius: 999px;
+  box-shadow: 0 6px 20px -10px rgba(0, 0, 0, 0.7);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--text-2xs);
+  line-height: 1;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.filter-chip:active {
+  background: color-mix(in srgb, var(--ink-700) 92%, transparent);
+}
+
+/* Hidden kinds stay in the column, dimmed and hollow — the same reading as the
+   desktop rail's inactive rows, and the only way to get them back. */
+.filter-chip--off {
+  opacity: 0.5;
+}
+
+.filter-chip--off .filter-chip__dot {
+  background: none !important;
+  border-color: var(--text-muted);
+}
+
+/* The map's own colour for this kind, and nothing more: a dot the size of the
+   text beside it. */
+.filter-chip__dot {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1px solid var(--seam-strong);
+}
+
+/* Tie keys its layers by shape, so those chips lead with the marker's glyph. */
+.filter-chip__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--text-secondary);
+}
+
+/* Sized by the text, so no flex-grow and no ellipsis until a label would run off
+   the screen entirely. */
+.filter-chip__label {
+  flex: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filter-chip__count {
+  flex: none;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.filter-chip--all {
+  padding: 0 10px;
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filter-strip {
+    animation: none;
+  }
+
+  .filter-strip-btn:active {
+    transform: none;
+  }
+}

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 
 const MAX_RESULTS = 8;
@@ -27,8 +27,17 @@ interface EntitySearchProps {
   /** Shown when nothing matches — name the thing, not "no results". */
   emptyText: string;
   /**
-   * 'panel' → inline in a desktop rail. 'floating' → the pill over the map on a
-   * phone. Only picks the wrapper class; the field and results are identical.
+   * What the box offers before anything is typed: the things nearest the middle
+   * of the map. Opening search is nearly always "what is that one over there",
+   * and the answer is a tap rather than a name you have to know how to spell.
+   */
+  suggestions?: SearchItem[];
+  /** Heading over the suggestions. */
+  suggestionsLabel?: string;
+  /**
+   * 'panel' → inline in a desktop rail, always open. 'floating' → the pill over
+   * the map on a phone, which rests as just its icon and unfolds when tapped.
+   * The field and results are identical either way.
    */
   variant?: 'panel' | 'floating';
 }
@@ -49,9 +58,24 @@ export const EntitySearch: React.FC<EntitySearchProps> = ({
   placeholder,
   ariaLabel,
   emptyText,
+  suggestions,
+  suggestionsLabel = 'Nearest',
   variant = 'panel',
 }) => {
   const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  /* The floating pill is the only chrome over the map, so at rest it is just its
+     icon and the map keeps the width. The panel variant sits in a rail that is
+     already open and has nothing to reclaim. */
+  const collapsible = variant === 'floating';
+  const expanded = !collapsible || open;
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -59,32 +83,88 @@ export const EntitySearch: React.FC<EntitySearchProps> = ({
     return items.filter((item) => item.haystack.includes(q)).slice(0, MAX_RESULTS);
   }, [items, query]);
 
-  const pick = (id: string) => {
-    onPick(id);
+  const collapse = () => {
     setQuery('');
+    setOpen(false);
+    inputRef.current?.blur();
   };
 
+  const pick = (id: string) => {
+    onPick(id);
+    if (collapsible) collapse();
+    else setQuery('');
+  };
+
+  // Nothing typed yet, and the box has been asked for: offer the nearest. The
+  // pill unfolding is that ask on a phone; in a rail, which is always open, it
+  // is the field taking focus.
+  const offered = suggestions ?? [];
+  const showSuggestions = !query && (collapsible ? open : focused) && offered.length > 0;
+
   return (
-    <div className={variant === 'floating' ? 'vessel-search-overlay' : undefined}>
+    <div
+      className={
+        collapsible ? `vessel-search-overlay${expanded ? '' : ' is-collapsed'}` : undefined
+      }
+    >
       <div className="vessel-search">
-        <Search size={14} className="vessel-search-icon" aria-hidden="true" />
+        {collapsible ? (
+          <button
+            type="button"
+            className="vessel-search-toggle"
+            onClick={() => (expanded ? collapse() : setOpen(true))}
+            aria-label={expanded ? 'Close search' : ariaLabel}
+            aria-expanded={expanded}
+          >
+            <Search size={16} aria-hidden="true" />
+          </button>
+        ) : (
+          <Search size={14} className="vessel-search-icon" aria-hidden="true" />
+        )}
         <input
+          ref={inputRef}
           type="text"
           className="vessel-search-input"
           placeholder={placeholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' && collapsible) collapse();
+          }}
+          /* Fold back up when the field is left empty, but stay put while a query
+             is standing — the results below it are still the point. */
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            setFocused(false);
+            if (collapsible && !query) setOpen(false);
+          }}
           aria-label={ariaLabel}
+          aria-hidden={!expanded}
+          tabIndex={expanded ? undefined : -1}
         />
         {query && (
-          <button className="vessel-search-clear" onClick={() => setQuery('')} aria-label="Clear search">
+          <button
+            className="vessel-search-clear"
+            onClick={() => {
+              setQuery('');
+              inputRef.current?.focus();
+            }}
+            aria-label="Clear search"
+          >
             <X size={13} />
           </button>
         )}
-        {query && (
-          <div className="vessel-search-results" role="listbox">
-            {results.length === 0 && <div className="panel-note">{emptyText}</div>}
-            {results.map((item) => (
+        {(query || showSuggestions) && (
+          /* Keep the focus in the field while a row is tapped: losing it would
+             unmount this list before the tap landed on anything. */
+          <div
+            className="vessel-search-results"
+            role="listbox"
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            {showSuggestions && <div className="vessel-search-group">{suggestionsLabel}</div>}
+            {query && results.length === 0 && <div className="panel-note">{emptyText}</div>}
+            {(query ? results : offered).map((item) => (
               <button
                 key={item.id}
                 className="vessel-search-result"

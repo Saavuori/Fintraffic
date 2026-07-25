@@ -19,7 +19,7 @@ import { type LayerKey, LAYER_ORDER, type LayerVisibility } from '../lib/layers'
 import { type Theme, BASEMAP_STYLES, MARKER_STROKE, TRACK_COLORS } from '../lib/theme';
 import { loadMapIcons, TRAIN_ICON_ID, STATION_PIN_ICON_ID, CANCELLED_BADGE_ICON_ID } from '../lib/mapIcons';
 import { LocateControl } from '../../../shared/components/LocateControl';
-import { useSheetCameraPadding } from '../../../shared/hooks/useSheetCameraPadding';
+import { INITIAL_CENTER, INITIAL_ZOOM } from '../lib/mapView';
 
 interface MapProps {
   onSelectTrain: (train: Train) => void;
@@ -129,8 +129,6 @@ const Map: React.FC<MapProps> = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
 
-  // Keep whatever is centred above the phone's sheet rather than behind it.
-  useSheetCameraPadding(() => map.current);
   // Latest onMoveEnd, read from the mount effect's moveend handler (which is
   // registered once) so an identity change never leaves it stale.
   const onMoveEndRef = useRef(onMoveEnd);
@@ -211,8 +209,8 @@ const Map: React.FC<MapProps> = ({
     const m = new maplibregl.Map({
       container: mapContainer.current,
       style: BASEMAP_STYLES[themeRef.current],
-      center: [25.75, 62.2], // roughly the middle of the rail network
-      zoom: 5.2,
+      center: INITIAL_CENTER,
+      zoom: INITIAL_ZOOM,
       // Own compact attribution bottom-left (see meri) instead of the default
       // expanded one bottom-right.
       attributionControl: false,

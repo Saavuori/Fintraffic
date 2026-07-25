@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, ChevronRight, Gauge, SquareParking, Camera, Zap } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
-import { BottomSheet } from '../../../shared/components/BottomSheet';
+import { Panel } from '../../../shared/components/Panel';
 import { BrowseButton } from '../../../shared/components/SheetViewSwitch';
 import { Fold } from '../../../shared/components/Fold';
 import { type Station, directionalStatuses, stationVolume, congestionColors } from '../lib/traffic';
@@ -404,13 +404,10 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   const { title, subtitle, badgeClass, Icon } = header(selection);
 
   return (
-    <BottomSheet
+    <Panel
       variant="detail"
       isMobile={isMobile}
       open={open}
-      /* A camera is a picture, a charger is a connector list, and a station or
-         a car park is a readout plus a fold. */
-      restRatio={selection.kind === 'camera' ? 0.55 : selection.kind === 'charger' ? 0.5 : 0.38}
       ariaLabel="Open details panel"
       collapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
@@ -443,6 +440,6 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
           {selection.kind === 'charger' && <ChargerDetail charger={selection.charger} isMobile={isMobile} />}
         </div>
       )}
-    </BottomSheet>
+    </Panel>
   );
 };

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, ChevronRight, ChevronDown, ChevronUp, Navigation, Anchor as AnchorIcon } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
-import { BottomSheet } from '../../../shared/components/BottomSheet';
-import { BrowseButton } from '../../../shared/components/SheetViewSwitch';
+import { Panel } from '../../../shared/components/Panel';
 import { useValueTick } from '../../../shared/hooks/useValueTick';
 import {
   categorize,
@@ -15,8 +14,6 @@ import {
 import { fetchVesselDetails } from '../lib/api';
 import { VesselActions } from './VesselActions';
 import { CourseRose } from './CourseRose';
-import { TrackReplayPanel } from './TrackReplayPanel';
-import type { TrackReplay } from '../hooks/useTrackReplay';
 import type { Vessel, VesselDetailsResponse } from '../types';
 
 interface VesselPopupProps {
@@ -33,15 +30,11 @@ interface VesselPopupProps {
   onToggleTrail: () => void;
   trailWindowSec: number;
   onSetTrailWindow: (sec: number) => void;
-  /** The selected vessel's own track playback, unfolded in the sheet on mobile. */
-  trackReplay: TrackReplay;
   // During replay the selected vessel may not be transmitting live AIS at
   // all, so skip the live metadata fetch rather than show an unrelated ship.
   replayActive?: boolean;
-  /** False while the phone's one sheet is showing the filters instead. */
+  /** False while the phone's one slot is showing the filters instead. */
   open?: boolean;
-  /** Switches the phone's sheet to the filters without dropping the selection. */
-  onShowBrowse?: () => void;
 }
 
 function formatEta(eta?: string): string | null {
@@ -66,10 +59,8 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
   onToggleTrail,
   trailWindowSec,
   onSetTrailWindow,
-  trackReplay,
   replayActive = false,
   open = true,
-  onShowBrowse,
 }) => {
   const bodyCollapsed = !isMobile && isCollapsed;
   const [details, setDetails] = useState<VesselDetailsResponse | null>(null);
@@ -170,15 +161,9 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
   );
 
   return (
-    <BottomSheet
+    <Panel
       variant="detail"
       className="vessel-sheet"
-      /* Sized to the body, so nothing is left over for the map to lose. The
-         three cases are the three heights the body actually has: no action row
-         during a fleet replay, one row normally, two once the trail's window
-         chips join it. Changing it mid-selection animates, so switching the
-         trail on reads as the panel unfolding to make room. */
-      restRatio={replayActive ? 0.34 : showTrail ? 0.58 : 0.43}
       isMobile={isMobile}
       open={open}
       ariaLabel="Open vessel details"
@@ -187,7 +172,25 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
     >
       {!bodyCollapsed && (
         <div className="detail-content" onClick={stopPanelClick}>
-          <div className="detail-header">
+          <div
+            className="detail-header"
+            /* The whole row is the control: tapping it opened the details and
+               tapping it again puts them away. */
+            onClick={isMobile ? onToggleCollapse : undefined}
+            role={isMobile ? 'button' : undefined}
+            tabIndex={isMobile ? 0 : undefined}
+            aria-expanded={isMobile ? true : undefined}
+            onKeyDown={
+              isMobile
+                ? (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onToggleCollapse();
+                    }
+                  }
+                : undefined
+            }
+          >
             {/* The phone's badge is the map's own arrow at the ship's own
                 bearing; the desktop rail keeps the generic glyph. */}
             {isMobile ? (
@@ -214,8 +217,8 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
               </span>
             </div>
 
-            {/* The readout: the two numbers you keep a ship selected for, in the
-                one row a minimized sheet still shows. */}
+            {/* The readout: the two numbers you keep a ship selected for, on the
+                one row the bar shows when it is folded. */}
             {isMobile && (
               <div className="vessel-readout">
                 <span className={`readout-value ${speedTick}`}>
@@ -226,11 +229,26 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
               </div>
             )}
 
-            {isMobile && onShowBrowse && <BrowseButton onClick={onShowBrowse} />}
-            <button className="icon-btn panel-collapse-btn" onClick={onToggleCollapse} aria-label="Collapse panel">
-              <ChevronRight size={16} />
-            </button>
-            <button className="icon-btn" onClick={onClose} aria-label="Close panel">
+            {/* Desktop folds the rail into its sliver. A phone folds the details
+                back by tapping the header itself — the same tap that opened
+                them, so there is no separate control to find. */}
+            {!isMobile && (
+              <button
+                className="icon-btn panel-collapse-btn"
+                onClick={onToggleCollapse}
+                aria-label="Collapse panel"
+              >
+                <ChevronRight size={16} />
+              </button>
+            )}
+            <button
+              className="icon-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
+              aria-label="Close panel"
+            >
               <X size={16} />
             </button>
           </div>
@@ -265,16 +283,6 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
                 {vessel.dest && <b className="vessel-trip-dest">→ {vessel.dest}</b>}
                 {etaText && <span className="vessel-trip-eta">ETA {etaText}</span>}
               </div>
-
-              {/* Track history on: the transport unfolds here rather than
-                  floating over the map, next to the ship it is rewinding. */}
-              {showTrail && !replayActive && (
-                <TrackReplayPanel
-                  replay={trackReplay}
-                  trailWindowSec={trailWindowSec}
-                  onSetTrailWindow={onSetTrailWindow}
-                />
-              )}
 
               <button
                 className="detail-more-btn"
@@ -357,6 +365,6 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
           )}
         </div>
       )}
-    </BottomSheet>
+    </Panel>
   );
 };
