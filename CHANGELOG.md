@@ -2,12 +2,6 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
-## [v0.14.0] - 2026-07-25
-
-### Changed
-- **Track replay moved into the top bar, and unfolds with the track history**: on desktop the replay was a separate floating bar at the bottom of the map that only existed once playback had been started from a small rewind icon — the controls for one feature sat at opposite ends of the screen, and nothing on screen suggested a recorded track could be played at all until you found that icon. Switching on the track history now unfolds the transport directly under the vessel's name in the top bar: restart, play, 0.5–4× speed and a scrubber already scaled to the recorded window, so the replay reads as part of the track history rather than a separate mode to enter. The play button opens the session that the rewind icon used to, and that icon is gone from the desktop row. Phones are unchanged — they hide the top bar entirely, so the floating transport still stands in there.
-- **The replay range is the track history's own 1h / 24h / 7d / 60d**: those buttons moved down into the replay section, where they now visibly set both things at once. They always did — the playback rewinds the very points the trail is drawn from, so its range was never separate — but sitting in the title row they read as a trail setting that playback happened to inherit. Fleet replay keeps its shorter 1h/3h/6h windows: every active vessel contributes points to it, so the longer spans are nothing like an affordable request there.
-
 ## [v0.13.0] - 2026-07-25
 
 ### Added
