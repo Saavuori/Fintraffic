@@ -971,8 +971,8 @@ a,
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   background: var(--bg-panel);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -981,6 +981,35 @@ a,
   box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
   padding: 8px 12px;
   max-width: min(92vw, 560px);
+}
+
+.vessel-card-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Unfolded by the track history: the scrubber needs a stable width to be worth
+   dragging, so the bar stops shrinking to its title and takes the transport's
+   own measure — the same one the floating replay bars use. */
+.vessel-card-overlay--expanded {
+  width: min(92vw, 560px);
+}
+
+.track-replay-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-faint);
+}
+
+/* The panel leads with the window buttons; this (its only icon button, the
+   restart) opens the transport group, which the speed control's own auto margin
+   then balances against the right edge instead of leaving one wide gap. */
+.track-replay-panel .replay-row .icon-btn {
+  margin-left: auto;
 }
 
 .vessel-card-dot {

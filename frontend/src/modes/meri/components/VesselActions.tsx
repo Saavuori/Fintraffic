@@ -1,5 +1,6 @@
 import React from 'react';
 import { Crosshair, Route, Rewind } from 'lucide-react';
+import { TRAIL_WINDOWS } from '../lib/trailWindows';
 
 interface VesselActionsProps {
   isFollowing: boolean;
@@ -10,20 +11,16 @@ interface VesselActionsProps {
   onSetTrailWindow: (sec: number) => void;
   // Replay of the selected vessel's own recorded track. Only offered while the
   // track is on screen — it animates the very points the trail is drawn from.
-  trackReplayAvailable: boolean;
-  trackReplayActive: boolean;
-  onToggleTrackReplay: () => void;
+  trackReplayAvailable?: boolean;
+  trackReplayActive?: boolean;
+  onToggleTrackReplay?: () => void;
+  // The desktop card unfolds a full replay panel below this row, which owns the
+  // window buttons and its own transport; there the row keeps only the toggles.
+  showTrackControls?: boolean;
   // Follow and trail act on the live layers, which are hidden during replay —
   // render nothing so callers stay info-only while playback runs.
   replayActive?: boolean;
 }
-
-const TRAIL_WINDOWS: { label: string; sec: number }[] = [
-  { label: '1h', sec: 3600 },
-  { label: '24h', sec: 24 * 3600 },
-  { label: '7d', sec: 7 * 24 * 3600 },
-  { label: '60d', sec: 60 * 24 * 3600 },
-];
 
 /**
  * The follow / track-history controls shared by the floating vessel card
@@ -37,16 +34,17 @@ export const VesselActions: React.FC<VesselActionsProps> = ({
   onToggleTrail,
   trailWindowSec,
   onSetTrailWindow,
-  trackReplayAvailable,
-  trackReplayActive,
+  trackReplayAvailable = false,
+  trackReplayActive = false,
   onToggleTrackReplay,
+  showTrackControls = true,
   replayActive = false,
 }) => {
   if (replayActive) return null;
 
   return (
     <>
-      {showTrail && (
+      {showTrail && showTrackControls && (
         <span className="trail-window" role="group" aria-label="Track history window">
           {TRAIL_WINDOWS.map((w) => (
             <button
@@ -61,7 +59,7 @@ export const VesselActions: React.FC<VesselActionsProps> = ({
       )}
       {/* Stays mounted but disabled when there's nothing recorded yet, so the
           row doesn't reflow the instant a first fix lands. */}
-      {showTrail && (
+      {showTrail && showTrackControls && (
         <button
           className={`icon-btn track-replay-btn ${trackReplayActive ? 'active' : ''}`}
           onClick={onToggleTrackReplay}
