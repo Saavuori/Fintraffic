@@ -4,8 +4,16 @@ import { FilterPanel } from './components/FilterPanel';
 import { DetailPanel } from './components/DetailPanel';
 import { SelectedCard } from './components/SelectedCard';
 import { useIsMobile, MOBILE_QUERY } from '../../shared/hooks/useMediaQuery';
+import { useSheetView } from '../../shared/hooks/useSheetView';
 import { type Theme } from './lib/theme';
-import { type Train, type StationMeta, type Board, type TrainGroup, trainGroup } from './lib/trains';
+import {
+  type Train,
+  type StationMeta,
+  type Board,
+  type TrainGroup,
+  trainGroup,
+  trainTitle,
+} from './lib/trains';
 import { type LayerKey, type LayerVisibility, DEFAULT_LAYER_VISIBILITY } from './lib/layers';
 import './raide.css';
 
@@ -27,6 +35,8 @@ interface RaideAppProps {
 function RaideApp({ theme, onToggleTheme }: RaideAppProps) {
   const isMobile = useIsMobile();
   const [trains, setTrains] = useState<Train[]>([]);
+  // Kept here rather than only in the map, so search can reach them.
+  const [stations, setStations] = useState<StationMeta[]>([]);
   const [selectedTrain, setSelectedTrain] = useState<Train | null>(null);
   const [selectedStation, setSelectedStation] = useState<StationMeta | null>(null);
   const [board, setBoard] = useState<Board | null>(null);
@@ -125,27 +135,43 @@ function RaideApp({ theme, onToggleTheme }: RaideAppProps) {
 
   const hasSelection = selectedTrain !== null || selectedStation !== null;
 
+  // The phone's one sheet shows either the selection or the filters (see
+  // useSheetView); on desktop both rails are up as before.
+  const selectionKey = selectedTrain
+    ? `train:${selectedTrain.trainNumber}/${selectedTrain.departureDate}`
+    : selectedStation
+      ? `station:${selectedStation.code}`
+      : null;
+  const selectionLabel = selectedTrain
+    ? trainTitle(selectedTrain)
+    : selectedStation?.name ?? '';
+  const sheet = useSheetView(isMobile, selectionKey);
+
   return (
     <div className="dashboard-container mode-raide">
       <Map
         onSelectTrain={selectTrain}
         onSelectStation={selectStation}
         onTrainsUpdate={onTrainsUpdate}
+        onStationsUpdate={setStations}
         visibility={layerVisibility}
         theme={theme}
         onMoveEnd={handleMoveEnd}
       />
 
       <FilterPanel
-        /* Two sheets can't share one bottom edge on a phone — a detail sheet
-           would sit exactly on top of the filter sheet's handle. So the filter
-           sheet stands down while something is selected; closing the detail
-           brings it back. Desktop shows both rails as before. */
-        open={!isMobile || !hasSelection}
+        /* The filters and the selection take turns in the phone's one sheet:
+           the detail header's filters button swaps to this, the row at the top
+           of it swaps back. Desktop shows both rails at once as before. */
+        open={sheet.browseOpen}
+        selectionLabel={hasSelection ? selectionLabel : null}
+        onBackToSelection={sheet.showDetail}
         total={trains.length}
         counts={counts}
         trains={trains}
         onSelectTrain={selectTrain}
+        stations={stations}
+        onSelectStation={selectStation}
         mapCenter={mapCenter}
         visibility={layerVisibility}
         onToggleLayer={toggleLayer}
@@ -174,6 +200,8 @@ function RaideApp({ theme, onToggleTheme }: RaideAppProps) {
           isCollapsed={isDetailCollapsed}
           onToggleCollapse={() => setIsDetailCollapsed(v => !v)}
           isMobile={isMobile}
+          open={sheet.detailOpen}
+          onShowBrowse={sheet.showBrowse}
         />
       )}
     </div>

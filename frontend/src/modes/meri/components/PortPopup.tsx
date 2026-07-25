@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, ChevronRight, Anchor, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { BottomSheet } from '../../../shared/components/BottomSheet';
+import { BrowseButton } from '../../../shared/components/SheetViewSwitch';
 import { fetchPortCalls } from '../lib/api';
 import type { Port, PortCall } from '../types';
 
@@ -12,6 +13,10 @@ interface PortPopupProps {
   onToggleCollapse: () => void;
   isMobile: boolean;
   onSelectVessel: (mmsi: number) => void;
+  /** False while the phone's one sheet is showing the filters instead. */
+  open?: boolean;
+  /** Switches the phone's sheet to the filters without dropping the selection. */
+  onShowBrowse?: () => void;
 }
 
 interface CallRow {
@@ -71,6 +76,8 @@ export const PortPopup: React.FC<PortPopupProps> = ({
   onToggleCollapse,
   isMobile,
   onSelectVessel,
+  open = true,
+  onShowBrowse,
 }) => {
   const bodyCollapsed = !isMobile && isCollapsed;
   const [rows, setRows] = useState<CallRow[] | null>(null);
@@ -104,7 +111,9 @@ export const PortPopup: React.FC<PortPopupProps> = ({
     <BottomSheet
       variant="detail"
       isMobile={isMobile}
-      open
+      open={open}
+      /* A board is a list: it earns the tall stop, unlike the vessel sheet. */
+      restRatio={0.72}
       ariaLabel="Open port details"
       collapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
@@ -119,6 +128,7 @@ export const PortPopup: React.FC<PortPopupProps> = ({
               <h3>{port.name}</h3>
               <span className="detail-subtitle">{port.locode}</span>
             </div>
+            {isMobile && onShowBrowse && <BrowseButton onClick={onShowBrowse} />}
             <button className="icon-btn panel-collapse-btn" onClick={onToggleCollapse} aria-label="Collapse panel">
               <ChevronRight size={16} />
             </button>
@@ -127,7 +137,9 @@ export const PortPopup: React.FC<PortPopupProps> = ({
             </button>
           </div>
 
-          <div className="filter-section-title">Arrivals &amp; departures</div>
+          {/* The board is the whole reason a port was tapped, so on a phone it
+              starts straight away rather than under a heading naming it. */}
+          {!isMobile && <div className="filter-section-title">Arrivals &amp; departures</div>}
 
           <div className="port-calls-list">
             {rows === null && !error && <div className="panel-note">Loading…</div>}

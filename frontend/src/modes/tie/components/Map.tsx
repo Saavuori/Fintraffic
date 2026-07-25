@@ -16,6 +16,15 @@ import { type ChargingStation, chargingLevel, availabilityText } from '../lib/ch
 import { type LayerKey, LAYER_ORDER, type LayerVisibility, poiColors } from '../lib/layers';
 import { type Theme, BASEMAP_STYLES } from '../lib/theme';
 import { LocateControl } from '../../../shared/components/LocateControl';
+import { useSheetCameraPadding } from '../../../shared/hooks/useSheetCameraPadding';
+
+/** The map's live feeds, handed up so the app can search them. */
+export interface TieData {
+  stations: Station[];
+  facilities: ParkingFacility[];
+  cameras: WeathercamStation[];
+  chargers: ChargingStation[];
+}
 
 interface MapProps {
   onSelectStation: (station: Station) => void;
@@ -24,6 +33,8 @@ interface MapProps {
   onSelectCharger: (charger: ChargingStation) => void;
   visibility: LayerVisibility;
   theme: Theme;
+  /** Fired per feed as it lands, with just that feed's slice. */
+  onDataUpdate?: (patch: Partial<TieData>) => void;
 }
 
 const STATIONS_SOURCE = 'tms-stations';
@@ -122,9 +133,19 @@ const Map: React.FC<MapProps> = ({
   onSelectCharger,
   visibility,
   theme,
+  onDataUpdate,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
+
+  // Keep whatever is centred above the phone's sheet rather than behind it.
+  useSheetCameraPadding(() => map.current);
+  // The polls are registered once inside the mount effect, so they read the
+  // callback through a ref rather than closing over the mounting render's copy.
+  const onDataUpdateRef = useRef(onDataUpdate);
+  useEffect(() => {
+    onDataUpdateRef.current = onDataUpdate;
+  }, [onDataUpdate]);
   const stationsById = useRef<globalThis.Map<number, Station>>(new globalThis.Map());
   const facilitiesById = useRef<globalThis.Map<number, ParkingFacility>>(new globalThis.Map());
   const camerasById = useRef<globalThis.Map<string, WeathercamStation>>(new globalThis.Map());
@@ -336,6 +357,7 @@ const Map: React.FC<MapProps> = ({
         const stations: Station[] = await res.json();
 
         stationsById.current = new globalThis.Map(stations.map(s => [s.id, s]));
+        onDataUpdateRef.current?.({ stations });
 
         const stationsGeojson = toStationsGeoJSON(stations);
         const stationsSource = m.getSource(STATIONS_SOURCE) as maplibregl.GeoJSONSource | undefined;
@@ -508,6 +530,7 @@ const Map: React.FC<MapProps> = ({
         const facilities = allFacilities.filter(f => f.spacesAvailable != null);
 
         facilitiesById.current = new globalThis.Map(facilities.map(f => [f.id, f]));
+        onDataUpdateRef.current?.({ facilities });
 
         const geojson = toParkingGeoJSON(facilities);
         const source = m.getSource(PARKING_SOURCE) as maplibregl.GeoJSONSource | undefined;
@@ -589,6 +612,7 @@ const Map: React.FC<MapProps> = ({
         const stations: WeathercamStation[] = await res.json();
 
         camerasById.current = new globalThis.Map(stations.map(s => [s.id, s]));
+        onDataUpdateRef.current?.({ cameras: stations });
 
         const geojson = toWeathercamsGeoJSON(stations);
         const source = m.getSource(WEATHERCAM_SOURCE) as maplibregl.GeoJSONSource | undefined;
@@ -662,6 +686,7 @@ const Map: React.FC<MapProps> = ({
         const stations: ChargingStation[] = await res.json();
 
         chargersById.current = new globalThis.Map(stations.map(s => [s.id, s]));
+        onDataUpdateRef.current?.({ chargers: stations });
 
         const geojson = toChargingGeoJSON(stations);
         const source = m.getSource(CHARGING_SOURCE) as maplibregl.GeoJSONSource | undefined;

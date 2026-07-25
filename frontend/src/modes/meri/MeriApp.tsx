@@ -4,7 +4,13 @@ import { useVesselData } from './hooks/useVesselData';
 import { useVesselTrail } from './hooks/useVesselTrail';
 import { useTrackReplay } from './hooks/useTrackReplay';
 import { useFleetReplay } from './hooks/useFleetReplay';
-import { useIsMobile, MOBILE_QUERY } from '../../shared/hooks/useMediaQuery';
+import {
+  useIsMobile,
+  useMediaQuery,
+  MOBILE_QUERY,
+  SHORT_LANDSCAPE_QUERY,
+} from '../../shared/hooks/useMediaQuery';
+import { useSheetView } from '../../shared/hooks/useSheetView';
 import { Map } from './components/Map';
 import { FilterPanel } from './components/FilterPanel';
 import { VesselSearch } from './components/VesselSearch';
@@ -13,7 +19,6 @@ import { VesselCard } from './components/VesselCard';
 import { PortPopup } from './components/PortPopup';
 import { WebcamPopup } from './components/WebcamPopup';
 import { ReplayBar } from './components/ReplayBar';
-import { TrackReplayBar } from './components/TrackReplayBar';
 import { fetchPorts, fetchSeaState, fetchSeaConditions, fetchAtonFaults } from './lib/api';
 import { categorize, CATEGORY_COLORS, type ShipCategory } from './lib/shipTypes';
 import { WEBCAMS } from './lib/webcams';
@@ -125,6 +130,9 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   );
 
   const isMobile = useIsMobile();
+  // Sideways, the panels are rails again (see BottomSheet) and the floating
+  // search pill would sit on top of them.
+  const shortLandscape = useMediaQuery(SHORT_LANDSCAPE_QUERY);
 
   // Viewport centre, refreshed on map moveend, used to list the vessels nearest
   // to what the user is currently looking at — the mobile sheet's glanceable
@@ -280,6 +288,20 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   // Whether any detail sheet/panel is up (vessel, port or webcam).
   const detailOpen = displayedVessel !== null || selectedPort !== null || selectedWebcam !== null;
 
+  // What the phone's one sheet is showing. The selection and the filters take
+  // turns in the same slot instead of the filters standing down entirely.
+  const selectionKey = displayedVessel
+    ? `vessel:${displayedVessel.mmsi}`
+    : selectedPort
+      ? `port:${selectedPort.locode}`
+      : selectedWebcam
+        ? `webcam:${selectedWebcam.youtubeId}`
+        : null;
+  const selectionLabel = displayedVessel
+    ? displayedVessel.name || `MMSI ${displayedVessel.mmsi}`
+    : selectedPort?.name ?? selectedWebcam?.name ?? '';
+  const sheet = useSheetView(isMobile, selectionKey);
+
   // The trail is drawn in the selected vessel's category colour.
   const trailColor = displayedVessel
     ? CATEGORY_COLORS[categorize(displayedVessel.shipType)]
@@ -308,7 +330,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   const handleCloseWebcam = useCallback(() => setSelectedWebcam(null), []);
 
   return (
-    <div className="dashboard-container">
+    <div className="dashboard-container mode-meri">
       <Map
         vessels={displayedVessels}
         selectedMmsi={selectedMmsi}
@@ -339,16 +361,18 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
 
       {/* On mobile, search is a floating pill over the map (the bottom tab bar
           freed the top of the screen). Desktop keeps it inside the filter rail. */}
-      {isMobile && !replay.active && (
+      {isMobile && !shortLandscape && !replay.active && (
         <VesselSearch vessels={vessels} onSelectVessel={handleSelectVessel} variant="floating" />
       )}
 
       <FilterPanel
-        /* Two sheets can't share one bottom edge on a phone — a detail sheet
-           would sit exactly on top of the filter sheet's handle. So the filter
-           sheet stands down while something is selected; closing the detail
-           brings it back. Desktop shows both rails as before. */
-        open={!isMobile || !detailOpen}
+        /* Two sheets can't share one bottom edge on a phone, so the filters and
+           the selection take turns in the one slot — the detail header's
+           filters button swaps to this, and the row at the top of it swaps
+           back. Desktop shows both rails at once as before. */
+        open={sheet.browseOpen}
+        selectionLabel={detailOpen ? selectionLabel : null}
+        onBackToSelection={sheet.showDetail}
         vessels={vessels}
         onSelectVessel={handleSelectVessel}
         categoryCounts={categoryCounts}
@@ -360,6 +384,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         isCollapsed={isFilterCollapsed}
         onToggleCollapse={toggleFilterCollapsed}
         isMobile={isMobile}
+        searchInPanel={!isMobile || shortLandscape}
         mapCenter={mapCenter}
         mapTheme={mapTheme}
         setMapTheme={setMapTheme}
@@ -404,10 +429,10 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
           onToggleTrail={toggleTrail}
           trailWindowSec={trailWindowSec}
           onSetTrailWindow={setTrailWindowSec}
-          trackReplayAvailable={trackReplay.available}
-          trackReplayActive={trackReplay.active || trackReplay.loading}
-          onToggleTrackReplay={trackReplay.toggle}
+          trackReplay={trackReplay}
           replayActive={replay.active}
+          open={sheet.detailOpen}
+          onShowBrowse={sheet.showBrowse}
         />
       )}
 
@@ -419,6 +444,8 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
           onToggleCollapse={toggleDetailCollapsed}
           isMobile={isMobile}
           onSelectVessel={handleSelectVessel}
+          open={sheet.detailOpen}
+          onShowBrowse={sheet.showBrowse}
         />
       )}
 
@@ -429,19 +456,12 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
           isCollapsed={isDetailCollapsed}
           onToggleCollapse={toggleDetailCollapsed}
           isMobile={isMobile}
+          open={sheet.detailOpen}
+          onShowBrowse={sheet.showBrowse}
         />
       )}
 
       {replay.visible && <ReplayBar replay={replay} />}
-
-      {/* On desktop the transport lives in the top bar, unfolded under the
-          vessel's name. The phone hides that bar, so the floating one stands in. */}
-      {isMobile && (trackReplay.active || trackReplay.loading) && displayedVessel && (
-        <TrackReplayBar
-          replay={trackReplay}
-          vesselName={displayedVessel.name || `MMSI ${displayedVessel.mmsi}`}
-        />
-      )}
     </div>
   );
 }

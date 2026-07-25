@@ -7,6 +7,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from 'react';
+import { publishSheetHeight } from '../lib/sheetHeight';
 
 export type SnapPoint = 'peek' | 'half' | 'full';
 
@@ -31,11 +32,11 @@ interface UseBottomSheetReturn {
   isDragging: boolean;
 }
 
-/** Visible fraction of the sheet's box at the middle stop. */
+/** Visible fraction of the sheet's box at the middle stop, when CSS says nothing. */
 const HALF_RATIO = 0.56;
 
-/** A px-valued custom property off the sheet, with a fallback for first paint. */
-function cssPx(el: HTMLElement, prop: string, fallback: number): number {
+/** A numeric custom property off the sheet, with a fallback for first paint. */
+function cssNum(el: HTMLElement, prop: string, fallback: number): number {
   const declared = parseFloat(getComputedStyle(el).getPropertyValue(prop));
   return Number.isFinite(declared) && declared > 0 ? declared : fallback;
 }
@@ -47,9 +48,15 @@ function cssPx(el: HTMLElement, prop: string, fallback: number): number {
  * has to be laid out to match, so BottomSheet.css owns both numbers and this
  * reads them back rather than keeping copies that can drift.
  */
-const peekHeight = (el: HTMLElement) => cssPx(el, '--sheet-peek-height', 82);
+const peekHeight = (el: HTMLElement) => cssNum(el, '--sheet-peek-height', 88);
 /** The sheet's resting padding-bottom, which every snap adds its offset to. */
-const basePad = (el: HTMLElement) => cssPx(el, '--sheet-pad-bottom', 8);
+const basePad = (el: HTMLElement) => cssNum(el, '--sheet-pad-bottom', 8);
+/**
+ * How much of the box the middle stop shows. Also declared in CSS so a sheet can
+ * rest at the height its own content needs: a scrolling list wants the tall stop,
+ * a fixed handful of rows (Meri's vessel sheet) only wants what it fills.
+ */
+const halfRatio = (el: HTMLElement) => Math.min(1, cssNum(el, '--sheet-half-ratio', HALF_RATIO));
 const FLING_V = 0.5; // px/ms — above this a release flings one snap step
 const RUBBER = 0.3; // resistance when dragged above the full stop
 
@@ -110,15 +117,17 @@ export function useBottomSheet({
   const translateFor = useCallback((el: HTMLElement, s: SnapPoint): number => {
     const h = el.offsetHeight;
     if (s === 'full') return 0;
-    if (s === 'half') return Math.max(0, Math.round(h * (1 - HALF_RATIO)));
+    if (s === 'half') return Math.max(0, Math.round(h * (1 - halfRatio(el))));
     return Math.max(0, h - peekHeight(el)); // peek
   }, []);
 
   const publishHeight = useCallback(
     (px: number) => {
       document.documentElement.style.setProperty(cssVar, `${Math.round(Math.max(0, px))}px`);
+      // Same number, for the camera: see shared/lib/sheetHeight.
+      publishSheetHeight(sheetId, px);
     },
-    [cssVar]
+    [cssVar, sheetId]
   );
 
   // Element height the current resting position was computed against, so the

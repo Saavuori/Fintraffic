@@ -6,6 +6,7 @@ import { lerpAngle } from '../lib/lerp';
 import { deadReckon } from '../lib/geo';
 import { categorize, CATEGORY_COLORS, isStationary, ALL_CATEGORIES } from '../lib/shipTypes';
 import { LocateControl } from '../../../shared/components/LocateControl';
+import { useSheetCameraPadding } from '../../../shared/hooks/useSheetCameraPadding';
 import { WAVE_RAMP, WIND_RAMP, headlineLabel, seaConditionsPopupHtml } from '../lib/seaConditions';
 import type {
   Vessel,
@@ -457,6 +458,9 @@ export function Map({
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+
+  // Keep whatever is centred above the phone's sheet rather than behind it.
+  useSheetCameraPadding(() => mapRef.current);
 
   // Everything the rAF loop and event handlers read lives in refs so the map
   // never re-initializes and position updates never re-render React.

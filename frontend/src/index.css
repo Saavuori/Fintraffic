@@ -1,5 +1,5 @@
 :root {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-ui);
   line-height: 1.5;
   font-weight: 400;
 
@@ -1162,7 +1162,7 @@ a,
 }
 
 .replay-clock {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--text-strong);
@@ -1254,29 +1254,6 @@ a,
   color: var(--accent-coral);
 }
 
-/* Single-vessel track replay reuses the transport chrome above — the two bars
-   are never on screen together — and differs only in naming the ship it is
-   rewinding, which must not push the window's timestamps out of the row. */
-.replay-bar--track .replay-meta-mid {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.replay-bar--track .replay-meta > span:first-child,
-.replay-bar--track .replay-meta > span:last-child {
-  flex-shrink: 0;
-}
-
-@media (max-width: 768px) {
-  .replay-bar {
-    bottom: calc(12px + env(safe-area-inset-bottom));
-    width: 94vw;
-    padding: 8px 10px;
-  }
-}
-
 /* ---------- Version badge ---------- */
 
 .version-badge {
@@ -1287,7 +1264,7 @@ a,
   display: flex;
   align-items: center;
   gap: 5px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
   color: var(--text-muted);
   text-decoration: none;
@@ -1511,126 +1488,6 @@ a,
   --tabbar-height: 0px;
 }
 
-@media (max-width: 768px) {
-  /* Reserve the bottom band for the tab bar. Everything bottom-anchored below
-     adds this in, and the height here must match the rendered nav (its own
-     height is pinned to the same variable, so the two can't drift). */
-  :root {
-    --tabbar-height: calc(64px + env(safe-area-inset-bottom));
-  }
-
-  /* The floating summary pills are redundant on mobile — the detail sheet is
-     the single source of selection detail — so hide them (Meri's follow/trail
-     actions move into the sheet header via VesselActions). */
-  .vessel-card-overlay,
-  .train-card-overlay,
-  .selected-card-overlay {
-    display: none;
-  }
-
-  /* Sheet icon buttons (header collapse/close, relocated follow/trail) get the
-     full 44px thumb target. On mobile the panels render as `.bottom-sheet`. */
-  .bottom-sheet .icon-btn {
-    width: 44px;
-    height: 44px;
-  }
-
-  /* Meri's relocated follow / track-history controls, in the detail sheet. */
-  .vessel-actions-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-
-  /* Category filters (Meri ship types, Raide train types) become horizontal
-     wrapped chips on phones instead of full-width rows — denser, and quicker to
-     scan/toggle with a thumb. The swatch, label and count are unchanged. */
-  .category-list {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .category-row {
-    width: auto;
-    min-height: 38px;
-    gap: 7px;
-    padding: 8px 12px;
-    border-radius: 999px;
-  }
-
-  .category-label {
-    flex: none;
-  }
-
-  /* The bottom tab bar already names the active mode, so the filter sheet's
-     mode title ("Meriliikenne" …) and its desktop collapse chevron are
-     redundant on phones — and they eat the most valuable row, the one visible
-     at peek. Hide the header so the peek leads with real content: the live
-     count, then the nearest list. (Detail sheets keep their header — the
-     selected vessel/train name there is not redundant.) */
-  .bottom-sheet--filter .panel-header {
-    display: none;
-  }
-
-  /* With the title gone, the live count is the sheet's summary line — it's what
-     the peek shows, so BottomSheet.css styles and sizes it alongside the rest of
-     the peek geometry rather than here. */
-
-  /* Bigger tap target, lifted clear of the active sheet AND the tab bar. The
-     sheet rests on the tab bar, so its top edge is (tabbar + sheet) up from the
-     bottom; --tabbar-height already carries the safe-area inset. */
-  .locate-control {
-    width: 44px;
-    height: 44px;
-    bottom: calc(var(--active-sheet-height) + var(--tabbar-height) + 16px);
-  }
-
-  .locate-error {
-    bottom: calc(var(--active-sheet-height) + var(--tabbar-height) + 68px);
-  }
-
-  /* Keep the required attribution visible just above the active sheet. */
-  .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
-    margin-bottom: calc(var(--active-sheet-height) + var(--tabbar-height) + 8px);
-  }
-
-  /* The controls above rebase off --active-sheet-height, which the sheet
-     publishes continuously. While a finger is down that's a live value and they
-     must track it frame-for-frame; when the sheet is settling into a snap it
-     steps once, so they ease along the sheet's own curve instead of jumping
-     ahead of it. useBottomSheet toggles .sheet-dragging on <html>. */
-  .locate-control,
-  .locate-error,
-  .replay-bar,
-  .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
-    transition: bottom 0.28s cubic-bezier(0.32, 0.72, 0, 1),
-      margin-bottom 0.28s cubic-bezier(0.32, 0.72, 0, 1);
-  }
-
-  :root.sheet-dragging .locate-control,
-  :root.sheet-dragging .locate-error,
-  :root.sheet-dragging .replay-bar,
-  :root.sheet-dragging .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
-    transition: none;
-  }
-
-  /* Build metadata isn't useful on a phone. */
-  .version-badge {
-    display: none;
-  }
-
-  /* Fleet-replay transport bar clears the active sheet and the tab bar. */
-  .replay-bar {
-    bottom: calc(var(--active-sheet-height) + var(--tabbar-height) + 12px);
-  }
-
-  /* The mode switcher's transformation into a bottom tab bar lives in its own
-     media block after the desktop rules below — equal-specificity overrides
-     must come later in source order to win. */
-}
 
 /* ---------- Mode switcher (Meri / Raide / Tie) ---------- */
 
@@ -1709,81 +1566,3 @@ a,
   cursor: default;
 }
 
-/* ---- Mobile: the switcher becomes the primary bottom navigation ----
-   A fixed, thumb-zone tab bar spanning the full width. Placed after the desktop
-   rules above so these equal-specificity overrides win on phones. It sits above
-   the sheets (z 12/13) so it's always reachable; the sheets rest on top of it
-   (bottom: var(--tabbar-height)) rather than under it, so nothing overlaps. */
-@media (max-width: 768px) {
-  .mode-switcher {
-    position: fixed;
-    top: auto;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 20;
-    height: var(--tabbar-height);
-    box-sizing: border-box;
-    gap: 0;
-    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
-    border: none;
-    border-top: 1px solid var(--border-glow);
-    border-radius: 0;
-    /* Opaque, and no backdrop blur: a minimized sheet's box runs down behind the
-       bar, so anything see-through here shows that overhang bleeding through. */
-    background: var(--bg-bar);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    box-shadow: 0 -8px 28px -12px rgba(0, 0, 0, 0.55);
-  }
-
-  .mode-switcher__btn {
-    flex: 1;
-    flex-direction: column;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    padding: 4px 0;
-    border-radius: 12px;
-    font-size: 0.68rem;
-  }
-
-  .mode-switcher__icon {
-    display: grid;
-    place-items: center;
-    width: 46px;
-    height: 26px;
-    border-radius: 999px;
-    transition: background 0.2s, transform 0.15s;
-  }
-
-  /* Touch has no hover, so the press itself has to answer. */
-  .mode-switcher__btn:active:not(:disabled) .mode-switcher__icon {
-    transform: scale(0.9);
-    background: var(--bg-button-hover);
-  }
-
-  .mode-switcher__icon svg {
-    width: 22px;
-    height: 22px;
-  }
-
-  /* Active tab: the icon pill and label take the current mode's accent, so the
-     colour and the position both say where you are. Undo the desktop pill's
-     filled background/border — on the bar only the pill behind the icon fills. */
-  .mode-switcher__btn--active {
-    background: transparent;
-    border-color: transparent;
-    color: var(--switch-accent);
-  }
-
-  .mode-switcher__btn--active .mode-switcher__icon {
-    background: color-mix(in srgb, var(--switch-accent) 15%, transparent);
-  }
-
-  .mode-switcher__btn:hover:not(:disabled):not(.mode-switcher__btn--active) {
-    background: transparent;
-    color: var(--text-primary);
-  }
-}

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Ship, Anchor, Waves, TriangleAlert, Moon, Sun, ChevronLeft, History, Video } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { BottomSheet } from '../../../shared/components/BottomSheet';
+import { BackToSelection } from '../../../shared/components/SheetViewSwitch';
 import { VesselSearch } from './VesselSearch';
 import { nearestTo, formatDistanceKm } from '../lib/geo';
 import { ALL_CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS, categorize, type ShipCategory } from '../lib/shipTypes';
@@ -24,6 +25,11 @@ interface FilterPanelProps {
   isMobile: boolean;
   /** False while a detail sheet is up on mobile — see BottomSheet's `open`. */
   open?: boolean;
+  /** True wherever this panel renders as a rail; the phone's pill floats instead. */
+  searchInPanel: boolean;
+  /** What is selected behind this sheet on a phone, if anything — offers a way back. */
+  selectionLabel?: string | null;
+  onBackToSelection?: () => void;
   mapCenter: { lng: number; lat: number } | null;
   mapTheme: 'light' | 'dark';
   setMapTheme: (theme: 'light' | 'dark') => void;
@@ -53,6 +59,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   onToggleCollapse,
   isMobile,
   open = true,
+  searchInPanel,
+  selectionLabel,
+  onBackToSelection,
   mapCenter,
   mapTheme,
   setMapTheme,
@@ -88,6 +97,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       variant="filter"
       isMobile={isMobile}
       open={open}
+      className={selectionLabel ? 'has-back' : undefined}
       ariaLabel="Open filters panel"
       collapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
@@ -113,6 +123,12 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
       {!bodyCollapsed && (
         <div className="filter-content" onClick={stopPanelClick}>
+          {/* The way back to what is selected. It sits in the peek row so a
+              minimized browse sheet still says what it is covering. */}
+          {selectionLabel && onBackToSelection && (
+            <BackToSelection label={selectionLabel} onClick={onBackToSelection} />
+          )}
+
           <div className="panel-stats">
             <span
               className={`conn-dot ${connectionStatus}`}
@@ -128,10 +144,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             )}
           </div>
 
-          {/* Desktop keeps search inside the rail. On mobile it moves out to a
-              floating pill over the map (rendered by MeriApp), so it isn't
-              buried under the sheet's peek. */}
-          {!isMobile && <VesselSearch vessels={vessels} onSelectVessel={onSelectVessel} />}
+          {/* Desktop keeps search inside the rail. On a phone held upright it
+              moves out to a floating pill over the map (rendered by MeriApp) so
+              it isn't buried under the sheet's peek; held sideways the panel is
+              a rail again and takes the box back. */}
+          {searchInPanel && <VesselSearch vessels={vessels} onSelectVessel={onSelectVessel} />}
 
           <div className="filter-scroll-area">
             {nearest.length > 0 && (

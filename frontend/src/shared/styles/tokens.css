@@ -1,0 +1,137 @@
+/* ---------------------------------------------------------------------------
+   Design tokens.
+
+   Loaded before index.css. The older `--bg-panel` / `--text-*` tokens in
+   index.css still drive the desktop rails and stay where they are; what lives
+   here is the layer the phone UI is built on, plus the two things that are
+   deliberately app-wide — the typefaces and the motion setting.
+
+   Type: one app, one voice. Barlow Semi Condensed carries the interface (a
+   signage face — and semi-condensed fits roughly a sixth more characters per
+   row, which is why "FINNCANOPUS" and "Kirkkonummi" stop ellipsing on a 375px
+   screen). JetBrains Mono has exactly one job: values a sensor reported —
+   speeds, delays, times, coordinates, MMSI — and the boards they line up in.
+   If a number was measured, it is monospaced; if it was written, it is not.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --font-ui: 'Barlow Semi Condensed', 'Inter', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo,
+    'Courier New', monospace;
+
+  /* Type scale (phone). Kept small and closed — five steps, no in-betweens. */
+  --text-2xs: 0.6875rem; /* 11px — labels, units */
+  --text-xs: 0.8125rem; /* 13px — secondary rows */
+  --text-sm: 0.9375rem; /* 15px — body, list rows */
+  --text-md: 1.25rem; /* 20px — readout values */
+  --text-lg: 1.75rem; /* 28px — the one big number */
+
+  /* Thumb targets. 44px is the floor for anything tappable; rows get more. */
+  --tap-min: 44px;
+  --row-min: 48px;
+  /* Chips are the smallest thing here and still clear the 44px floor: a filter
+     you tap by mistake is worse than one more row of wrapping. */
+  --chip-min: 44px;
+
+  /* Spacing rhythm on a phone: 4/8/12/16, gutters at 16. */
+  --gutter: 16px;
+  --gap-xs: 4px;
+  --gap-sm: 8px;
+  --gap-md: 12px;
+  --gap-lg: 16px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* --- instrument surfaces (phone) ---
+     Opaque, not glass: a translucent blur over a moving map costs a full-screen
+     composite every frame and washes out in sunlight. */
+  --ink-900: #04101c;
+  --ink-800: #0a1b2b;
+  --ink-700: #102639;
+  --seam: rgba(255, 255, 255, 0.07);
+  --seam-strong: rgba(255, 255, 255, 0.14);
+
+  /* Status ramp, shared by delay, congestion and faults so one colour never
+     means two things. Aliases of the existing accents, named for their job. */
+  --signal-ok: #2dd4bf;
+  --signal-warn: #fdcb6e;
+  --signal-bad: #ff7a6b;
+
+  /* The active mode's accent. App.tsx sets --switch-accent on the tab bar for
+     the same purpose; the mode roots re-publish it here so any surface can key
+     off "the colour of what I am looking at". */
+  --accent: var(--accent-teal);
+}
+
+[data-theme='light'] {
+  --ink-900: #ffffff;
+  --ink-800: #f2f6f9;
+  --ink-700: #e6eef3;
+  --seam: rgba(12, 36, 48, 0.1);
+  --seam-strong: rgba(12, 36, 48, 0.2);
+
+  --signal-ok: #0a7268;
+  --signal-warn: #b7791f;
+  --signal-bad: #d1443a;
+}
+
+/* Per-mode accent, published on the mode root so panels inside it inherit the
+   colour of the traffic they are showing. Meri keeps the default teal. */
+.mode-raide {
+  --accent: #2ecc71;
+}
+
+.mode-tie {
+  --accent: #38bdf8;
+}
+
+/* The dark-theme accents are tuned for dark ground; on white they are too pale
+   to read as text, and the accent is text as often as it is a seam. */
+[data-theme='light'] .mode-meri {
+  --accent: #0a7268;
+}
+
+[data-theme='light'] .mode-raide {
+  --accent: #0a6e3a;
+}
+
+[data-theme='light'] .mode-tie {
+  --accent: #0369a1;
+}
+
+/* Live values: measured numbers in the mono face, aligned in columns, never
+   re-flowing as digits change. */
+.readout-value,
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'zero' 1; /* slashed zero — 0 vs O at a glance */
+}
+
+/* A value that just changed gets a single quiet pulse. This is the only
+   ambient motion in the app. */
+@keyframes value-tick {
+  from {
+    color: var(--accent);
+  }
+}
+
+.value-tick {
+  animation: value-tick 0.12s ease-out;
+}
+
+/* Motion is an enhancement everywhere: sheet drags still track the finger (the
+   transform is written directly, not transitioned), they just stop easing. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

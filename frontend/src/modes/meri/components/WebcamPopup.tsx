@@ -2,6 +2,7 @@ import React from 'react';
 import { X, ChevronRight, Video } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { BottomSheet } from '../../../shared/components/BottomSheet';
+import { BrowseButton } from '../../../shared/components/SheetViewSwitch';
 import type { Webcam } from '../lib/webcams';
 
 interface WebcamPopupProps {
@@ -10,6 +11,10 @@ interface WebcamPopupProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   isMobile: boolean;
+  /** False while the phone's one sheet is showing the filters instead. */
+  open?: boolean;
+  /** Switches the phone's sheet to the filters without dropping the selection. */
+  onShowBrowse?: () => void;
 }
 
 export const WebcamPopup: React.FC<WebcamPopupProps> = ({
@@ -18,6 +23,8 @@ export const WebcamPopup: React.FC<WebcamPopupProps> = ({
   isCollapsed,
   onToggleCollapse,
   isMobile,
+  open = true,
+  onShowBrowse,
 }) => {
   const bodyCollapsed = !isMobile && isCollapsed;
 
@@ -26,7 +33,9 @@ export const WebcamPopup: React.FC<WebcamPopupProps> = ({
       variant="detail"
       className="webcam-popup"
       isMobile={isMobile}
-      open
+      open={open}
+      /* Header plus a 16:9 picture across the sheet's width, and nothing else. */
+      restRatio={0.45}
       ariaLabel="Open webcam"
       collapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
@@ -41,6 +50,7 @@ export const WebcamPopup: React.FC<WebcamPopupProps> = ({
               <h3>{webcam.name}</h3>
               <span className="detail-subtitle">Port of Helsinki webcam</span>
             </div>
+            {isMobile && onShowBrowse && <BrowseButton onClick={onShowBrowse} />}
             <button className="icon-btn panel-collapse-btn" onClick={onToggleCollapse} aria-label="Collapse panel">
               <ChevronRight size={16} />
             </button>

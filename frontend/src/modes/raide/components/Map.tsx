@@ -19,12 +19,15 @@ import { type LayerKey, LAYER_ORDER, type LayerVisibility } from '../lib/layers'
 import { type Theme, BASEMAP_STYLES, MARKER_STROKE, TRACK_COLORS } from '../lib/theme';
 import { loadMapIcons, TRAIN_ICON_ID, STATION_PIN_ICON_ID, CANCELLED_BADGE_ICON_ID } from '../lib/mapIcons';
 import { LocateControl } from '../../../shared/components/LocateControl';
+import { useSheetCameraPadding } from '../../../shared/hooks/useSheetCameraPadding';
 
 interface MapProps {
   onSelectTrain: (train: Train) => void;
   onSelectStation: (station: StationMeta) => void;
   /** Fired after every poll so App can refresh the selected train and counts. */
   onTrainsUpdate: (trains: Train[]) => void;
+  /** Fired when the station list lands, so App can offer it to search. */
+  onStationsUpdate?: (stations: StationMeta[]) => void;
   /** Layer/category visibility, owned by the FilterPanel in App. */
   visibility: LayerVisibility;
   theme: Theme;
@@ -118,18 +121,27 @@ const Map: React.FC<MapProps> = ({
   onSelectTrain,
   onSelectStation,
   onTrainsUpdate,
+  onStationsUpdate,
   visibility,
   theme,
   onMoveEnd,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
+
+  // Keep whatever is centred above the phone's sheet rather than behind it.
+  useSheetCameraPadding(() => map.current);
   // Latest onMoveEnd, read from the mount effect's moveend handler (which is
   // registered once) so an identity change never leaves it stale.
   const onMoveEndRef = useRef(onMoveEnd);
   useEffect(() => {
     onMoveEndRef.current = onMoveEnd;
   }, [onMoveEnd]);
+  // Same: the station poll is registered once, inside the mount effect.
+  const onStationsUpdateRef = useRef(onStationsUpdate);
+  useEffect(() => {
+    onStationsUpdateRef.current = onStationsUpdate;
+  }, [onStationsUpdate]);
   const trainsByKey = useRef<globalThis.Map<string, Train>>(new globalThis.Map());
   const stationsByCode = useRef<globalThis.Map<string, StationMeta>>(new globalThis.Map());
   const hoverPopupRef = useRef<maplibregl.Popup | null>(null);
@@ -353,6 +365,7 @@ const Map: React.FC<MapProps> = ({
         const stations: StationMeta[] = await res.json();
 
         stationsByCode.current = new globalThis.Map(stations.map(s => [s.code, s]));
+        onStationsUpdateRef.current?.(stations);
 
         const geojson = toStationsGeoJSON(stations);
         const source = m.getSource(STATIONS_SOURCE) as maplibregl.GeoJSONSource | undefined;
