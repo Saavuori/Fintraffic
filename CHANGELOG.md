@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.10.11] - 2026-07-25
+
+### Fixed
+- **The Renovate workflow couldn't start**: it referenced `renovatebot/github-action@v46`, and that tag doesn't exist — the action publishes only exact semver tags (`v46.1.20`), never a floating major alias, so the run failed at action resolution before a single step executed. Pinned to the full version, which is also what Renovate's own github-actions manager can keep current. Until this landed the weekly dependency PR would never have opened; the first scheduled Monday run would simply have errored.
+
 ## [v0.10.10] - 2026-07-25
 
 ### Changed

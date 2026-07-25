@@ -49,8 +49,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v7
 
+      # Pinned to a full version on purpose: renovatebot/github-action publishes
+      # only exact semver tags, no floating `v46` major tag, so `@v46` fails to
+      # resolve before the job starts. Renovate's own github-actions manager keeps
+      # this line current.
       - name: Renovate
-        uses: renovatebot/github-action@v46
+        uses: renovatebot/github-action@v46.1.20
         with:
           token: ${{ secrets.RENOVATE_TOKEN }}
           configurationFile: renovate.json5
