@@ -72,16 +72,16 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   // peek); only desktop unmounts the body when collapsed.
   const bodyCollapsed = !isMobile && isCollapsed;
 
-  // Vessels nearest the viewport centre — the sheet's glanceable content. Only
-  // computed on mobile (the only place it's shown), and only once the map has
-  // reported a centre. Vessels without a fix are skipped.
+  // Vessels nearest the viewport centre — the sheet's glanceable content on
+  // mobile, the top of the rail on desktop. Computed once the map has reported
+  // a centre; vessels without a fix are skipped.
   const nearest = useMemo(() => {
-    if (!isMobile || !mapCenter) return [];
+    if (!mapCenter) return [];
     const located = Object.values(vessels).filter(
       (v) => Number.isFinite(v.lat) && Number.isFinite(v.lng)
     );
     return nearestTo(mapCenter, located, NEAREST_COUNT);
-  }, [isMobile, mapCenter, vessels]);
+  }, [mapCenter, vessels]);
 
   return (
     <BottomSheet

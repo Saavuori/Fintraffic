@@ -111,15 +111,12 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   const isMobile = useIsMobile();
 
   // Viewport centre, refreshed on map moveend, used to list the vessels nearest
-  // to what the user is currently looking at (the mobile sheet's glanceable
-  // peek). Only tracked on mobile — that's the only place the list is shown.
+  // to what the user is currently looking at — the mobile sheet's glanceable
+  // peek and the desktop rail's "Nearest" section.
   const [mapCenter, setMapCenter] = useState<{ lng: number; lat: number } | null>(null);
-  const handleMoveEnd = useCallback(
-    (center: { lng: number; lat: number }) => {
-      if (isMobile) setMapCenter(center);
-    },
-    [isMobile]
-  );
+  const handleMoveEnd = useCallback((center: { lng: number; lat: number }) => {
+    setMapCenter(center);
+  }, []);
 
   // Panel collapse state
   const [isDetailCollapsed, setIsDetailCollapsed] = useState<boolean>(false);

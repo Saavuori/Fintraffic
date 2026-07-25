@@ -521,7 +521,7 @@ a,
   margin-top: 2px;
 }
 
-/* ---------- Nearest-vessels list (mobile glanceable peek) ---------- */
+/* ---------- Nearest-vessels list (desktop rail + mobile glanceable peek) ---------- */
 
 .nearest-list {
   display: flex;
@@ -583,6 +583,35 @@ a,
   flex-shrink: 0;
   min-width: 46px;
   text-align: right;
+}
+
+/* The desktop rail is only 210px wide, so the single-line mobile row would
+   ellipsis the name down to nothing. Wrap it instead: name on top, distance and
+   speed on a second line indented past the colour dot. */
+.filter-panel .nearest-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  column-gap: 8px;
+  row-gap: 1px;
+  padding: 7px 8px;
+}
+
+.filter-panel .nearest-dot {
+  grid-area: 1 / 1;
+  align-self: center;
+}
+
+.filter-panel .nearest-name {
+  grid-area: 1 / 2 / 2 / -1;
+}
+
+.filter-panel .nearest-dist {
+  grid-area: 2 / 2;
+}
+
+.filter-panel .nearest-speed {
+  grid-area: 2 / 3;
+  min-width: 0;
 }
 
 /* ---------- Right detail panel ---------- */
