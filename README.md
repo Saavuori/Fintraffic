@@ -198,3 +198,20 @@ Two scripts in `deploy/`:
 
 * **`install.sh`** — idempotent install/update: writes the compose file and `update.sh`, registers the auto-update cron, ensures the `web-proxy` network and trail volume exist, pulls the image, recreates the stack, and verifies trail recording actually came up. Run it for first install and whenever the *compose* changes (env vars, volumes).
 * **`update.sh`** — image-only refresher, run every 5 minutes by the cron that `install.sh` registers: pulls the latest image and recreates the containers when it changed. It never touches the compose file, so config drift is fixed by re-running `install.sh`. (Watchtower is not used — it is incompatible with rootless Podman.)
+
+## Dependency updates
+
+Renovate opens one grouped pull request every Monday morning covering all five places the repo pins a version — `backend/go.mod`, `frontend/package.json`, the GitHub Actions in `.github/workflows/`, the `Dockerfile` build and runtime stages, and the images in `deploy/docker-compose.yml`. Major updates come as their own PR. Config lives in [`renovate.json5`](renovate.json5); the schedule is the cron in [`.github/workflows/renovate.yml`](.github/workflows/renovate.yml).
+
+Each PR writes its own `CHANGELOG.md` entry: Renovate runs [`scripts/changelog-entry.js`](scripts/changelog-entry.js) as a post-upgrade task, which reads the pending diff and lists what moved. That text is factual only — expand it by hand when a bump actually matters.
+
+### Required setup
+
+The workflow needs a `RENOVATE_TOKEN` repository secret, and **it cannot be `GITHUB_TOKEN`**: pull requests opened with the built-in token don't trigger `pull_request` workflows, so the `backend` / `frontend` / `changelog` checks that `main`'s branch protection requires would never report and every dependency PR would sit blocked forever. Use either:
+
+* a classic **personal access token** with `repo` scope, or
+* a **GitHub App** installation token (finer-grained; needs `contents: write`, `pull-requests: write`, `workflows: write`).
+
+Renovate is self-hosted here rather than the Mend-hosted app because writing the changelog entry needs `postUpgradeTasks`, and running arbitrary commands is a self-hosted-only capability. The command allow-list is `RENOVATE_ALLOWED_COMMANDS` in the workflow — Renovate runs nothing that doesn't match it, so that env var, not `renovate.json5`, is the security boundary.
+
+To try it without opening anything, run the workflow manually from the Actions tab with **dryRun** checked.
