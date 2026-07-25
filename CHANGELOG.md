@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.10.5] - 2026-07-25
+
+### Added
+- **Dependabot watches every place the repo pins a version**: the Go module, the frontend npm tree, the GitHub Actions used by CI, the Dockerfile's build and runtime stages, and the Redis image in the deploy stack. It checks weekly on Monday mornings (Helsinki time) and opens PRs against `main`, which means the kind of drift that had to be cleared by hand in v0.10.3 — a 14-minor `go-redis` gap holding back connection-pool fixes, an end-of-lifed Node in CI, an Alpine base approaching EOL — now surfaces as it happens rather than accumulating. Minor and patch bumps are grouped into one PR per ecosystem so a routine week is a single review; majors arrive one per PR, because those are the ones that need a real look (MapLibre 5 → 6 being the recent example). Commits use the `chore(deps)` / `ci(deps)` conventional prefixes, so a merged dependency update takes a patch version like any other non-feature change. The repo's own image in the deploy compose file is left alone: it's pinned to `:latest` on purpose and `update.sh` is what pulls it.
+- **The weekly dependency PR writes its own changelog entry**: Dependabot doesn't touch `CHANGELOG.md`, so a new workflow reads its update metadata and commits an entry onto the PR branch — the predicted patch heading, a `### Changed` section, and one bullet per ecosystem listing what moved and between which versions. The entry is factual by design: nothing automatic can know that a `go-redis` bump matters because of how the in-memory cache fallback behaves when Redis returns, so treat the generated text as the starting point and expand it by hand when an update earns it. Rewriting rather than appending means a Dependabot follow-up commit refreshes the entry instead of stacking a second copy. Two things worth knowing about the mechanics: the workflow runs on `pull_request` rather than `pull_request_target` — a Dependabot-triggered run gets a read-only token by default, but the `permissions` key raises it, so there's no need for the trigger that runs PR code in the base context — and pushing to a Dependabot branch makes Dependabot stop rebasing that PR, so if a sibling dependency PR merges first the predicted version can land one behind and needs correcting.
+
 ## [v0.10.4] - 2026-07-25
 
 ### Fixed
