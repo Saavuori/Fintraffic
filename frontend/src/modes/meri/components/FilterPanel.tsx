@@ -29,8 +29,8 @@ interface FilterPanelProps {
   setMapTheme: (theme: 'light' | 'dark') => void;
   showPorts: boolean;
   setShowPorts: (v: boolean) => void;
-  showBuoys: boolean;
-  setShowBuoys: (v: boolean) => void;
+  showSeaConditions: boolean;
+  setShowSeaConditions: (v: boolean) => void;
   showAton: boolean;
   setShowAton: (v: boolean) => void;
   atonFaults: AtonFaultFeature[];
@@ -58,8 +58,8 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   setMapTheme,
   showPorts,
   setShowPorts,
-  showBuoys,
-  setShowBuoys,
+  showSeaConditions,
+  setShowSeaConditions,
   showAton,
   setShowAton,
   atonFaults,
@@ -197,9 +197,12 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                 <Video size={14} />
                 <span>Webcams</span>
               </button>
-              <button className={`layer-toggle ${showBuoys ? 'on' : ''}`} onClick={() => setShowBuoys(!showBuoys)}>
+              <button
+                className={`layer-toggle ${showSeaConditions ? 'on' : ''}`}
+                onClick={() => setShowSeaConditions(!showSeaConditions)}
+              >
                 <Waves size={14} />
-                <span>Sea state</span>
+                <span>Sea conditions</span>
               </button>
               <button className={`layer-toggle ${showAton ? 'on' : ''}`} onClick={() => setShowAton(!showAton)}>
                 <TriangleAlert size={14} />

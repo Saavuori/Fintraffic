@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.13.0] - 2026-07-25
+
+### Added
+- **Sea conditions: what the water is actually doing, in numbers**: the marine map gains a layer of live observations from the Finnish Meteorological Institute — significant wave height, period and direction from the wave buoys, wind speed, gust and direction from ~42 coastal lighthouses and skerries, and sea level from the mareographs. Wave buoys are drawn as circles that grow with wave height, wind as arrows pointing where the air is going, and sea level as a ring coloured by which side of the theoretical mean the water sits on. Colours break on the Douglas sea scale and Beaufort rather than an arbitrary ramp, so a change of hue on the map lines up with a change in the words a forecast would use, and clicking any station names the sea state ("Smooth (2)") and force ("Fresh breeze (5)") alongside the raw figures. A new `/api/meri/sea-conditions` endpoint serves it, polled every 10 minutes.
+- **The old sea-state buoys became the layer's second tier**: Digitraffic's smart buoys report a coarse sea-state *class* and no wave height at all, which is why the layer they had to themselves was off by default and largely decorative. They now share the "Sea conditions" toggle with the FMI stations, drawn small and desaturated — still worth having for the fairway positions FMI has no instrument at, but no longer the only thing on offer. Anyone who had the old layer switched on keeps it switched on.
+
+### Notes
+- FMI is a new upstream, separate from Digitraffic: open, keyless, CC BY 4.0, served as GML over WFS rather than JSON. Its parameter names and units are not guessable and were taken from FMI's own metadata service — the mareographs publish sea level in millimetres, and the wave buoys call significant wave height `WaveHs` where the forecast model calls the same quantity `SigWaveHeight`. The three queries are polled independently and reported separately in `/api/health`, because "no wave data" is a normal state for several months a year (the buoys are lifted out of the water for the winter) and needs to stay distinguishable from a broken query.
+
 ## [v0.12.0] - 2026-07-25
 
 ### Added

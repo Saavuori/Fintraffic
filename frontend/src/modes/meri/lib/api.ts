@@ -3,6 +3,7 @@ import type {
   PortCallsResponse,
   VesselDetailsResponse,
   SeaStateResponse,
+  SeaConditionsResponse,
   AtonFaultsResponse,
   VesselTrailResponse,
   FleetReplayResponse,
@@ -53,6 +54,10 @@ export function fetchFleetReplay(
 
 export function fetchSeaState(): Promise<SeaStateResponse> {
   return getJSON('/api/meri/sea-state');
+}
+
+export function fetchSeaConditions(): Promise<SeaConditionsResponse> {
+  return getJSON('/api/meri/sea-conditions');
 }
 
 export function fetchAtonFaults(): Promise<AtonFaultsResponse> {

@@ -76,7 +76,7 @@ Modes implement the `server.Mode` interface (`Name`, `Register`, `Health`); the 
 
 ## Data Sources
 
-All data comes from [Digitraffic](https://www.digitraffic.fi/en/) and other Fintraffic open APIs — public, keyless, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The backend identifies itself with a `Digitraffic-User` header per the API etiquette.
+All data comes from [Digitraffic](https://www.digitraffic.fi/en/) and other Fintraffic open APIs, plus the [Finnish Meteorological Institute's open data](https://en.ilmatieteenlaitos.fi/open-data) for marine observations — all public, keyless, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The backend identifies itself with a `Digitraffic-User` header per the API etiquette.
 
 ### 🚢 Meri — `meri.digitraffic.fi`
 
@@ -85,9 +85,19 @@ All data comes from [Digitraffic](https://www.digitraffic.fi/en/) and other Fint
 | AIS positions & metadata | MQTT `wss://meri.digitraffic.fi:443/mqtt`, topic `vessels-v2/#` | Live vessel stream (positions, metadata, nav status) |
 | AIS REST | `/api/ais/v1/vessels`, `/api/ais/v1/locations` | Fleet hydration on boot + per-vessel details |
 | Port calls (Portnet) | `/api/port-call/v1/ports`, `/api/port-call/v1/port-calls` | Finnish ports layer + arrivals/departures |
-| Sea state estimation | `/api/sse/v1/measurements` | Smart-buoy wave/sea-state layer |
+| Sea state estimation | `/api/sse/v1/measurements` | Coarse smart-buoy sea-state class, drawn behind the FMI stations |
 | Aids to navigation | `/api/aton/v1/faults` | AtoN fault warnings layer |
 | Port of Helsinki webcams | YouTube live streams (portofhelsinki.fi), hardcoded — no upstream API | Länsisatama LT1/LT2 webcam markers |
+
+Marine observations come from FMI rather than Digitraffic, over WFS at `opendata.fmi.fi/wfs`:
+
+| Feed | Stored query | Used for |
+|---|---|---|
+| Wave buoys | `fmi::observations::wave::simple` | Significant wave height, modal period, wave direction, water temperature |
+| Mareographs | `fmi::observations::mareograph::simple` | Sea level against theoretical mean (published in mm, served as cm) |
+| Coastal weather stations | `fmi::observations::weather::simple` | Wind speed, gust and direction at ~42 lighthouses, skerries and harbours |
+
+The station list is hand-maintained in `backend/internal/meri/fmi/sources.go`; it was generated from FMI's own registry (`fmi::ef::stations`), which is where to look when adding one. Parameter names and units are not guessable — check them against `opendata.fmi.fi/meta?observableProperty=observation&param=...` rather than assuming.
 
 ### 🚆 Raide — `rata.digitraffic.fi`
 

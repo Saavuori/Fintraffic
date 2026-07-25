@@ -12,6 +12,7 @@ import (
 	"fintraffic/internal/core/server"
 	"fintraffic/internal/core/upstream"
 	"fintraffic/internal/meri/ais"
+	"fintraffic/internal/meri/fmi"
 	"fintraffic/internal/meri/trail"
 	"fintraffic/internal/meri/ws"
 )
@@ -25,12 +26,14 @@ const RedisHashKey = "fintraffic:meri:positions"
 // live position cache, trail history, WebSocket hub and REST handlers.
 // It implements server.Mode.
 type Service struct {
-	cfg      *config.Config
-	cache    cache.Cache
-	worker   *ais.IngestionWorker
-	trail    *trail.Store
-	hub      *ws.Hub
-	handlers *Handlers
+	cfg        *config.Config
+	cache      cache.Cache
+	worker     *ais.IngestionWorker
+	trail      *trail.Store
+	hub        *ws.Hub
+	handlers   *Handlers
+	fmiClient  *fmi.Client
+	conditions *ConditionsStore
 }
 
 func NewService(cfg *config.Config, liveCache cache.Cache) *Service {
@@ -55,13 +58,20 @@ func NewService(cfg *config.Config, liveCache cache.Cache) *Service {
 
 	proxy := upstream.NewCachedProxy(upstream.NewClient(digitrafficBase))
 
+	// Sea conditions come from FMI rather than Digitraffic, so they get their
+	// own client and a poll-style store.
+	conditions := NewConditionsStore(liveCache)
+	fmiClient := fmi.NewClient(fmi.DefaultBaseURL, config.DigitrafficUserAgent)
+
 	return &Service{
-		cfg:      cfg,
-		cache:    liveCache,
-		worker:   worker,
-		trail:    trailStore,
-		hub:      ws.NewHub(liveCache),
-		handlers: NewHandlers(liveCache, proxy, worker, trailStore),
+		cfg:        cfg,
+		cache:      liveCache,
+		worker:     worker,
+		trail:      trailStore,
+		hub:        ws.NewHub(liveCache),
+		handlers:   NewHandlers(liveCache, proxy, worker, trailStore, conditions),
+		fmiClient:  fmiClient,
+		conditions: conditions,
 	}
 }
 
@@ -78,6 +88,10 @@ func (s *Service) Start(ctx context.Context) error {
 	go s.worker.Hydrate(ctx)
 
 	go s.hub.Run(ctx)
+
+	// FMI marine observations (waves, wind, sea level) behind the sea
+	// conditions layer.
+	go pollSeaConditions(ctx, s.fmiClient, s.conditions)
 
 	// Background stale vessel cleanup: ships at anchor report every 3-6 min,
 	// so anything silent for 15 min is gone.
@@ -144,6 +158,7 @@ func (s *Service) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/meri/vessel/{mmsi}/trail", s.handlers.VesselTrail)
 	mux.HandleFunc("GET /api/meri/replay", s.handlers.FleetReplay)
 	mux.HandleFunc("GET /api/meri/sea-state", s.handlers.SeaState)
+	mux.HandleFunc("GET /api/meri/sea-conditions", s.handlers.SeaConditions)
 	mux.HandleFunc("GET /api/meri/aton-faults", s.handlers.AtonFaults)
 	mux.Handle("GET /api/meri/stream", s.hub)
 }
