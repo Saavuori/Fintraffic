@@ -32,22 +32,46 @@ jobs:
   renovate:
     runs-on: ubuntu-latest
     steps:
-      # RENOVATE_TOKEN must be a PAT or GitHub App token, not GITHUB_TOKEN: pull
-      # requests opened with GITHUB_TOKEN don't trigger `pull_request` workflows, so
-      # the backend/frontend/changelog checks that main's protection requires would
-      # never report and every dependency PR would sit blocked. Failing loudly here
-      # beats a run that looks green and silently does nothing.
-      - name: Check the token is configured
+      # Renovate must not run as GITHUB_TOKEN: pull requests opened with the
+      # built-in token don't trigger `pull_request` workflows, so the
+      # backend/frontend/changelog checks that main's protection requires would
+      # never report and every dependency PR would sit blocked. A GitHub App
+      # installation token does trigger them. Failing loudly here beats a run that
+      # looks green and silently does nothing.
+      - name: Check the app credentials are configured
         env:
-          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+          APP_ID: ${{ secrets.RENOVATE_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
         run: |
-          if [ -z "${RENOVATE_TOKEN}" ]; then
-            echo "::error::RENOVATE_TOKEN is not set. Add a PAT (repo scope) or a GitHub App token as a repository secret — see README, Dependency updates."
+          if [ -z "${APP_ID}" ] || [ -z "${APP_PRIVATE_KEY}" ]; then
+            echo "::error::RENOVATE_APP_ID / RENOVATE_APP_PRIVATE_KEY are not both set — see README, Dependency updates."
             exit 1
           fi
 
+      # Mints a short-lived installation token scoped to this repo, so nothing
+      # long-lived is stored as a secret.
+      - name: Mint an installation token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.RENOVATE_APP_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+
       - name: Checkout Code
         uses: actions/checkout@v7
+
+      # An installation token can't call /user, so Renovate can't work out who it
+      # is committing as — the identity has to be handed to it. The numeric id is
+      # what makes GitHub attribute the commits to the app rather than to a ghost
+      # account.
+      - name: Resolve the bot commit identity
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          user_id=$(gh api "users/${APP_SLUG}[bot]" --jq .id)
+          echo "RENOVATE_USERNAME=${APP_SLUG}[bot]" >> "$GITHUB_ENV"
+          echo "RENOVATE_GIT_AUTHOR=${APP_SLUG} <${user_id}+${APP_SLUG}[bot]@users.noreply.github.com>" >> "$GITHUB_ENV"
 
       # Pinned to a full version on purpose: renovatebot/github-action publishes
       # only exact semver tags, no floating `v46` major tag, so `@v46` fails to
@@ -56,7 +80,7 @@ jobs:
       - name: Renovate
         uses: renovatebot/github-action@v46.1.20
         with:
-          token: ${{ secrets.RENOVATE_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           configurationFile: renovate.json5
         env:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
