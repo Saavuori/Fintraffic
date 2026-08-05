@@ -107,9 +107,12 @@ jobs:
 
       # Kept from when entries were written straight into CHANGELOG.md: it now
       # guards the fold's output and any hand edit, rather than the PR's own text.
+      # Anchored to the heading form: entry prose may legitimately mention the
+      # term (v0.15.0's does), and an unanchored grep failed every PR once that
+      # entry folded into CHANGELOG.md.
       - name: Reject [Unreleased] placeholder
         run: |
-          if grep -q '\[Unreleased\]' CHANGELOG.md; then
+          if grep -q '^## \[Unreleased\]' CHANGELOG.md; then
             echo "::error file=CHANGELOG.md::CHANGELOG.md must use a real versioned heading (## [vX.Y.Z] - date), not [Unreleased]."
             exit 1
           fi
