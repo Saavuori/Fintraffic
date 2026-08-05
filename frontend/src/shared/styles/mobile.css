@@ -146,27 +146,19 @@
     height: 44px;
   }
 
-  /* Meri's track-history toggle, in the detail header. One button is not worth
-     a row of its own, and the header is where the folded bar carries it — the
-     two states have to agree, since one unfolds into the other. */
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: var(--gap-xs);
-    flex: none;
-  }
-
-  /* This column is 247px wide on a 375px screen and carries a rose, a name and
-     type, a readout and two controls. Every px the chrome gives back is one the
-     name and the ship type get: the sheet's buttons take the bar's 36px rather
-     than a page's 44px, and both the bar and the header set their rows at the
-     tighter gap — they must match each other in any case, since one unfolds
-     into the other. */
+  /* This column is 247px wide on a 375px screen, and the name has first claim
+     on it: beside the headline sit only the rose and the close button, so the
+     name line keeps ~149px — a 20-character ship name — in both states. The
+     close takes the bar's 36px rather than a page's 44px, and the header sets
+     the bar's own 4px gap (the doubled class outranks the generic
+     `.mobile-panel` header below) — the two rows must match each other in any
+     case, since one unfolds into the other. */
   .vessel-sheet .detail-header .icon-btn {
     width: 36px;
     height: 36px;
   }
 
+  .mobile-panel.vessel-sheet .detail-header,
   .vessel-sheet .detail-header {
     gap: var(--gap-xs);
   }
@@ -236,6 +228,34 @@
   .vessel-trip-eta {
     color: var(--text-secondary);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* The track-history switch, as a row of the page: it left the headline so
+     the name could have the line. It draws the recorded track and docks the
+     transport for it along the bottom of the map, and answers in the same
+     accent that transport wears. */
+  .track-history-row {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+    width: 100%;
+    min-height: var(--tap-min);
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-faint);
+    border-radius: 10px;
+    color: var(--text-body);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .track-history-row.active {
+    color: var(--accent-teal);
+    border-color: var(--border-focus);
+    background: rgba(45, 212, 191, 0.12);
   }
 
   /* The shared fold's control (Raide's and Tie's detail sections). */
@@ -669,8 +689,9 @@
    ===========================================================================
    The one row a minimized sheet shows is the mode's own instrument, not a
    generic title bar: what the thing is, and the live numbers you keep it
-   selected for. Meri's is the ship's bearing arrow, its name, and speed over
-   course — the map marker, enlarged. */
+   selected for. Meri's is the ship's bearing arrow, its name across the whole
+   line — the name is what was tapped, so it truncates last — and speed over
+   course on the meta line beneath. */
 
 @media (max-width: 768px) {
   .course-rose {
@@ -680,20 +701,23 @@
     align-self: center;
   }
 
+  /* The readout holds the meta line's right edge: still the mono, tabular
+     numbers the ship stays selected for, at the meta line's scale — beside the
+     name they cost the very characters that say which ship the numbers belong
+     to, and the rose already draws the course. */
   .vessel-readout {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    justify-content: center;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
     flex: none;
-    line-height: 1.1;
+    margin-left: auto;
   }
 
   .readout-value {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     font-feature-settings: 'zero' 1;
-    font-size: var(--text-md);
+    font-size: var(--text-xs);
     font-weight: 700;
     color: var(--text-strong);
   }
@@ -713,8 +737,9 @@
     color: var(--text-secondary);
   }
 
-  /* The header is the page's title bar: the readout and both controls, with the
-     name taking what's left and ellipsising rather than pushing anything off. */
+  /* The header is the page's title bar, with the name taking what's left and
+     ellipsising rather than pushing anything off. (The vessel sheet tightens
+     this gap to the bar's own — see the doubled-class rule above.) */
   .mobile-panel .detail-header {
     gap: var(--gap-sm);
   }

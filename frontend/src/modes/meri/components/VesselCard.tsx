@@ -61,29 +61,18 @@ export const VesselCard: React.FC<VesselCardProps> = ({
       <div className="vessel-card-row">
         {compact && onOpenDetails ? (
           /* The headline is the button: everything the bar leaves out is one tap
-             behind it, which is the only way to the full details from here. */
-          <>
-            <button
-              className="vessel-card-open"
-              onClick={onOpenDetails}
-              aria-expanded={false}
-              aria-label="Show vessel details"
-            >
-              <VesselHeadline vessel={vessel} />
-            </button>
-            {/* The track history is a switch you reach for while looking at the
-                ship, not something to open a page for — so it is on the bar in
-                both states, folded and open (VesselPopup keeps it beside the
-                voyage line). */}
-            <VesselActions
-              showTrail={showTrail}
-              onToggleTrail={onToggleTrail}
-              trailWindowSec={trailWindowSec}
-              onSetTrailWindow={onSetTrailWindow}
-              showTrackControls={false}
-              replayActive={replayActive}
-            />
-          </>
+             behind it, which is the only way to the full details from here.
+             Nothing sits beside the headline but the way out — a control's 40px
+             is five characters of the name, and the name is what was tapped.
+             Track history is a row of the page behind (VesselPopup). */
+          <button
+            className="vessel-card-open"
+            onClick={onOpenDetails}
+            aria-expanded={false}
+            aria-label="Show vessel details"
+          >
+            <VesselHeadline vessel={vessel} />
+          </button>
         ) : (
           <>
             <span className="vessel-card-dot" style={{ background: CATEGORY_COLORS[cat] }} />

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, ChevronRight, Navigation, Anchor as AnchorIcon } from 'lucide-react';
+import { X, ChevronRight, Navigation, Anchor as AnchorIcon, Route } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { Panel } from '../../../shared/components/Panel';
 import {
@@ -10,7 +10,6 @@ import {
   navStatText,
 } from '../lib/shipTypes';
 import { fetchVesselDetails } from '../lib/api';
-import { VesselActions } from './VesselActions';
 import { VesselHeadline } from './VesselHeadline';
 import type { Vessel, VesselDetailsResponse } from '../types';
 
@@ -21,11 +20,10 @@ interface VesselPopupProps {
   onToggleCollapse: () => void;
   isMobile: boolean;
   // On mobile the bar on the map carries the headline only, so the
-  // track-history controls are relocated into this sheet.
+  // track-history toggle is relocated into this sheet; the window chips and
+  // the transport live in the docked replay bar the toggle unfolds.
   showTrail: boolean;
   onToggleTrail: () => void;
-  trailWindowSec: number;
-  onSetTrailWindow: (sec: number) => void;
   // During replay the selected vessel may not be transmitting live AIS at
   // all, so skip the live metadata fetch rather than show an unrelated ship.
   replayActive?: boolean;
@@ -51,8 +49,6 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
   isMobile,
   showTrail,
   onToggleTrail,
-  trailWindowSec,
-  onSetTrailWindow,
   replayActive = false,
   open = true,
 }) => {
@@ -209,24 +205,6 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
                 <ChevronRight size={16} />
               </button>
             )}
-            {/* The track-history toggle sits exactly where the folded bar has
-                it — between the readout and the close button — so unfolding the
-                page adds what is underneath and moves nothing. Its own tap must
-                not reach the header, which folds the page again. */}
-            {isMobile && !replayActive && (
-              <span className="header-actions" onClick={(e) => e.stopPropagation()}>
-                <VesselActions
-                  showTrail={showTrail}
-                  onToggleTrail={onToggleTrail}
-                  trailWindowSec={trailWindowSec}
-                  onSetTrailWindow={onSetTrailWindow}
-                  /* The window chips and the transport live in the docked
-                     transport bar, which the toggle unfolds. */
-                  showTrackControls={false}
-                  replayActive={replayActive}
-                />
-              </span>
-            )}
             <button
               className="icon-btn"
               onClick={(e) => {
@@ -252,6 +230,21 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
                 {vessel.dest && <b className="vessel-trip-dest">→ {vessel.dest}</b>}
                 {etaText && <span className="vessel-trip-eta">ETA {etaText}</span>}
               </div>
+
+              {/* The toggle left the headline so the name could have the line;
+                  here it is a row of its own — the switch that draws the
+                  recorded track and docks the transport for it at the bottom of
+                  the map. The window chips live in that transport. */}
+              {!replayActive && (
+                <button
+                  className={`track-history-row${showTrail ? ' active' : ''}`}
+                  onClick={onToggleTrail}
+                  aria-pressed={showTrail}
+                >
+                  <Route size={15} />
+                  {showTrail ? 'Hide track history' : 'Show track history'}
+                </button>
+              )}
 
               <div className="vessel-stats">
                 <div className="vessel-stat">

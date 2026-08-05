@@ -536,8 +536,6 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
           isMobile={isMobile}
           showTrail={showTrail}
           onToggleTrail={toggleTrail}
-          trailWindowSec={trailWindowSec}
-          onSetTrailWindow={setTrailWindowSec}
           replayActive={replay.active}
           /* No filters button in here: the expanded bar sits beside the
              settings launcher, which is the way to them. */
