@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.18.1] - 2026-08-05
+
+### Fixed
+- **The `[Unreleased]` guard reads only headings**: the changelog job grepped `CHANGELOG.md` for the placeholder anywhere in the file, and v0.15.0's own entry — which names the `Reject [Unreleased] placeholder` step it reworked — tripped the guard the moment the fold wrote that prose onto `main`. Every PR checked after the fold failed over text it never touched, starting with Renovate's #44. The grep is now anchored to the `## [` heading form, the only place a placeholder version can actually do harm.
+
 ## [v0.18.0] - 2026-07-25
 
 ### Added
