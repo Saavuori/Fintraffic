@@ -1,0 +1,2 @@
+### Fixed
+- **The `[Unreleased]` guard reads only headings**: the changelog job grepped `CHANGELOG.md` for the placeholder anywhere in the file, and v0.15.0's own entry — which names the `Reject [Unreleased] placeholder` step it reworked — tripped the guard the moment the fold wrote that prose onto `main`. Every PR checked after the fold failed over text it never touched, starting with Renovate's #44. The grep is now anchored to the `## [` heading form, the only place a placeholder version can actually do harm.
