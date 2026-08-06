@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.18.3] - 2026-08-06
+
+### Changed
+- **The phone's ship headline is name-first**: the folded bar and the page title crammed the rose, the name over the ship type, a two-line readout and two buttons into a 247px column, which left the name — the one thing tapping a ship is for — about 40px: "RESCUE JENNY WIHURI" rendered as "RES…" on the bar and as "R…" at the top of its own details page. The name now takes the whole line, with only the rose before it and the close button after, and the meta line beneath carries the type, the call sign and the speed-over-course readout — still mono and tabular, still pulsing on change, holding the line's right edge while the type gives way first. A 20-character name fits, the bar and the page header stay the same two rows in the same places, and unfolding still moves nothing.
+- **Track history is a row of the vessel page**: the toggle's 40px beside the headline was five characters of the name, and a switch is not what a glance at the bar is for. On the phone it now sits under the voyage line as a labelled row that draws the recorded track and docks the transport along the bottom of the map, exactly as before; the window chips stay in that transport. The desktop pill keeps its inline toggle.
+
 ## [v0.18.2] - 2026-08-05
 
 ### Changed
