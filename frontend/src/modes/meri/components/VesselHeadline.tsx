@@ -9,8 +9,10 @@ interface VesselHeadlineProps {
 }
 
 /**
- * The phone's one-line reading of a selected ship: its marker enlarged as a
- * bearing arrow, what it is, and the two numbers you keep it selected for.
+ * The phone's reading of a selected ship: its marker enlarged as a bearing
+ * arrow, the name across the whole line — the name is what was tapped, so it
+ * is the last thing allowed to truncate — and beneath it, on the meta line,
+ * what the ship is and the two numbers you keep it selected for.
  *
  * It is the same block whether the bar is folded on the map (VesselCard) or
  * open as the page's title row (VesselPopup) — unfolding adds what is below it
@@ -34,19 +36,19 @@ export const VesselHeadline: React.FC<VesselHeadlineProps> = ({ vessel }) => {
         <h3>{vessel.name || `MMSI ${vessel.mmsi}`}</h3>
         {/* The category's colour is on the rose beside it; repeating it in the
             type line only costs contrast. The call sign rides on the same line:
-            it is how a ship is addressed, it is four characters wide, and this
-            row has the room for it — the type gives way first. */}
+            it is how a ship is addressed, and it is four characters wide. The
+            readout holds the line's right edge — the type gives way first. */}
         <span className="detail-subtitle">
           <span className="headline-type">{shipTypeText(vessel.shipType)}</span>
           {vessel.callSign && <b className="headline-callsign">{vessel.callSign}</b>}
+          <span className="vessel-readout">
+            <span className={`readout-value ${speedTick}`}>
+              {vessel.sog.toFixed(1)}
+              <small>kn</small>
+            </span>
+            <span className="readout-sub">{Math.round(vessel.cog)}°</span>
+          </span>
         </span>
-      </div>
-      <div className="vessel-readout">
-        <span className={`readout-value ${speedTick}`}>
-          {vessel.sog.toFixed(1)}
-          <small>kn</small>
-        </span>
-        <span className="readout-sub">{Math.round(vessel.cog)}°</span>
       </div>
     </>
   );
