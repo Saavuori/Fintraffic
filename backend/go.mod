@@ -1,14 +1,14 @@
 module fintraffic
 
-go 1.26
+go 1.26.0
 
 require (
 	github.com/coder/websocket v1.8.15
 	github.com/eclipse/paho.mqtt.golang v1.5.1
 	github.com/prometheus/client_golang v1.24.1
 	github.com/redis/go-redis/v9 v9.22.0
-	golang.org/x/sync v0.22.0
-	modernc.org/sqlite v1.56.0
+	golang.org/x/sync v0.23.0
+	modernc.org/sqlite v1.59.0
 )
 
 require (
@@ -28,7 +28,7 @@ require (
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
-	modernc.org/libc v1.74.4 // indirect
+	modernc.org/libc v1.75.7 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
-	modernc.org/memory v1.11.0 // indirect
+	modernc.org/memory v1.12.1 // indirect
 )
