@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.18.7] - 2026-09-22
+
+### Changed
+- **Frontend packages updated**: `vitest` 4.1.9 → 5.0.0.
+
 ## [v0.18.6] - 2026-09-22
 
 ### Changed
