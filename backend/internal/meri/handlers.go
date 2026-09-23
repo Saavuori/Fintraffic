@@ -196,7 +196,7 @@ func (h *Handlers) Vessel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var metadata json.RawMessage
-	body, err := h.proxy.GetCached(r, "vessel:"+mmsiStr, "/api/ais/v1/vessels/"+mmsiStr, 10*time.Minute)
+	body, err := h.proxy.GetCached(r, "vessel:"+mmsiStr, "/api/ais/v1/vessels/"+mmsiStr, 10*time.Minute, nil)
 	if err != nil {
 		log.Printf("Vessel metadata error for %s: %v\n", mmsiStr, err)
 		metadata = json.RawMessage("null")
