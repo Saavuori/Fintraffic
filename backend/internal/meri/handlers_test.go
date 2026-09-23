@@ -62,7 +62,7 @@ func TestFleetReplayHandler(t *testing.T) {
 		From      int64                   `json:"from"`
 		To        int64                   `json:"to"`
 		Truncated bool                    `json:"truncated"`
-		Vessels   map[string][][4]float64 `json:"vessels"`
+		Vessels   map[string][][5]float64 `json:"vessels"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decode: %v", err)
@@ -74,7 +74,7 @@ func TestFleetReplayHandler(t *testing.T) {
 	if len(track) != 2 {
 		t.Fatalf("vessel 42 should have 2 points, got %d", len(track))
 	}
-	// Tuple order is [lng, lat, ts, cog], ascending by ts.
+	// Tuple order is [lng, lat, ts, cog, sog], ascending by ts.
 	if track[0][0] != 24.90 || track[0][1] != 60.10 || track[0][2] != 1000 {
 		t.Fatalf("tuple layout wrong: %+v", track[0])
 	}

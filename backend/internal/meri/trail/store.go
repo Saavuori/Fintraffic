@@ -314,19 +314,20 @@ func reverse(pts []Point) {
 	}
 }
 
-// decimate evenly strides pts down to at most maxPoints, always keeping the
-// first and last so the drawn track spans the full window.
+// decimate evenly spreads maxPoints picks across pts, always keeping the first
+// and last so the drawn track spans the full window. maxPoints below 2 is
+// treated as 2 (the callers already clamp to that).
 func decimate(pts []Point, maxPoints int) []Point {
+	if maxPoints < 2 {
+		maxPoints = 2
+	}
 	if len(pts) <= maxPoints {
 		return pts
 	}
-	stride := (len(pts) + maxPoints - 1) / maxPoints
-	out := make([]Point, 0, maxPoints+1)
-	for i := 0; i < len(pts); i += stride {
-		out = append(out, pts[i])
-	}
-	if last := pts[len(pts)-1]; out[len(out)-1].Ts != last.Ts {
-		out = append(out, last)
+	out := make([]Point, maxPoints)
+	last := len(pts) - 1
+	for i := range out {
+		out[i] = pts[i*last/(maxPoints-1)]
 	}
 	return out
 }
