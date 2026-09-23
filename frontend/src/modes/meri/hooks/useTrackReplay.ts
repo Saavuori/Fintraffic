@@ -78,8 +78,8 @@ export const TRACK_REPLAY_SPEEDS = [0.5, 1, 2, 4];
 
 /**
  * How far back the surrounding traffic is loaded. Every active vessel
- * contributes points, so this is the expensive half of the request — 6h is what
- * the fleet replay itself offers as its widest window, and a known-good payload.
+ * contributes points, so this is the expensive half of the request — 6h is a
+ * known-good payload, a quarter of the fleet replay's own 24h maximum.
  * Track windows reach 60 days, so a long one replays with recorded traffic over
  * its final hours and the ship alone before that; the transport bar says so.
  */

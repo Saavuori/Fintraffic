@@ -1,6 +1,7 @@
 /** Time formatting shared by the replay transports (top bar, fleet, mobile). */
 
-/** "14:32" — enough for the fleet replay, whose widest window is six hours. */
+/** "14:32" — the fleet replay's live playhead; its window ends are dated with
+ *  fmtStamp, since a 24h window starts and ends at the same clock time. */
 export function fmtClock(epochSec: number): string {
   if (!epochSec) return '--:--';
   return new Date(epochSec * 1000).toLocaleTimeString([], {

@@ -1296,7 +1296,6 @@ export function Map({
       setupMapContent(map);
       setStyleEpoch((n) => n + 1);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapTheme]);
 
   // Overlay data + visibility effects (re-run after every style (re)load)
