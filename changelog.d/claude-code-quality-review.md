@@ -1,8 +1,0 @@
-### Fixed
-- **A visitor leaving no longer fails everyone else's port and vessel lookups**: the meri proxy coalesces concurrent requests for the same upstream payload into one fetch, but that fetch ran on the context of whichever request started it. If that visitor closed the tab mid-fetch, every other request waiting on the same key got a 502. The shared fetch now outlives the request that began it, still bounded by the client's 30-second timeout.
-- **The meri response cache stops growing forever**: expired entries were never removed, and the keys include what visitors type into the URL (an MMSI, a port locode), so every key ever asked for stayed in memory until the next restart. Expired entries are now swept every ten minutes.
-- **Recorded tracks respect their point cap**: thinning a long track down to its limit could return one point too many (ten points into five came back as six). The picks are now spread evenly from the first fix to the last and never exceed the cap.
-- **Charging-network paging is URL-safe**: the AFIR page cursor was pasted into the URL unescaped. Today's cursors happen to be plain letters, but a `+`, `/` or `=` would have reached the server as a different cursor. It is now query-escaped, and running into the page cap is logged instead of silently dropping the remaining stations.
-
-### Changed
-- **Raide and Tie map clicks always reach the current handler**: both maps registered their click handlers once and called the selection callbacks from the first render. Nothing misbehaves today because the parents pass stable callbacks, but a callback that ever depended on state would have gone stale without a sound. They now read every callback through one ref, which also clears the frontend's remaining lint warnings.
