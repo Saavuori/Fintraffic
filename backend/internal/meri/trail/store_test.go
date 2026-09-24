@@ -6,9 +6,8 @@ import (
 	"testing"
 )
 
-// waitFlush closes the store, which drains and flushes the writer queue, then
-// reopens against the same handle is not possible with :memory:, so tests that
-// need to read call flushNow instead.
+// flushNow writes pts straight through the writer's flush, so tests can read
+// them back without waiting on the background writer.
 func flushNow(t *testing.T, s *Store, pts []input) {
 	t.Helper()
 	if err := s.flush(pts); err != nil {
@@ -173,7 +172,7 @@ func TestDecimate(t *testing.T) {
 		pts[i] = Point{Ts: int64(i)}
 	}
 	got := decimate(pts, 100)
-	if len(got) > 101 {
+	if len(got) != 100 {
 		t.Fatalf("decimate exceeded cap: %d", len(got))
 	}
 	if got[0].Ts != 0 {
@@ -181,6 +180,12 @@ func TestDecimate(t *testing.T) {
 	}
 	if got[len(got)-1].Ts != 999 {
 		t.Fatalf("last point not kept: %d", got[len(got)-1].Ts)
+	}
+
+	// The cap is exact even where an even stride doesn't divide the length:
+	// 10 points into 5 used to come back as 6.
+	if got := decimate(pts[:10], 5); len(got) != 5 || got[0].Ts != 0 || got[4].Ts != 9 {
+		t.Fatalf("decimate(10, 5) = %+v", got)
 	}
 
 	// Below the cap, returned unchanged.

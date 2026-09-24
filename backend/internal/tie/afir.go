@@ -2,8 +2,9 @@ package tie
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"math"
+	"net/url"
 )
 
 const (
@@ -83,16 +84,18 @@ type tariffPrice struct {
 	currency string
 }
 
-// fetchAFIRPages walks an AFIR cursor-paginated endpoint, calling decode for
-// each page's decoded body; decode returns the page's nextCursor.
-func fetchAFIRPages(ctx context.Context, baseURL string, decode func(cursor string) (string, error)) error {
+// fetchAFIRPages walks an AFIR cursor-paginated endpoint, calling fetchPage
+// with each page's URL; fetchPage returns that page's nextCursor. The cursor is
+// opaque and query-escaped: a base64 "+" or "/" sent raw would reach the server
+// as a different cursor.
+func fetchAFIRPages(baseURL string, fetchPage func(pageURL string) (string, error)) error {
 	cursor := ""
 	for page := 0; page < afirMaxPages; page++ {
-		url := baseURL
+		pageURL := baseURL
 		if cursor != "" {
-			url = fmt.Sprintf("%s?cursor=%s", baseURL, cursor)
+			pageURL = baseURL + "?cursor=" + url.QueryEscape(cursor)
 		}
-		next, err := decode(url)
+		next, err := fetchPage(pageURL)
 		if err != nil {
 			return err
 		}
@@ -101,16 +104,17 @@ func fetchAFIRPages(ctx context.Context, baseURL string, decode func(cursor stri
 		}
 		cursor = next
 	}
+	log.Printf("Tie: %s still had more pages after %d; the rest were dropped", baseURL, afirMaxPages)
 	return nil
 }
 
 // fetchChargingTariffs builds a tariffId -> energy price lookup so each
-// connector can be labeled with its â‚¬/kWh price.
+// connector can be labeled with its €/kWh price.
 func fetchChargingTariffs(ctx context.Context) (map[string]tariffPrice, error) {
 	prices := make(map[string]tariffPrice)
-	err := fetchAFIRPages(ctx, afirTariffsURL, func(url string) (string, error) {
+	err := fetchAFIRPages(afirTariffsURL, func(pageURL string) (string, error) {
 		var page rawTariffs
-		if err := fetchJSON(ctx, url, &page); err != nil {
+		if err := fetchJSON(ctx, pageURL, &page); err != nil {
 			return "", err
 		}
 		for _, t := range page.Tariffs {
@@ -131,9 +135,9 @@ func fetchChargingTariffs(ctx context.Context) (map[string]tariffPrice, error) {
 // (AVAILABLE, CHARGING, OUTOFORDER, ...), paginating over every status page.
 func FetchChargingStatuses(ctx context.Context) (map[string]string, error) {
 	statuses := make(map[string]string)
-	err := fetchAFIRPages(ctx, afirStatusesURL, func(url string) (string, error) {
+	err := fetchAFIRPages(afirStatusesURL, func(pageURL string) (string, error) {
 		var page rawChargingStatuses
-		if err := fetchJSON(ctx, url, &page); err != nil {
+		if err := fetchJSON(ctx, pageURL, &page); err != nil {
 			return "", err
 		}
 		for _, s := range page.Statuses {
@@ -147,7 +151,7 @@ func FetchChargingStatuses(ctx context.Context) (map[string]string, error) {
 // FetchChargingLocations fetches every AFIR charging location (paginated) and
 // flattens each into a ChargingStation, deduplicating connectors and
 // attaching each connector's energy price from the tariff lookup. Live EVSE
-// availability is merged separately (see the poll loop in cmd/server).
+// availability is merged separately (see pollCharging in service.go).
 func FetchChargingLocations(ctx context.Context) ([]ChargingStation, error) {
 	tariffs, err := fetchChargingTariffs(ctx)
 	if err != nil {
@@ -156,9 +160,9 @@ func FetchChargingLocations(ctx context.Context) ([]ChargingStation, error) {
 	}
 
 	var stations []ChargingStation
-	err = fetchAFIRPages(ctx, afirLocationsURL, func(url string) (string, error) {
+	err = fetchAFIRPages(afirLocationsURL, func(pageURL string) (string, error) {
 		var page rawChargingLocations
-		if err := fetchJSON(ctx, url, &page); err != nil {
+		if err := fetchJSON(ctx, pageURL, &page); err != nil {
 			return "", err
 		}
 		for _, f := range page.Features {

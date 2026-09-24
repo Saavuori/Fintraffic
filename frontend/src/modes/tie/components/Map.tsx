@@ -137,12 +137,14 @@ const Map: React.FC<MapProps> = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
 
-  // The polls are registered once inside the mount effect, so they read the
-  // callback through a ref rather than closing over the mounting render's copy.
-  const onDataUpdateRef = useRef(onDataUpdate);
+  // The map handlers and polls are registered once inside the mount effect, so
+  // they read every callback through this ref rather than closing over the
+  // mounting render's copy.
+  const callbacks = { onSelectStation, onSelectFacility, onSelectCamera, onSelectCharger, onDataUpdate };
+  const callbacksRef = useRef(callbacks);
   useEffect(() => {
-    onDataUpdateRef.current = onDataUpdate;
-  }, [onDataUpdate]);
+    callbacksRef.current = callbacks;
+  });
   const stationsById = useRef<globalThis.Map<number, Station>>(new globalThis.Map());
   const facilitiesById = useRef<globalThis.Map<number, ParkingFacility>>(new globalThis.Map());
   const camerasById = useRef<globalThis.Map<string, WeathercamStation>>(new globalThis.Map());
@@ -354,7 +356,7 @@ const Map: React.FC<MapProps> = ({
         const stations: Station[] = await res.json();
 
         stationsById.current = new globalThis.Map(stations.map(s => [s.id, s]));
-        onDataUpdateRef.current?.({ stations });
+        callbacksRef.current.onDataUpdate?.({ stations });
 
         const stationsGeojson = toStationsGeoJSON(stations);
         const stationsSource = m.getSource(STATIONS_SOURCE) as maplibregl.GeoJSONSource | undefined;
@@ -424,7 +426,7 @@ const Map: React.FC<MapProps> = ({
             const station = stationsById.current.get(props.id);
             if (!station) return;
 
-            onSelectStation(station);
+            callbacksRef.current.onSelectStation(station);
             m.flyTo({
               center: [station.longitude, station.latitude],
               zoom: 12,
@@ -527,7 +529,7 @@ const Map: React.FC<MapProps> = ({
         const facilities = allFacilities.filter(f => f.spacesAvailable != null);
 
         facilitiesById.current = new globalThis.Map(facilities.map(f => [f.id, f]));
-        onDataUpdateRef.current?.({ facilities });
+        callbacksRef.current.onDataUpdate?.({ facilities });
 
         const geojson = toParkingGeoJSON(facilities);
         const source = m.getSource(PARKING_SOURCE) as maplibregl.GeoJSONSource | undefined;
@@ -590,7 +592,7 @@ const Map: React.FC<MapProps> = ({
             const facility = facilitiesById.current.get(props.id);
             if (!facility) return;
 
-            onSelectFacility(facility);
+            callbacksRef.current.onSelectFacility(facility);
             m.flyTo({
               center: [facility.longitude, facility.latitude],
               zoom: 14,
@@ -609,7 +611,7 @@ const Map: React.FC<MapProps> = ({
         const stations: WeathercamStation[] = await res.json();
 
         camerasById.current = new globalThis.Map(stations.map(s => [s.id, s]));
-        onDataUpdateRef.current?.({ cameras: stations });
+        callbacksRef.current.onDataUpdate?.({ cameras: stations });
 
         const geojson = toWeathercamsGeoJSON(stations);
         const source = m.getSource(WEATHERCAM_SOURCE) as maplibregl.GeoJSONSource | undefined;
@@ -664,7 +666,7 @@ const Map: React.FC<MapProps> = ({
             const camera = camerasById.current.get(props.id);
             if (!camera) return;
 
-            onSelectCamera(camera);
+            callbacksRef.current.onSelectCamera(camera);
             m.flyTo({
               center: [camera.longitude, camera.latitude],
               zoom: 14,
@@ -683,7 +685,7 @@ const Map: React.FC<MapProps> = ({
         const stations: ChargingStation[] = await res.json();
 
         chargersById.current = new globalThis.Map(stations.map(s => [s.id, s]));
-        onDataUpdateRef.current?.({ chargers: stations });
+        callbacksRef.current.onDataUpdate?.({ chargers: stations });
 
         const geojson = toChargingGeoJSON(stations);
         const source = m.getSource(CHARGING_SOURCE) as maplibregl.GeoJSONSource | undefined;
@@ -744,7 +746,7 @@ const Map: React.FC<MapProps> = ({
             const charger = chargersById.current.get(props.id);
             if (!charger) return;
 
-            onSelectCharger(charger);
+            callbacksRef.current.onSelectCharger(charger);
             m.flyTo({
               center: [charger.longitude, charger.latitude],
               zoom: 14,

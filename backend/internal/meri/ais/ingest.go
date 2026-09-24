@@ -12,6 +12,7 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/prometheus/client_golang/prometheus"
+
 	"fintraffic/internal/core/cache"
 	"fintraffic/internal/meri/trail"
 )

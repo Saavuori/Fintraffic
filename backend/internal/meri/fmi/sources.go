@@ -78,11 +78,11 @@ var Sources = []Source{
 // FMI's naming differs between the wave buoys, the mareographs and the land
 // weather network. Matching is case-insensitive.
 var paramFields = map[string]string{
-	"WaveHs":               "waveHeight",
-	"WTP":                  "wavePeriod",
-	"ModalWDi":             "waveDir",
-	"TWATER":               "waterTemp",
-	"TW_PT1H_AVG":          "waterTemp",
+	"WaveHs":      "waveHeight",
+	"WTP":         "wavePeriod",
+	"ModalWDi":    "waveDir",
+	"TWATER":      "waterTemp",
+	"TW_PT1H_AVG": "waterTemp",
 	"WATLEV":      "waterLevel",
 	"ws_10min":    "windSpeed",
 	"wg_10min":    "windGust",

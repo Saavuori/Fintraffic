@@ -129,17 +129,14 @@ const Map: React.FC<MapProps> = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
 
-  // Latest onMoveEnd, read from the mount effect's moveend handler (which is
-  // registered once) so an identity change never leaves it stale.
-  const onMoveEndRef = useRef(onMoveEnd);
+  // The mount effect registers its map handlers and polls once, so they read
+  // every callback through this ref: an identity change from the parent must
+  // never leave them calling the mounting render's copy.
+  const callbacks = { onSelectTrain, onSelectStation, onTrainsUpdate, onStationsUpdate, onMoveEnd };
+  const callbacksRef = useRef(callbacks);
   useEffect(() => {
-    onMoveEndRef.current = onMoveEnd;
-  }, [onMoveEnd]);
-  // Same: the station poll is registered once, inside the mount effect.
-  const onStationsUpdateRef = useRef(onStationsUpdate);
-  useEffect(() => {
-    onStationsUpdateRef.current = onStationsUpdate;
-  }, [onStationsUpdate]);
+    callbacksRef.current = callbacks;
+  });
   const trainsByKey = useRef<globalThis.Map<string, Train>>(new globalThis.Map());
   const stationsByCode = useRef<globalThis.Map<string, StationMeta>>(new globalThis.Map());
   const hoverPopupRef = useRef<maplibregl.Popup | null>(null);
@@ -224,7 +221,7 @@ const Map: React.FC<MapProps> = ({
     // seed it, then after each settled pan/zoom.
     const emitCenter = () => {
       const c = m.getCenter();
-      onMoveEndRef.current?.({ lng: c.lng, lat: c.lat });
+      callbacksRef.current.onMoveEnd?.({ lng: c.lng, lat: c.lat });
     };
     m.on('moveend', emitCenter);
     emitCenter();
@@ -280,7 +277,7 @@ const Map: React.FC<MapProps> = ({
         const train = trainsByKey.current.get(props.key);
         if (!train) return;
 
-        onSelectTrain(train);
+        callbacksRef.current.onSelectTrain(train);
         m.flyTo({
           center: [train.longitude, train.latitude],
           zoom: Math.max(m.getZoom(), 9),
@@ -347,7 +344,7 @@ const Map: React.FC<MapProps> = ({
         const station = stationsByCode.current.get(props.code);
         if (!station) return;
 
-        onSelectStation(station);
+        callbacksRef.current.onSelectStation(station);
         m.flyTo({
           center: [station.longitude, station.latitude],
           zoom: Math.max(m.getZoom(), 10),
@@ -363,7 +360,7 @@ const Map: React.FC<MapProps> = ({
         const stations: StationMeta[] = await res.json();
 
         stationsByCode.current = new globalThis.Map(stations.map(s => [s.code, s]));
-        onStationsUpdateRef.current?.(stations);
+        callbacksRef.current.onStationsUpdate?.(stations);
 
         const geojson = toStationsGeoJSON(stations);
         const source = m.getSource(STATIONS_SOURCE) as maplibregl.GeoJSONSource | undefined;
@@ -425,7 +422,7 @@ const Map: React.FC<MapProps> = ({
         const trains: Train[] = await res.json();
 
         trainsByKey.current = new globalThis.Map(trains.map(t => [trainKey(t), t]));
-        onTrainsUpdate(trains);
+        callbacksRef.current.onTrainsUpdate(trains);
 
         const geojson = toTrainsGeoJSON(trains);
         const source = m.getSource(TRAINS_SOURCE) as maplibregl.GeoJSONSource | undefined;
