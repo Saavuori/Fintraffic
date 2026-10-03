@@ -4,7 +4,14 @@ import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { Panel } from '../../../shared/components/Panel';
 import { BackToSelection } from '../../../shared/components/SheetViewSwitch';
 import { VesselSearch } from './VesselSearch';
-import { ALL_CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS, type ShipCategory } from '../lib/shipTypes';
+import { CategorySwatch } from '../../../shared/components/CategorySwatch';
+import {
+  ALL_CATEGORIES,
+  CATEGORY_COLORS,
+  CATEGORY_ICONS,
+  CATEGORY_LABELS,
+  type ShipCategory,
+} from '../lib/shipTypes';
 import type { ConnectionStatus } from '../hooks/useWebSocket';
 import type { AtonFaultFeature, Vessel } from '../types';
 
@@ -177,10 +184,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                         className={`category-row ${active ? '' : 'inactive'}`}
                         onClick={() => onToggleCategory(cat)}
                       >
-                        <span
-                          className="category-swatch"
-                          style={{ background: CATEGORY_COLORS[cat] }}
-                        />
+                        <CategorySwatch color={CATEGORY_COLORS[cat]} icon={CATEGORY_ICONS[cat]} />
                         <span className="category-label">{CATEGORY_LABELS[cat]}</span>
                         <span className="category-count">{categoryCounts[cat] ?? 0}</span>
                       </button>

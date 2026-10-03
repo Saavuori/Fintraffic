@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ListFilter } from 'lucide-react';
+import { CategorySwatch } from './CategorySwatch';
+import { MapButton } from './MapButton';
 import './FilterStrip.css';
 
 export interface FilterChip {
@@ -8,7 +10,7 @@ export interface FilterChip {
   label: string;
   /** The colour this kind wears on the map, drawn as a dot. */
   color?: string;
-  /** Marker pictogram, used where the map keys its kinds by shape and not colour. */
+  /** The kind's pictogram — drawn inside the colour where there is one, on its own where not. */
   icon?: React.ComponentType<{ size?: number }>;
   /** How many of this kind are on the map right now. */
   count?: number;
@@ -60,18 +62,18 @@ export const FilterStrip: React.FC<FilterStripProps> = ({
     <>
       {/* One control that shows and hides the pills, not a dialog that opens and
           closes: the icon stays the icon, and it is lit while they are up. */}
-      <button
-        className={`filter-strip-btn${open ? ' filter-strip-btn--on' : ''}`}
+      <MapButton
+        icon={ListFilter}
+        className="filter-strip-btn"
+        on={open}
         onClick={() => setOpen((v) => !v)}
         aria-pressed={open}
         aria-label={`${open ? 'Hide' : 'Show'} ${ariaLabel.toLowerCase()}`}
         title={`${open ? 'Hide' : 'Show'} ${ariaLabel.toLowerCase()}`}
-      >
-        <ListFilter size={20} />
-        {/* Something is hidden and the map doesn't say so on its own — the dot is
-            the only sign that what you are looking at is a subset. */}
-        {anyHidden && <span className="filter-strip-btn__dot" />}
-      </button>
+        /* Something is hidden and the map doesn't say so on its own — the dot is
+           the only sign that what you are looking at is a subset. */
+        badge={anyHidden}
+      />
 
       {open && (
         <div className="filter-strip" role="group" aria-label={ariaLabel}>
@@ -84,9 +86,12 @@ export const FilterStrip: React.FC<FilterStripProps> = ({
                 onClick={() => onToggle(chip.id)}
                 aria-pressed={chip.active}
               >
-                {/* Colour first: where the map keys by colour, the dot is the
-                    whole key and a pictogram inside it would only shrink it. */}
-                {chip.color ? (
+                {/* Colour and shape together where the mode has both — the
+                    same tile the desktop rail draws — and whichever one it has
+                    otherwise. */}
+                {chip.color && Icon ? (
+                  <CategorySwatch color={chip.color} icon={Icon} round />
+                ) : chip.color ? (
                   <span className="filter-chip__dot" style={{ background: chip.color }} />
                 ) : (
                   Icon && (

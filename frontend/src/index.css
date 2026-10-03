@@ -514,12 +514,7 @@ a,
   opacity: 0.35;
 }
 
-.category-swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  flex-shrink: 0;
-}
+/* .category-swatch lives with its component, shared/components/CategorySwatch. */
 
 .category-label {
   flex: 1;
@@ -1159,32 +1154,12 @@ a,
 
 /* ---------- Theme toggle (floating pill, desktop) ---------- */
 
+/* A MapButton; this places it. */
 .mode-meri .theme-toggle {
   position: absolute;
   top: 16px;
   right: 16px;
   z-index: 12;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius-pill);
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow-sm);
-  color: var(--text-primary);
-  cursor: pointer;
-  padding: 0;
-  transition: border-color 0.2s, background 0.2s, transform 0.2s;
-}
-
-.mode-meri .theme-toggle:hover {
-  background: var(--glass-bg-hover);
-  border-color: var(--border-button-hover);
-  transform: translateY(-1px);
 }
 
 /* ---------- Replay launcher (desktop) ---------- */
@@ -1446,37 +1421,12 @@ a,
 
 /* ---------- Locate-me control (shared by every mode) ---------- */
 
+/* A MapButton; this places it. */
 .locate-control {
   position: absolute;
   bottom: calc(1.5rem + env(safe-area-inset-bottom));
   right: 1rem;
   z-index: 11;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-pill);
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow-sm);
-  color: var(--text-primary);
-  cursor: pointer;
-  padding: 0;
-  transition: border-color 0.2s, background 0.2s, transform 0.2s;
-}
-
-.locate-control:hover:not(:disabled) {
-  background: var(--glass-bg-hover);
-  border-color: var(--border-button-hover);
-  transform: translateY(-1px);
-}
-
-.locate-control:disabled {
-  cursor: default;
-  opacity: 0.7;
 }
 
 .locate-spin {

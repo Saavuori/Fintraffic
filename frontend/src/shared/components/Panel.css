@@ -180,39 +180,16 @@
      carries besides search. Top right, opposite the search pill, and clear of
      everything docked at the bottom. */
   .panel-launcher {
+    /* A MapButton; this places it. */
     position: fixed;
     z-index: 14;
     top: calc(env(safe-area-inset-top) + 12px);
     right: 12px;
-    width: var(--tap-min);
-    height: var(--tap-min);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-pill);
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    box-shadow: var(--glass-shadow-sm);
-    color: var(--text-body);
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s, transform 0.15s;
-  }
-
-  .panel-launcher:active {
-    transform: scale(0.94);
-    color: var(--text-primary);
   }
 
   @media (prefers-reduced-motion: reduce) {
     .mobile-panel {
       animation: none;
-    }
-
-    .panel-launcher:active {
-      transform: none;
     }
   }
 }

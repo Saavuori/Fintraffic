@@ -9,6 +9,7 @@
    that isn't visible while you filter. */
 
 .filter-strip-btn {
+  /* A MapButton; this places it. */
   position: fixed;
   /* Above the expanded vessel details (15): the strip sits beside them, and its
      pills unfold across the gap between the two. */
@@ -16,46 +17,6 @@
   /* Under the settings launcher: 12px inset + its 44px + an 8px gap. */
   top: calc(env(safe-area-inset-top) + 64px);
   right: 12px;
-  width: var(--tap-min);
-  height: var(--tap-min);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-pill);
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  box-shadow: var(--glass-shadow-sm);
-  color: var(--text-body);
-  cursor: pointer;
-  transition: color 0.15s, transform 0.15s;
-}
-
-.filter-strip-btn:active {
-  transform: scale(0.94);
-  color: var(--text-primary);
-}
-
-/* Lit while the pills are showing — the button's own state, not a different
-   button. */
-.filter-strip-btn--on {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 16%, var(--glass-bg));
-}
-
-/* Filtering is invisible on the map itself — the ships that aren't there don't
-   announce themselves — so the button carries the fact. */
-.filter-strip-btn__dot {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
 }
 
 /* A column of pills, not a panel: transparent, right-aligned, each row only as
@@ -130,6 +91,19 @@
   border-color: var(--text-muted);
 }
 
+/* A glyph tile goes hollow the same way, keeping its glyph so the kind is still
+   recognisable while it is off. */
+.filter-chip--off .category-swatch {
+  background: none !important;
+  color: var(--text-muted) !important;
+  box-shadow: inset 0 0 0 1px var(--text-muted);
+}
+
+/* The tile is taller than the text, so it tucks into the pill's rounded end. */
+.filter-chip .category-swatch {
+  margin-left: -5px;
+}
+
 /* The map's own colour for this kind, and nothing more: a dot the size of the
    text beside it. */
 .filter-chip__dot {
@@ -140,7 +114,7 @@
   border: 1px solid var(--seam-strong);
 }
 
-/* Tie keys its layers by shape, so those chips lead with the marker's glyph. */
+/* Tie keys its layers by shape alone, so those chips lead with the bare glyph. */
 .filter-chip__icon {
   display: grid;
   place-items: center;
@@ -175,9 +149,5 @@
 @media (prefers-reduced-motion: reduce) {
   .filter-strip {
     animation: none;
-  }
-
-  .filter-strip-btn:active {
-    transform: none;
   }
 }

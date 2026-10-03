@@ -1,0 +1,70 @@
+/* The round glass button at the map's edges (see MapButton.tsx). Look only —
+   each caller's own class places it, `position` included: this sheet loads
+   after theirs, so setting it here would override every one. Their fixed or
+   absolute placement is also what anchors the badge. */
+
+.map-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.15s;
+}
+
+.map-btn:hover:not(:disabled) {
+  background: var(--glass-bg-hover);
+  border-color: var(--border-button-hover);
+}
+
+.map-btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.map-btn:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+/* A toggle that is on: the same button, lit. */
+.map-btn--on,
+.map-btn--on:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--glass-bg));
+}
+
+.map-btn__badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* The phone's thumb floor. */
+@media (max-width: 768px) {
+  .map-btn {
+    width: var(--tap-min);
+    height: var(--tap-min);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-btn:active:not(:disabled) {
+    transform: none;
+  }
+}

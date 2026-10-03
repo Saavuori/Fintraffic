@@ -377,15 +377,15 @@
     flex: none;
   }
 
-  /* Bigger tap target, clear of the tab bar (--tabbar-height already carries
-     the home-indicator safe area). Nothing else is anchored down there any
-     more: the panels are pages now, so the map's own controls keep a fixed
-     offset instead of being pushed around by a sheet that changed height under
-     the finger. */
+  /* Clear of the tab bar (--tabbar-height already carries the home-indicator
+     safe area); MapButton grows it to the thumb floor. Nothing else is anchored
+     down there any more: the panels are pages now, so the map's own controls
+     keep a fixed offset instead of being pushed around by a sheet that changed
+     height under the finger. */
   .locate-control {
-    width: 44px;
-    height: 44px;
     bottom: calc(var(--tabbar-height) + 16px);
+    /* The same column as the settings launcher and filter toggle above it. */
+    right: 12px;
   }
 
   .locate-error {

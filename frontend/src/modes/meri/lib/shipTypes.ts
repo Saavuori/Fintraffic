@@ -1,3 +1,15 @@
+import {
+  CircleHelp,
+  Container,
+  Droplet,
+  Sailboat,
+  Shield,
+  Ship,
+  ShipWheel,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react';
+
 export type ShipCategory =
   | 'passenger'
   | 'cargo'
@@ -28,6 +40,22 @@ export const CATEGORY_LABELS: Record<ShipCategory, string> = {
   sailing: 'Sailing / Pleasure',
   military: 'Military',
   other: 'Other',
+};
+
+/**
+ * One glyph per category, so the filter keys don't rest on colour alone —
+ * tanker red and passenger blue are a long way apart, but military olive and
+ * "other" slate are not, and none of it survives colour blindness.
+ */
+export const CATEGORY_ICONS: Record<ShipCategory, LucideIcon> = {
+  passenger: Ship,
+  cargo: Container,
+  tanker: Droplet,
+  highspeed: Zap,
+  special: ShipWheel,
+  sailing: Sailboat,
+  military: Shield,
+  other: CircleHelp,
 };
 
 export const ALL_CATEGORIES: ShipCategory[] = [

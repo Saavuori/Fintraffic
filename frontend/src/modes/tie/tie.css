@@ -178,38 +178,18 @@
 
 /* ---------- Theme toggle (floating pill) ---------- */
 
+/* A MapButton; this places it. */
 .mode-tie .theme-toggle {
   position: absolute;
   top: 16px;
   right: 16px;
   z-index: 12;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius-pill);
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow-sm);
-  color: var(--text-primary);
-  cursor: pointer;
-  padding: 0;
-  transition: border-color 0.2s, background 0.2s, transform 0.2s;
 }
 
 /* Nudge the theme pill left when the detail panel is open on desktop so they
    don't overlap: past the 340px rail, the gap it floats at and one more. */
 .mode-tie .theme-toggle.detail-open {
   right: calc(340px + var(--float-gap) * 2);
-}
-
-.mode-tie .theme-toggle:hover {
-  background: var(--glass-bg-hover);
-  border-color: var(--border-button-hover);
-  transform: translateY(-1px);
 }
 
 /* The locate-me control + "you are here" marker are shared across modes;
