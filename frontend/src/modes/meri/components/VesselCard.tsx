@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { categorize, CATEGORY_COLORS } from '../lib/shipTypes';
 import { VesselActions } from './VesselActions';
 import { VesselHeadline } from './VesselHeadline';
+import { ShareVesselButton } from './ShareVesselButton';
 import { TrackReplayPanel } from './TrackReplayPanel';
 import type { TrackReplay } from '../hooks/useTrackReplay';
 import type { Vessel } from '../types';
@@ -98,6 +99,9 @@ export const VesselCard: React.FC<VesselCardProps> = ({
             replayActive={replayActive}
           />
         )}
+
+        {/* The phone shares from the details behind the headline (VesselPopup). */}
+        {!compact && <ShareVesselButton mmsi={vessel.mmsi} name={vessel.name} />}
 
         <button className="icon-btn" onClick={onClose} aria-label="Deselect vessel">
           <X size={15} />

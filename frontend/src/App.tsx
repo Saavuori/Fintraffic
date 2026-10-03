@@ -3,6 +3,7 @@ import MeriApp from './modes/meri/MeriApp';
 import RaideApp from './modes/raide/RaideApp';
 import TieApp from './modes/tie/TieApp';
 import { VersionBadge } from './shared/components/VersionBadge';
+import { initialLinkedVessel } from './modes/meri/lib/vesselLink';
 
 export type ModeId = 'meri' | 'raide' | 'tie';
 export type Theme = 'dark' | 'light';
@@ -38,6 +39,8 @@ const MODE_ICONS: Record<ModeId, ReactNode> = {
 
 function App() {
   const [mode, setMode] = useState<ModeId>(() => {
+    // A shared vessel link (?vessel=<MMSI>) opens Meri whatever was last used.
+    if (initialLinkedVessel() !== null) return 'meri';
     const saved = localStorage.getItem('fintraffic-mode') as ModeId | null;
     return MODES.find((m) => m.id === saved && m.enabled) ? (saved as ModeId) : 'meri';
   });

@@ -32,6 +32,7 @@ import {
   type ShipCategory,
 } from './lib/shipTypes';
 import { WEBCAMS } from './lib/webcams';
+import { initialLinkedVessel, syncVesselParam } from './lib/vesselLink';
 import type { Webcam } from './lib/webcams';
 import type {
   Port,
@@ -105,7 +106,8 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
   }, [showWebcams]);
 
   // Selection state
-  const [selectedMmsi, setSelectedMmsi] = useState<number | null>(null);
+  // A shared link (?vessel=<MMSI>) opens with that ship already selected.
+  const [selectedMmsi, setSelectedMmsi] = useState<number | null>(initialLinkedVessel);
   const [selectedPort, setSelectedPort] = useState<Port | null>(null);
   const [selectedWebcam, setSelectedWebcam] = useState<Webcam | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<ShipCategory[]>([]);
@@ -244,6 +246,29 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
       )
     );
   }, [vessels, selectedCategories, selectedMmsi]);
+
+  // The address bar mirrors the selection, so the URL is always a direct link
+  // to the ship on screen. Leaving Meri (unmount) drops it again.
+  useEffect(() => {
+    syncVesselParam(selectedMmsi);
+  }, [selectedMmsi]);
+  useEffect(() => () => syncVesselParam(null), []);
+
+  // A linked ship is only placeable once the stream has delivered it, so the
+  // map is flown there on its first position — once, never chasing it after.
+  // Settled during render (not in an effect) since it only derives from props;
+  // picking another ship before it arrives drops the pending flight.
+  const [pendingLink, setPendingLink] = useState<number | null>(initialLinkedVessel);
+  const [focusTarget, setFocusTarget] = useState<{ lng: number; lat: number } | null>(null);
+  if (pendingLink !== null) {
+    const linked = vessels[String(pendingLink)];
+    if (selectedMmsi !== pendingLink) {
+      setPendingLink(null);
+    } else if (linked && Number.isFinite(linked.lat) && Number.isFinite(linked.lng)) {
+      setFocusTarget({ lng: linked.lng, lat: linked.lat });
+      setPendingLink(null);
+    }
+  }
 
   const liveVessel = selectedMmsi !== null ? vessels[String(selectedMmsi)] ?? null : null;
 
@@ -409,6 +434,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         replay={replay.control}
         replayMeta={replayMeta}
         onMoveEnd={handleMoveEnd}
+        focusTarget={focusTarget}
       />
 
       {/* On mobile, search is a floating pill over the map (the bottom tab bar
