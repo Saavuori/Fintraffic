@@ -71,10 +71,13 @@ services:
       - TRAIL_DB_PATH=/data/trail.db
       - TRAIL_RETENTION_DAYS=60
       - TRAIL_INTERVAL_SEC=60
-      # aisstream.io key: adds class B boats to the map. A secret: compose reads
-      # it from the .env beside this file on the host; it is never committed.
-      # Unset/empty just turns that feed off.
-      - AISSTREAM_API_KEY=${AISSTREAM_API_KEY:-}
+    # Secrets (the aisstream.io key, which adds class B boats to the map) live
+    # in the .env beside this file on the host, owner-only and never committed.
+    # Loaded with env_file rather than ${...} interpolation: podman-compose
+    # doesn't reliably interpolate from .env, and an empty `environment:` entry
+    # would override env_file. No key just turns that feed off.
+    env_file:
+      - .env
     volumes:
       # Persist trail history across container recreation. `:Z` relabels the
       # volume for SELinux (Oracle Linux enforces it). Without this mount the
@@ -160,7 +163,8 @@ else
 fi
 
 # --- secrets: .env beside the compose file, owner-only, never in the repo ----
-# Compose reads it to fill ${AISSTREAM_API_KEY}. Pass the key once as
+# The backend loads it via env_file (and compose needs the file to exist).
+# Pass the key once as
 #   AISSTREAM_API_KEY=... ./install.sh
 # and it is stored here; later runs (and the update cron) keep using it.
 ( umask 077; touch .env ); chmod 600 .env
