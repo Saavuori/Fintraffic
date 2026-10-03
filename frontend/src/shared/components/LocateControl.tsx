@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import { LocateFixed } from 'lucide-react';
+import { MapButton } from './MapButton';
 
 interface LocateControlProps {
   /** Returns the live map instance, or null before it has initialized. */
@@ -74,15 +75,15 @@ export const LocateControl: React.FC<LocateControlProps> = ({ getMap }) => {
 
   return (
     <>
-      <button
+      <MapButton
+        icon={LocateFixed}
+        iconClassName={locating ? 'locate-spin' : undefined}
         className="locate-control"
         onClick={locateUser}
         disabled={locating}
         aria-label="Locate me"
         title="Locate me"
-      >
-        <LocateFixed size={18} className={locating ? 'locate-spin' : undefined} />
-      </button>
+      />
       {geoError && <div className="locate-error">{geoError}</div>}
     </>
   );

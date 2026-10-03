@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
+import { MAP_BUTTON_ICON_SIZE } from './MapButton';
 
 const MAX_RESULTS = 8;
 
@@ -116,7 +117,7 @@ export const EntitySearch: React.FC<EntitySearchProps> = ({
             aria-label={expanded ? 'Close search' : ariaLabel}
             aria-expanded={expanded}
           >
-            <Search size={16} aria-hidden="true" />
+            <Search size={MAP_BUTTON_ICON_SIZE} aria-hidden="true" />
           </button>
         ) : (
           <Search size={14} className="vessel-search-icon" aria-hidden="true" />

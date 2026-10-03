@@ -14,6 +14,7 @@ import {
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { Panel } from '../../../shared/components/Panel';
 import { BackToSelection } from '../../../shared/components/SheetViewSwitch';
+import { CategorySwatch } from '../../../shared/components/CategorySwatch';
 import { TrainSearch } from './TrainSearch';
 import {
   type Train,
@@ -184,9 +185,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                         onClick={() => onToggleLayer(group)}
                         aria-pressed={active}
                       >
-                        <span className="category-swatch" style={{ background: colors[group] }}>
-                          <Icon size={10} />
-                        </span>
+                        <CategorySwatch color={colors[group]} icon={Icon} />
                         <span className="category-label">{CATEGORY_LABELS[group]}</span>
                         <span className="category-count">{counts[group] ?? 0}</span>
                       </button>

@@ -2,6 +2,7 @@ import React, { useEffect, type ReactNode } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import { useCollapsiblePanel } from '../hooks/useCollapsiblePanel';
 import { useMediaQuery, SHORT_LANDSCAPE_QUERY } from '../hooks/useMediaQuery';
+import { MapButton } from './MapButton';
 import './Panel.css';
 
 interface PanelProps {
@@ -107,15 +108,14 @@ export const Panel: React.FC<PanelProps> = ({
 
   if (variant === 'filter' && collapsed) {
     return (
-      <button
+      <MapButton
+        icon={SlidersHorizontal}
         className="panel-launcher"
         onClick={onToggleCollapse}
         aria-expanded={false}
         aria-label={ariaLabel}
         title={ariaLabel}
-      >
-        <SlidersHorizontal size={20} />
-      </button>
+      />
     );
   }
 

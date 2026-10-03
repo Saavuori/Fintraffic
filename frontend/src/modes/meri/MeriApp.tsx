@@ -17,6 +17,7 @@ import { INITIAL_CENTER } from './lib/mapView';
 import { FilterPanel } from './components/FilterPanel';
 import { VesselSearch } from './components/VesselSearch';
 import { FilterStrip, type FilterChip } from '../../shared/components/FilterStrip';
+import { MapButton } from '../../shared/components/MapButton';
 import { VesselPopup } from './components/VesselPopup';
 import { VesselCard } from './components/VesselCard';
 import { PortPopup } from './components/PortPopup';
@@ -28,6 +29,7 @@ import {
   ALL_CATEGORIES,
   categorize,
   CATEGORY_COLORS,
+  CATEGORY_ICONS,
   CATEGORY_LABELS,
   type ShipCategory,
 } from './lib/shipTypes';
@@ -370,6 +372,7 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
         id: cat,
         label: CATEGORY_LABELS[cat],
         color: CATEGORY_COLORS[cat],
+        icon: CATEGORY_ICONS[cat],
         count: categoryCounts[cat] ?? 0,
         // No selection at all means every category is drawn.
         active: selectedCategories.length === 0 || selectedCategories.includes(cat),
@@ -498,13 +501,13 @@ function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {
           Tie has. On a phone it stays a row in the filter sheet — the corners
           there belong to the map and the mode switcher. */}
       {!isMobile && (
-        <button
+        <MapButton
+          icon={mapTheme === 'dark' ? Sun : Moon}
           className="theme-toggle"
           onClick={toggleTheme}
           aria-label={`Switch to ${mapTheme === 'dark' ? 'light' : 'dark'} theme`}
-        >
-          {mapTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-        </button>
+          title={`Switch to ${mapTheme === 'dark' ? 'light' : 'dark'} theme`}
+        />
       )}
 
       {/* The way into fleet replay, parked where the transport bar it opens

@@ -1,0 +1,22 @@
+/* A kind's colour key (see CategorySwatch.tsx). */
+
+.category-swatch {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+/* Big enough to carry the glyph: the shape is half the key now, so it has to be
+   legible, not a speck inside a dot. */
+.category-swatch--icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+}
+
+.category-swatch--round {
+  border-radius: 50%;
+}

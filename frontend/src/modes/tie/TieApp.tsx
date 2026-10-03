@@ -23,6 +23,7 @@ import {
 import { useSheetView } from '../../shared/hooks/useSheetView';
 import { EntitySearch, type SearchItem } from '../../shared/components/EntitySearch';
 import { FilterStrip, type FilterChip } from '../../shared/components/FilterStrip';
+import { MapButton } from '../../shared/components/MapButton';
 import { type Theme } from './lib/theme';
 import { congestionColors, directionalStatuses, type Station } from './lib/traffic';
 import { parkingColors, parkingLevel, type ParkingFacility } from './lib/parking';
@@ -275,13 +276,13 @@ function TieApp({ theme, onToggleTheme }: TieAppProps) {
         asRail={!searchOnMap}
       />
 
-      <button
+      <MapButton
+        icon={theme === 'dark' ? Sun : Moon}
         className={`theme-toggle ${selection ? 'detail-open' : ''}`}
         onClick={onToggleTheme}
         aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-      >
-        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-      </button>
+        title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+      />
 
       {selection && <SelectedCard selection={selection} theme={theme} onClose={clearSelection} />}
 
