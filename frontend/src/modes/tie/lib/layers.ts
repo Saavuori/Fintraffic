@@ -4,7 +4,16 @@ import type { Theme } from './theme';
 // so all three stay in sync from a single source. LAYER_IDS (the concrete
 // MapLibre layer ids per key) stays in Map.tsx since only the map needs it.
 
-export type LayerKey = 'stations' | 'roadworks' | 'incidents' | 'speedlimits' | 'parking' | 'weathercams' | 'charging';
+export type LayerKey =
+  | 'stations'
+  | 'roadworks'
+  | 'incidents'
+  | 'speedlimits'
+  | 'weather'
+  | 'maintenance'
+  | 'parking'
+  | 'weathercams'
+  | 'charging';
 
 // Display order for both the layer-toggle panel and the legend.
 export const LAYER_ORDER: LayerKey[] = [
@@ -12,6 +21,8 @@ export const LAYER_ORDER: LayerKey[] = [
   'roadworks',
   'incidents',
   'speedlimits',
+  'weather',
+  'maintenance',
   'parking',
   'weathercams',
   'charging',
@@ -22,6 +33,8 @@ export const LAYER_LABELS: Record<LayerKey, string> = {
   roadworks: 'Road works',
   incidents: 'Incidents',
   speedlimits: 'Variable speed limits',
+  weather: 'Road weather',
+  maintenance: 'Maintenance vehicles',
   parking: 'Parking',
   weathercams: 'Weather cameras',
   charging: 'EV charging',
@@ -51,6 +64,8 @@ export const DEFAULT_LAYER_VISIBILITY: LayerVisibility = {
   roadworks: true,
   incidents: true,
   speedlimits: true,
+  weather: true,
+  maintenance: true,
   parking: true,
   weathercams: true,
   charging: true,

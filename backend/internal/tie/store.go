@@ -25,6 +25,8 @@ type Store struct {
 	weathercamFallback []WeathercamStation
 	chargingFallback   []ChargingStation
 	speedSignFallback  []VariableSpeedSign
+	weatherFallback    []WeatherStationObs
+	maintFallback      *MaintenanceSnapshot
 }
 
 const (
@@ -34,6 +36,8 @@ const (
 	weathercamKey = "fintraffic:tie:weathercams"
 	chargingKey   = "fintraffic:tie:charging"
 	speedSignKey  = "fintraffic:tie:speedsigns"
+	weatherKey    = "fintraffic:tie:weather"
+	maintKey      = "fintraffic:tie:maintenance"
 
 	// TTLs are generous relative to the poll cadence — they exist to stop truly
 	// ancient data being served forever if a poller dies, not to force refreshes.
@@ -43,6 +47,8 @@ const (
 	weathercamTTL = 30 * time.Minute
 	chargingTTL   = 15 * time.Minute
 	speedSignTTL  = 10 * time.Minute
+	weatherTTL    = 30 * time.Minute
+	maintTTL      = 10 * time.Minute
 )
 
 func NewStore(c cache.Cache) *Store {
@@ -171,4 +177,39 @@ func (s *Store) GetSpeedSignData(ctx context.Context) ([]VariableSpeedSign, bool
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.speedSignFallback, s.speedSignFallback != nil
+}
+
+func (s *Store) SetRoadWeatherData(ctx context.Context, data []WeatherStationObs) {
+	s.mu.Lock()
+	s.weatherFallback = data
+	s.mu.Unlock()
+	s.set(ctx, weatherKey, data, weatherTTL)
+}
+
+func (s *Store) GetRoadWeatherData(ctx context.Context) ([]WeatherStationObs, bool) {
+	if data, ok := getJSON[[]WeatherStationObs](ctx, s, weatherKey); ok {
+		return data, true
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.weatherFallback, s.weatherFallback != nil
+}
+
+func (s *Store) SetMaintenanceData(ctx context.Context, data MaintenanceSnapshot) {
+	s.mu.Lock()
+	s.maintFallback = &data
+	s.mu.Unlock()
+	s.set(ctx, maintKey, data, maintTTL)
+}
+
+func (s *Store) GetMaintenanceData(ctx context.Context) (MaintenanceSnapshot, bool) {
+	if data, ok := getJSON[MaintenanceSnapshot](ctx, s, maintKey); ok {
+		return data, true
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.maintFallback == nil {
+		return MaintenanceSnapshot{}, false
+	}
+	return *s.maintFallback, true
 }

@@ -6,10 +6,12 @@ export interface WeathercamPreset {
 }
 
 export interface WeatherReading {
+  /** Digitraffic weather sensor id, e.g. 27 road condition (see WEATHER_SENSOR). */
+  sensorId: number;
   label: string;
   value: number;
   unit?: string;
-  /** Digitraffic's coded description for enumerated sensors (e.g. road condition "Märkä"). */
+  /** Digitraffic's coded description for enumerated sensors (e.g. road condition "Wet"). */
   description?: string;
 }
 
@@ -38,11 +40,11 @@ export function weathercamColor(theme: Theme): string {
   return theme === 'light' ? '#0097a7' : WEATHERCAM_COLOR;
 }
 
-/** Formats one weather reading as a display string, e.g. "18.8 °C" or "3.0 (Märkä)". */
+/** Formats one weather reading as a display string, e.g. "18.8 °C" or "Wet" —
+ *  an enumerated sensor's code means nothing on its own, so only its
+ *  description is shown. */
 export function formatWeatherReading(reading: WeatherReading): string {
-  const parts: string[] = [];
+  if (reading.description) return reading.description;
   const unit = reading.unit ? ` ${reading.unit}` : '';
-  parts.push(`${reading.value}${unit}`);
-  if (reading.description) parts.push(`(${reading.description})`);
-  return parts.join(' ');
+  return `${reading.value}${unit}`;
 }

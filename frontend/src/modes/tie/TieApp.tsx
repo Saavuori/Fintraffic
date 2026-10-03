@@ -1,17 +1,7 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import {
-  Moon,
-  Sun,
-  Gauge,
-  Construction,
-  TriangleAlert,
-  Signpost,
-  SquareParking,
-  Camera,
-  Zap,
-} from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { Moon, Sun } from 'lucide-react';
 import Map, { type TieData } from './components/Map';
-import { FilterPanel } from './components/FilterPanel';
+import { FilterPanel, LAYER_ICONS } from './components/FilterPanel';
 import { DetailPanel, type Selection } from './components/DetailPanel';
 import { SelectedCard } from './components/SelectedCard';
 import {
@@ -30,6 +20,12 @@ import { parkingColors, parkingLevel, type ParkingFacility } from './lib/parking
 import { weathercamColor, type WeathercamStation } from './lib/weathercam';
 import { chargingColors, chargingLevel, type ChargingStation } from './lib/charging';
 import {
+  roadWeatherColors,
+  roadWeatherLevel,
+  weatherStationName,
+  type RoadWeatherStation,
+} from './lib/roadWeather';
+import {
   type LayerKey,
   type LayerVisibility,
   DEFAULT_LAYER_VISIBILITY,
@@ -38,19 +34,38 @@ import {
 } from './lib/layers';
 import './tie.css';
 
-const EMPTY_DATA: TieData = { stations: [], facilities: [], cameras: [], chargers: [] };
+const EMPTY_DATA: TieData = { stations: [], facilities: [], cameras: [], chargers: [], weather: [] };
 
-// Pictogram per layer, mirroring what the map draws — Tie keys its layers by
-// shape rather than by one colour each, so the strip does too.
-const LAYER_ICONS: Record<LayerKey, React.ComponentType<{ size?: number }>> = {
-  stations: Gauge,
-  roadworks: Construction,
-  incidents: TriangleAlert,
-  speedlimits: Signpost,
-  parking: SquareParking,
-  weathercams: Camera,
-  charging: Zap,
-};
+/** Search/sheet key for a selection, e.g. "camera:C01502". */
+function selectionId(selection: Selection): string {
+  switch (selection.kind) {
+    case 'station':
+      return `station:${selection.station.id}`;
+    case 'parking':
+      return `parking:${selection.facility.id}`;
+    case 'camera':
+      return `camera:${selection.camera.id}`;
+    case 'charger':
+      return `charger:${selection.charger.id}`;
+    case 'weather':
+      return `weather:${selection.weather.id}`;
+  }
+}
+
+function selectionName(selection: Selection): string {
+  switch (selection.kind) {
+    case 'station':
+      return selection.station.name;
+    case 'parking':
+      return selection.facility.name;
+    case 'camera':
+      return selection.camera.name;
+    case 'charger':
+      return selection.charger.name;
+    case 'weather':
+      return weatherStationName(selection.weather.name);
+  }
+}
 
 interface TieAppProps {
   theme: Theme;
@@ -108,15 +123,21 @@ function TieApp({ theme, onToggleTheme }: TieAppProps) {
     (charger: ChargingStation) => select({ kind: 'charger', charger }),
     [select]
   );
+  const onSelectWeather = useCallback(
+    (weather: RoadWeatherStation) => select({ kind: 'weather', weather }),
+    [select]
+  );
 
   const clearSelection = useCallback(() => setSelection(null), []);
 
-  // One box over four feeds: measurement stations by name or road, car parks,
-  // cameras and chargers. Each row wears the colour its marker has on the map.
+  // One box over five feeds: measurement stations by name or road, car parks,
+  // cameras, chargers and road weather stations. Each row wears the colour its
+  // marker has on the map.
   const searchItems = useMemo<SearchItem[]>(() => {
     const congestion = congestionColors(theme);
     const parking = parkingColors(theme);
     const charging = chargingColors(theme);
+    const roadWeather = roadWeatherColors(theme);
     const items: SearchItem[] = [];
     for (const s of data.stations) {
       const [dir1] = directionalStatuses(s);
@@ -155,6 +176,16 @@ function TieApp({ theme, onToggleTheme }: TieAppProps) {
         haystack: `${c.name} ${c.operator ?? ''} ${c.city ?? ''}`.toLowerCase(),
       });
     }
+    for (const w of data.weather) {
+      const name = weatherStationName(w.name);
+      items.push({
+        id: `weather:${w.id}`,
+        label: name,
+        meta: 'Weather',
+        accent: roadWeather[roadWeatherLevel(w)],
+        haystack: `${name} ${w.id}`.toLowerCase(),
+      });
+    }
     return items;
   }, [data, theme]);
 
@@ -175,30 +206,17 @@ function TieApp({ theme, onToggleTheme }: TieAppProps) {
       } else if (kind === 'charger') {
         const charger = data.chargers.find(c => c.id === key);
         if (charger) onSelectCharger(charger);
+      } else if (kind === 'weather') {
+        const weather = data.weather.find(w => String(w.id) === key);
+        if (weather) onSelectWeather(weather);
       }
     },
-    [data, onSelectStation, onSelectFacility, onSelectCamera, onSelectCharger]
+    [data, onSelectStation, onSelectFacility, onSelectCamera, onSelectCharger, onSelectWeather]
   );
 
   // The phone's one sheet shows either the selection or the filters.
-  const selectionKey = selection
-    ? selection.kind === 'station'
-      ? `station:${selection.station.id}`
-      : selection.kind === 'parking'
-        ? `parking:${selection.facility.id}`
-        : selection.kind === 'camera'
-          ? `camera:${selection.camera.id}`
-          : `charger:${selection.charger.id}`
-    : null;
-  const selectionLabel = selection
-    ? selection.kind === 'station'
-      ? selection.station.name
-      : selection.kind === 'parking'
-        ? selection.facility.name
-        : selection.kind === 'camera'
-          ? selection.camera.name
-          : selection.charger.name
-    : '';
+  const selectionKey = selection ? selectionId(selection) : null;
+  const selectionLabel = selection ? selectionName(selection) : '';
   const sheet = useSheetView(isMobile, selectionKey);
 
   // The pill belongs to the map, so it is only up while the map is: a panel
@@ -230,6 +248,7 @@ function TieApp({ theme, onToggleTheme }: TieAppProps) {
         onSelectFacility={onSelectFacility}
         onSelectCamera={onSelectCamera}
         onSelectCharger={onSelectCharger}
+        onSelectWeather={onSelectWeather}
         onDataUpdate={mergeData}
         visibility={layerVisibility}
         theme={theme}

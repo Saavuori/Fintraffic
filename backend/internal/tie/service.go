@@ -13,8 +13,8 @@ import (
 )
 
 // Service is the tie (road traffic) mode: REST polling of the Digitraffic
-// road APIs (TMS stations, traffic messages, variable signs, weathercams)
-// plus parking.fintraffic.fi and the AFIR charging network. It implements
+// road APIs (TMS stations, traffic messages, variable signs, road weather,
+// weathercams, maintenance vehicles) plus parking.fintraffic.fi and the AFIR charging network. It implements
 // server.Mode.
 type Service struct {
 	store    *Store
@@ -30,14 +30,21 @@ type Service struct {
 	// size of the last combined station set.
 	lastTMS        atomic.Int64
 	activeStations atomic.Int64
+	// Sizes of the last road-weather and maintenance snapshots, -1 until the
+	// first successful poll.
+	weatherStations     atomic.Int64
+	maintenanceVehicles atomic.Int64
 }
 
 func NewService(liveCache cache.Cache) *Service {
 	store := NewStore(liveCache)
-	return &Service{
+	s := &Service{
 		store:    store,
 		handlers: NewHandlers(store),
 	}
+	s.weatherStations.Store(-1)
+	s.maintenanceVehicles.Store(-1)
+	return s
 }
 
 // sleepCtx sleeps for d or until ctx is cancelled, reporting whether to keep
@@ -106,35 +113,55 @@ func (s *Service) pollSpeedSigns(ctx context.Context) {
 	}
 }
 
-func (s *Service) pollWeathercams(ctx context.Context) {
+// pollWeather keeps both weather-backed layers live from one weather fetch: the
+// road weather stations themselves, and the weather cameras, which carry no
+// sensors of their own and are enriched with their nearest station's readings.
+func (s *Service) pollWeather(ctx context.Context) {
 	for {
-		stations, err := FetchWeathercamStations(ctx)
-		if err != nil {
-			log.Printf("Tie: error fetching weathercam stations: %v", err)
-			if !sleepCtx(ctx, 3*time.Minute) {
-				return
-			}
-			continue
-		}
-
-		// Cameras carry no weather sensors, so enrich each with the current
-		// readings from its nearest road weather station. If the weather fetch
-		// fails, still serve the cameras (just without the weather summary).
 		weatherStations, err := FetchWeatherStations(ctx)
 		if err != nil {
 			log.Printf("Tie: error fetching weather stations: %v", err)
 		} else {
-			for i := range stations {
-				stations[i].Weather = NearestWeatherObservation(
-					stations[i].Longitude, stations[i].Latitude, weatherStations)
-			}
+			s.store.SetRoadWeatherData(ctx, weatherStations)
+			s.weatherStations.Store(int64(len(weatherStations)))
 		}
 
-		s.store.SetWeathercamData(ctx, stations)
+		// If the weather fetch failed, still serve the cameras (just without
+		// the weather summary).
+		cameras, err := FetchWeathercamStations(ctx)
+		if err != nil {
+			log.Printf("Tie: error fetching weathercam stations: %v", err)
+		} else {
+			if weatherStations != nil {
+				for i := range cameras {
+					cameras[i].Weather = NearestWeatherObservation(
+						cameras[i].Longitude, cameras[i].Latitude, weatherStations)
+				}
+			}
+			s.store.SetWeathercamData(ctx, cameras)
+		}
 
-		// Camera presets rarely change, but the embedded weather does, so poll
-		// on a weather-appropriate cadence.
+		// Camera presets rarely change, but road weather does; stations report
+		// every few minutes.
 		if !sleepCtx(ctx, 3*time.Minute) {
+			return
+		}
+	}
+}
+
+// pollMaintenance keeps the maintenance-vehicle layer live. Vehicles report
+// every few seconds to minutes and their points reach Digitraffic within a
+// couple of minutes, so a 1-min cadence keeps the map close to the feed.
+func (s *Service) pollMaintenance(ctx context.Context) {
+	for {
+		snap, err := FetchMaintenance(ctx, time.Now())
+		if err != nil {
+			log.Printf("Tie: error fetching maintenance tracking: %v", err)
+		} else {
+			s.store.SetMaintenanceData(ctx, snap)
+			s.maintenanceVehicles.Store(int64(len(snap.Vehicles)))
+		}
+		if !sleepCtx(ctx, 1*time.Minute) {
 			return
 		}
 	}
@@ -319,9 +346,13 @@ func (s *Service) Start(ctx context.Context) error {
 	go s.pollParking(ctx)
 	go s.pollCharging(ctx)
 
-	// Weather camera stations/presets (image list, not the images themselves —
-	// the frontend fetches those directly from weathercam.digitraffic.fi).
-	go s.pollWeathercams(ctx)
+	// Road weather stations, and the weather camera stations/presets they
+	// enrich (image list, not the images themselves — the frontend fetches
+	// those directly from weathercam.digitraffic.fi).
+	go s.pollWeather(ctx)
+
+	// Snowploughs, gritters and other road-maintenance vehicles.
+	go s.pollMaintenance(ctx)
 
 	// TMS traffic-measurement stations, the primary layer.
 	go s.pollTMS(ctx)
@@ -343,6 +374,8 @@ func (s *Service) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/tie/parking", s.handlers.Parking)
 	mux.HandleFunc("GET /api/tie/weathercams", s.handlers.Weathercams)
 	mux.HandleFunc("GET /api/tie/charging", s.handlers.Charging)
+	mux.HandleFunc("GET /api/tie/weather", s.handlers.RoadWeather)
+	mux.HandleFunc("GET /api/tie/maintenance", s.handlers.Maintenance)
 }
 
 // Health implements server.Mode. The mode is healthy once the TMS poll has
@@ -367,6 +400,9 @@ func (s *Service) Health(ctx context.Context) server.ModeHealth {
 		Details: map[string]any{
 			"active_stations":  s.activeStations.Load(),
 			"tms_poll_age_sec": age, // -1 until the first successful poll
+			// Both -1 until their first successful poll.
+			"weather_stations":     s.weatherStations.Load(),
+			"maintenance_vehicles": s.maintenanceVehicles.Load(),
 		},
 	}
 }

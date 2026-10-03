@@ -5,6 +5,7 @@ import { directionalStatuses, stationVolume, congestionColors, type CongestionLe
 import { parkingColors, parkingLevel } from '../lib/parking';
 import { chargingColors, chargingLevel, availabilityText } from '../lib/charging';
 import { weathercamColor } from '../lib/weathercam';
+import { roadWeatherColors, roadWeatherLevel, roadWeatherSummary, weatherStationName } from '../lib/roadWeather';
 import type { Theme } from '../lib/theme';
 
 interface SelectedCardProps {
@@ -49,6 +50,12 @@ function summary(selection: Selection, theme: Theme): { dot: string; name: strin
         dot: chargingColors(theme)[chargingLevel(selection.charger)],
         name: selection.charger.name,
         stat: availabilityText(selection.charger),
+      };
+    case 'weather':
+      return {
+        dot: roadWeatherColors(theme)[roadWeatherLevel(selection.weather)],
+        name: weatherStationName(selection.weather.name),
+        stat: roadWeatherSummary(selection.weather),
       };
   }
 }

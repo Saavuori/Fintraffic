@@ -2,6 +2,8 @@ import type * as maplibregl from 'maplibre-gl';
 import { parkingColors } from './parking';
 import { weathercamColor } from './weathercam';
 import { chargingColors } from './charging';
+import { type RoadWeatherLevel, ROAD_WEATHER_LEVELS, roadWeatherColors } from './roadWeather';
+import { type MaintenanceCategory, MAINTENANCE_CATEGORIES, maintenanceColors } from './maintenance';
 import { poiColors } from './layers';
 import { SPEED_SIGN_RING } from './speedLimits';
 import { type Theme, MARKER_STROKE } from './theme';
@@ -146,6 +148,67 @@ function chargingIcon(fill: string, stroke: string): IconImage {
   });
 }
 
+/** Hexagon with a thermometer glyph — a road weather station, tinted by how
+ *  slippery its road surface reads. The hexagon keeps it apart from the TMS
+ *  discs, which often share a mast. */
+function roadWeatherIcon(fill: string, stroke: string): IconImage {
+  return render(ctx => {
+    const c = SIZE / 2;
+    const r = SIZE / 2 - MARGIN;
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = Math.PI / 6 + (i * Math.PI) / 3;
+      const x = c + r * Math.cos(a);
+      const y = c + r * Math.sin(a);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    paint(ctx, fill, stroke);
+    // Thermometer: a stem and a bulb.
+    ctx.fillStyle = stroke;
+    roundRectPath(ctx, c - 2.5, c - 11, 5, 15, 2.5);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(c, c + 6, 5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+export function roadWeatherIconId(level: RoadWeatherLevel): string {
+  return `road-weather-${level}-icon`;
+}
+
+/** Navigation arrow — a maintenance vehicle with a known heading (rotated to it
+ *  via icon-rotate) — or, with no heading, a ring with a solid core. Both are
+ *  tinted by what the vehicle is doing. */
+function vehicleIcon(fill: string, stroke: string, heading: boolean): IconImage {
+  return render(ctx => {
+    const c = SIZE / 2;
+    if (heading) {
+      ctx.beginPath();
+      ctx.moveTo(c, MARGIN);
+      ctx.lineTo(SIZE - MARGIN - 4, SIZE - MARGIN);
+      ctx.lineTo(c, SIZE - MARGIN - 9);
+      ctx.lineTo(MARGIN + 4, SIZE - MARGIN);
+      ctx.closePath();
+      paint(ctx, fill, stroke);
+      return;
+    }
+    ctx.beginPath();
+    ctx.arc(c, c, SIZE / 2 - MARGIN - 4, 0, Math.PI * 2);
+    paint(ctx, fill, stroke);
+    ctx.beginPath();
+    ctx.arc(c, c, 4, 0, Math.PI * 2);
+    ctx.fillStyle = stroke;
+    ctx.fill();
+  });
+}
+
+export function vehicleIconId(category: MaintenanceCategory, heading: boolean): string {
+  return `vehicle-${category}-${heading ? 'arrow' : 'dot'}-icon`;
+}
+
 /** Disc split down the middle — a TMS station, with each half tinted by one
  *  direction's congestion level so a road that's fine one way and slow the
  *  other doesn't get hidden behind a single worst-case color. The split is
@@ -273,11 +336,21 @@ export function registerMarkerIcons(m: maplibregl.Map, theme: Theme) {
   const parking = parkingColors(theme);
   const charging = chargingColors(theme);
   const congestion = congestionColors(theme);
+  const roadWeather = roadWeatherColors(theme);
+  const maintenance = maintenanceColors(theme);
 
   for (const dir1 of CONGESTION_LEVELS) {
     for (const dir2 of CONGESTION_LEVELS) {
       add(stationIconId(dir1, dir2), stationIcon(congestion[dir1], congestion[dir2], stroke));
     }
+  }
+
+  for (const level of ROAD_WEATHER_LEVELS) {
+    add(roadWeatherIconId(level), roadWeatherIcon(roadWeather[level], stroke));
+  }
+  for (const category of MAINTENANCE_CATEGORIES) {
+    add(vehicleIconId(category, true), vehicleIcon(maintenance[category], stroke, true));
+    add(vehicleIconId(category, false), vehicleIcon(maintenance[category], stroke, false));
   }
 
   add(MARKER_ICONS.roadworks, triangleIcon(poi.roadworks, stroke));
