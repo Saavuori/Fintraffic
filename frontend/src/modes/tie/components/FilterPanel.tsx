@@ -8,6 +8,8 @@ import {
   SquareParking,
   Camera,
   Zap,
+  Thermometer,
+  Truck,
   Moon,
   Sun,
   ChevronLeft,
@@ -46,12 +48,15 @@ interface FilterPanelProps {
 }
 
 // Pictogram per layer, mirroring what the map draws so the toggle key matches
-// the marker.
-const LAYER_ICONS: Record<LayerKey, React.ComponentType<{ size?: number }>> = {
+// the marker. Tie keys its layers by shape rather than by one colour each, so
+// the phone's filter strip uses these too.
+export const LAYER_ICONS: Record<LayerKey, React.ComponentType<{ size?: number }>> = {
   stations: Gauge,
   roadworks: Construction,
   incidents: TriangleAlert,
   speedlimits: Signpost,
+  weather: Thermometer,
+  maintenance: Truck,
   parking: SquareParking,
   weathercams: Camera,
   charging: Zap,

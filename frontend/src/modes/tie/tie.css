@@ -103,6 +103,12 @@
   background: rgba(167, 139, 250, 0.12);
 }
 
+.mode-tie .detail-badge.weather-badge {
+  border-color: #2ecc71;
+  color: #2ecc71;
+  background: rgba(46, 204, 113, 0.12);
+}
+
 .mode-tie .detail-link {
   color: var(--accent);
   font-weight: 600;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ChevronRight, Gauge, SquareParking, Camera, Zap } from 'lucide-react';
+import { X, ChevronRight, Gauge, SquareParking, Camera, Zap, Thermometer } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
 import { Panel } from '../../../shared/components/Panel';
 import { BrowseButton } from '../../../shared/components/SheetViewSwitch';
@@ -19,12 +19,22 @@ import {
   connectorLabel,
   priceLabel,
 } from '../lib/charging';
+import {
+  type RoadWeatherStation,
+  WEATHER_SENSOR,
+  reading,
+  roadWeatherLevel,
+  roadWeatherColors,
+  weatherStationName,
+  ROAD_WEATHER_LEVEL_LABELS,
+} from '../lib/roadWeather';
 
 export type Selection =
   | { kind: 'station'; station: Station }
   | { kind: 'parking'; facility: ParkingFacility }
   | { kind: 'camera'; camera: WeathercamStation }
-  | { kind: 'charger'; charger: ChargingStation };
+  | { kind: 'charger'; charger: ChargingStation }
+  | { kind: 'weather'; weather: RoadWeatherStation };
 
 interface DetailPanelProps {
   selection: Selection;
@@ -214,7 +224,7 @@ function CameraDetail({ camera, isMobile }: { camera: WeathercamStation; isMobil
       {camera.weather && (
         <>
           <div className="section-label">
-            Weather · {camera.weather.stationName} ({camera.weather.distanceKm} km)
+            Weather · {weatherStationName(camera.weather.stationName)} ({camera.weather.distanceKm} km)
           </div>
           <div className="detail-facts">
             {camera.weather.readings.map(reading => (
@@ -298,6 +308,68 @@ function ChargerDetail({ charger, isMobile }: { charger: ChargingStation; isMobi
   );
 }
 
+function formatTemp(value: number | undefined): string {
+  return value != null ? value.toFixed(1) : '—';
+}
+
+function WeatherDetail({
+  weather,
+  theme,
+  isMobile,
+}: {
+  weather: RoadWeatherStation;
+  theme: Theme;
+  isMobile: boolean;
+}) {
+  const level = roadWeatherLevel(weather);
+  return (
+    <>
+      {!isMobile && (
+      <div className="telemetry-grid">
+        <div className="telemetry-item">
+          <span className="telemetry-label">Road surface</span>
+          <span className="telemetry-value">
+            {formatTemp(reading(weather, WEATHER_SENSOR.roadTemp)?.value)} <small>°C</small>
+          </span>
+        </div>
+        <div className="telemetry-item">
+          <span className="telemetry-label">Conditions</span>
+          <span className="telemetry-value" style={{ color: roadWeatherColors(theme)[level], fontSize: '0.9rem' }}>
+            {ROAD_WEATHER_LEVEL_LABELS[level]}
+          </span>
+        </div>
+      </div>
+      )}
+
+      <div className="detail-facts">
+        {weather.readings.map(r => (
+          <div className="fact-row" key={r.sensorId}>
+            <span>{r.label}</span>
+            <b>{formatWeatherReading(r)}</b>
+          </div>
+        ))}
+      </div>
+
+      <Fold folded={isMobile} label="Location">
+      <div className="detail-facts">
+        {weather.measuredTime && (
+          <div className="fact-row">
+            <span>Measured</span>
+            <b>{new Date(weather.measuredTime).toLocaleString('fi-FI')}</b>
+          </div>
+        )}
+        <div className="fact-row">
+          <span>Coordinates</span>
+          <b>
+            {weather.latitude.toFixed(5)}, {weather.longitude.toFixed(5)}
+          </b>
+        </div>
+      </div>
+      </Fold>
+    </>
+  );
+}
+
 /** Title, subtitle, badge class, and icon for the header, per selection kind. */
 function header(selection: Selection): {
   title: string;
@@ -333,6 +405,13 @@ function header(selection: Selection): {
         subtitle: selection.charger.operator || 'EV charging',
         badgeClass: 'charger-badge',
         Icon: Zap,
+      };
+    case 'weather':
+      return {
+        title: weatherStationName(selection.weather.name),
+        subtitle: `Road weather station · ${selection.weather.id}`,
+        badgeClass: 'weather-badge',
+        Icon: Thermometer,
       };
   }
 }
@@ -383,6 +462,22 @@ function Readout({ selection, theme }: { selection: Selection; theme: Theme }) {
           <span className="readout-sub">{availabilityText(selection.charger)}</span>
         </div>
       );
+    case 'weather': {
+      const level = roadWeatherLevel(selection.weather);
+      // Code 0 is a faulty sensor, not a condition.
+      const condition = reading(selection.weather, WEATHER_SENSOR.condition);
+      return (
+        <div className="vessel-readout">
+          <span className="readout-value" style={{ color: roadWeatherColors(theme)[level] }}>
+            {formatTemp(reading(selection.weather, WEATHER_SENSOR.roadTemp)?.value)}
+            <small>°C</small>
+          </span>
+          <span className="readout-sub">
+            {condition?.value && condition.description ? condition.description : ROAD_WEATHER_LEVEL_LABELS[level]}
+          </span>
+        </div>
+      );
+    }
     // A camera's readout is the picture itself.
     case 'camera':
       return null;
@@ -438,6 +533,9 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
           {selection.kind === 'parking' && <ParkingDetail facility={selection.facility} isMobile={isMobile} />}
           {selection.kind === 'camera' && <CameraDetail camera={selection.camera} isMobile={isMobile} />}
           {selection.kind === 'charger' && <ChargerDetail charger={selection.charger} isMobile={isMobile} />}
+          {selection.kind === 'weather' && (
+            <WeatherDetail weather={selection.weather} theme={theme} isMobile={isMobile} />
+          )}
         </div>
       )}
     </Panel>

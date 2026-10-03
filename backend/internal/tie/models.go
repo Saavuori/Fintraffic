@@ -258,16 +258,19 @@ type WeathercamStation struct {
 }
 
 // Weather Models
-// WeatherReading is one curated road-weather sensor value shown on a camera
-// screen. Digitraffic road weather stations expose ~100 sensors; only a handful
-// (air/road temperature, wind, precipitation, road condition, etc.) are useful
-// alongside a camera image, so the backend selects them by stable numeric id.
+// WeatherReading is one curated road-weather sensor value. Digitraffic road
+// weather stations expose ~100 sensors; only a handful (road/air temperature,
+// road condition, friction, wind, precipitation, etc.) are useful on a map, so
+// the backend selects them by stable numeric id.
 type WeatherReading struct {
-	Label string  `json:"label"`
-	Value float64 `json:"value"`
-	Unit  string  `json:"unit,omitempty"`
+	// SensorID is Digitraffic's weather sensor id (e.g. 27 road condition),
+	// which the frontend grades by — labels are display text only.
+	SensorID int     `json:"sensorId"`
+	Label    string  `json:"label"`
+	Value    float64 `json:"value"`
+	Unit     string  `json:"unit,omitempty"`
 	// Description is Digitraffic's coded textual description for enumerated
-	// sensors (e.g. road condition "Märkä"/wet); empty for plain numeric sensors.
+	// sensors (e.g. road condition "Wet"); empty for plain numeric sensors.
 	Description string `json:"description,omitempty"`
 }
 

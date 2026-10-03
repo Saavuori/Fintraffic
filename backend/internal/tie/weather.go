@@ -10,38 +10,44 @@ const (
 	weatherDataURL     = "https://tie.digitraffic.fi/api/weather/v1/stations/data"
 )
 
-// curatedWeatherSensors is the ordered set of road-weather sensors surfaced on a
-// camera screen. Digitraffic reuses ambiguous shortNames, so sensors are matched
-// by stable numeric id (same rule as the TMS speed/volume sensors). The label is
-// an English display name since the coded Finnish descriptions only exist for a
-// few enumerated sensors (e.g. road condition).
+// curatedWeatherSensors is the ordered set of road-weather sensors surfaced on
+// the road-weather layer and on a camera screen. Digitraffic reuses ambiguous
+// shortNames, so sensors are matched by stable numeric id (same rule as the TMS
+// speed/volume sensors). The label is an English display name; enumerated
+// sensors (road condition, warning) carry their meaning in the coded
+// description instead. The frontend grades a station by sensor id, so the ids
+// for road condition (27), warning (29) and friction (176) are load-bearing.
 var curatedWeatherSensors = []struct {
 	id    int
 	label string
 }{
-	{1, "Air temperature"},
 	{3, "Road surface temp"},
+	{1, "Air temperature"},
+	{27, "Road condition"},
+	{29, "Road weather warning"},
+	{176, "Friction"},
 	{21, "Humidity"},
 	{16, "Wind speed"},
 	{23, "Precipitation"},
-	{27, "Road condition"},
 	{26, "Visibility"},
 }
 
-// WeatherStationObs is a road weather station's location plus its curated current
-// readings, used to find the nearest station to each weather camera.
+// WeatherStationObs is a road weather station's location plus its curated
+// current readings: served as-is for the road-weather layer, and used to find
+// the nearest station to each weather camera.
 type WeatherStationObs struct {
-	ID           int
-	Name         string
-	Longitude    float64
-	Latitude     float64
-	MeasuredTime string
-	Readings     []WeatherReading
+	ID           int              `json:"id"`
+	Name         string           `json:"name"`
+	Longitude    float64          `json:"longitude"`
+	Latitude     float64          `json:"latitude"`
+	MeasuredTime string           `json:"measuredTime,omitempty"`
+	Readings     []WeatherReading `json:"readings"`
 }
 
 type rawWeatherStationProperties struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
+	ID               int    `json:"id"`
+	Name             string `json:"name"`
+	CollectionStatus string `json:"collectionStatus"`
 }
 
 type rawWeatherStationFeature struct {
@@ -59,6 +65,7 @@ type rawWeatherSensorValue struct {
 	Unit                     string  `json:"unit"`
 	MeasuredTime             string  `json:"measuredTime"`
 	SensorValueDescriptionFi string  `json:"sensorValueDescriptionFi"`
+	SensorValueDescriptionEn string  `json:"sensorValueDescriptionEn"`
 }
 
 type rawWeatherStationData struct {
@@ -72,8 +79,8 @@ type rawWeatherDataResponse struct {
 
 // FetchWeatherStations fetches all road weather stations and merges each
 // station's location metadata with its live curated sensor readings, mirroring
-// the metadata+data merge used for TMS and parking. Stations without location or
-// without any curated reading are skipped.
+// the metadata+data merge used for TMS and parking. Stations that aren't
+// gathering, or have no location or curated reading, are skipped.
 func FetchWeatherStations(ctx context.Context) ([]WeatherStationObs, error) {
 	var meta rawWeatherStationsCollection
 	if err := fetchJSON(ctx, weatherStationsURL, &meta); err != nil {
@@ -92,7 +99,8 @@ func FetchWeatherStations(ctx context.Context) ([]WeatherStationObs, error) {
 
 	stations := make([]WeatherStationObs, 0, len(meta.Features))
 	for _, f := range meta.Features {
-		if len(f.Geometry.Coordinates) < 2 {
+		// REMOVED_TEMPORARILY stations only carry stale readings.
+		if f.Properties.CollectionStatus != "GATHERING" || len(f.Geometry.Coordinates) < 2 {
 			continue
 		}
 		sd, ok := dataByID[f.Properties.ID]
@@ -115,11 +123,17 @@ func FetchWeatherStations(ctx context.Context) ([]WeatherStationObs, error) {
 			if measuredTime == "" {
 				measuredTime = sv.MeasuredTime
 			}
+			// The UI is English, so prefer the English coded description.
+			description := sv.SensorValueDescriptionEn
+			if description == "" {
+				description = sv.SensorValueDescriptionFi
+			}
 			readings = append(readings, WeatherReading{
+				SensorID:    c.id,
 				Label:       c.label,
 				Value:       sv.Value,
 				Unit:        cleanWeatherUnit(sv.Unit),
-				Description: sv.SensorValueDescriptionFi,
+				Description: description,
 			})
 		}
 		if len(readings) == 0 {

@@ -10,9 +10,30 @@ import {
 } from '../lib/traffic';
 import { type ParkingFacility, parkingLevel } from '../lib/parking';
 import { type WeathercamStation } from '../lib/weathercam';
-import { MARKER_ICONS, registerMarkerIcons, registerSpeedLimitIcon } from '../lib/markerIcons';
+import {
+  MARKER_ICONS,
+  registerMarkerIcons,
+  registerSpeedLimitIcon,
+  roadWeatherIconId,
+  vehicleIconId,
+} from '../lib/markerIcons';
 import { type VariableSpeedSign, speedSignPopupHTML } from '../lib/speedLimits';
 import { type ChargingStation, chargingLevel, availabilityText } from '../lib/charging';
+import {
+  type RoadWeatherStation,
+  roadWeatherLevel,
+  roadWeatherSummary,
+  weatherStationName,
+  ROAD_WEATHER_LEVEL_LABELS,
+} from '../lib/roadWeather';
+import {
+  type MaintenanceSnapshot,
+  type MaintenanceVehicle,
+  maintenanceCategory,
+  maintenanceColors,
+  maintenancePopupHTML,
+  minutesAgo,
+} from '../lib/maintenance';
 import { type LayerKey, LAYER_ORDER, type LayerVisibility, poiColors } from '../lib/layers';
 import { type Theme, BASEMAP_STYLES } from '../lib/theme';
 import { LocateControl } from '../../../shared/components/LocateControl';
@@ -24,6 +45,7 @@ export interface TieData {
   facilities: ParkingFacility[];
   cameras: WeathercamStation[];
   chargers: ChargingStation[];
+  weather: RoadWeatherStation[];
 }
 
 interface MapProps {
@@ -31,6 +53,7 @@ interface MapProps {
   onSelectFacility: (facility: ParkingFacility) => void;
   onSelectCamera: (camera: WeathercamStation) => void;
   onSelectCharger: (charger: ChargingStation) => void;
+  onSelectWeather: (station: RoadWeatherStation) => void;
   visibility: LayerVisibility;
   theme: Theme;
   /** Fired per feed as it lands, with just that feed's slice. */
@@ -49,12 +72,20 @@ const CHARGING_SOURCE = 'charging-stations';
 const CHARGING_LAYER = 'charging-stations-circles';
 const SPEEDLIMIT_SOURCE = 'speed-limits';
 const SPEEDLIMIT_LAYER = 'speed-limits-signs';
+const WEATHER_SOURCE = 'road-weather';
+const WEATHER_LAYER = 'road-weather-icons';
+const VEHICLES_SOURCE = 'maintenance-vehicles';
+const VEHICLES_LAYER = 'maintenance-vehicles-icons';
+const TRAILS_SOURCE = 'maintenance-trails';
+const TRAILS_LAYER = 'maintenance-trails-line';
 
 const LAYER_IDS: Record<LayerKey, string[]> = {
   stations: [STATIONS_LAYER],
   roadworks: ['roadworks-line', 'roadworks-point'],
   incidents: ['incidents-line', 'incidents-point'],
   speedlimits: [SPEEDLIMIT_LAYER],
+  weather: [WEATHER_LAYER],
+  maintenance: [TRAILS_LAYER, VEHICLES_LAYER],
   parking: [PARKING_LAYER],
   weathercams: [WEATHERCAM_LAYER],
   charging: [CHARGING_LAYER],
@@ -89,6 +120,52 @@ function toChargingGeoJSON(stations: ChargingStation[]): GeoJSON.FeatureCollecti
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [station.longitude, station.latitude] },
       properties: { id: station.id, level: chargingLevel(station) },
+    })),
+  };
+}
+
+function toRoadWeatherGeoJSON(stations: RoadWeatherStation[]): GeoJSON.FeatureCollection<GeoJSON.Point> {
+  return {
+    type: 'FeatureCollection',
+    features: stations.map(station => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [station.longitude, station.latitude] },
+      properties: { id: station.id, icon: roadWeatherIconId(roadWeatherLevel(station)) },
+    })),
+  };
+}
+
+// Age in minutes is baked in at fetch time (refreshed every poll) so the paint
+// can fade a vehicle that has stopped reporting, and the older end of a trail.
+function toVehiclesGeoJSON(vehicles: MaintenanceVehicle[], now: number): GeoJSON.FeatureCollection<GeoJSON.Point> {
+  return {
+    type: 'FeatureCollection',
+    features: vehicles.map(vehicle => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [vehicle.longitude, vehicle.latitude] },
+      properties: {
+        id: vehicle.id,
+        icon: vehicleIconId(maintenanceCategory(vehicle.tasks), vehicle.direction != null),
+        direction: vehicle.direction ?? 0,
+        age: minutesAgo(vehicle.time, now),
+      },
+    })),
+  };
+}
+
+function toTrailsGeoJSON(
+  routes: MaintenanceSnapshot['routes'],
+  now: number
+): GeoJSON.FeatureCollection<GeoJSON.LineString> {
+  return {
+    type: 'FeatureCollection',
+    features: routes.features.map(route => ({
+      type: 'Feature',
+      geometry: route.geometry,
+      properties: {
+        category: maintenanceCategory(route.properties.tasks),
+        age: minutesAgo(route.properties.endTime, now),
+      },
     })),
   };
 }
@@ -131,6 +208,7 @@ const Map: React.FC<MapProps> = ({
   onSelectFacility,
   onSelectCamera,
   onSelectCharger,
+  onSelectWeather,
   visibility,
   theme,
   onDataUpdate,
@@ -141,7 +219,14 @@ const Map: React.FC<MapProps> = ({
   // The map handlers and polls are registered once inside the mount effect, so
   // they read every callback through this ref rather than closing over the
   // mounting render's copy.
-  const callbacks = { onSelectStation, onSelectFacility, onSelectCamera, onSelectCharger, onDataUpdate };
+  const callbacks = {
+    onSelectStation,
+    onSelectFacility,
+    onSelectCamera,
+    onSelectCharger,
+    onSelectWeather,
+    onDataUpdate,
+  };
   const callbacksRef = useRef(callbacks);
   useEffect(() => {
     callbacksRef.current = callbacks;
@@ -150,6 +235,8 @@ const Map: React.FC<MapProps> = ({
   const facilitiesById = useRef<globalThis.Map<number, ParkingFacility>>(new globalThis.Map());
   const camerasById = useRef<globalThis.Map<string, WeathercamStation>>(new globalThis.Map());
   const chargersById = useRef<globalThis.Map<string, ChargingStation>>(new globalThis.Map());
+  const weatherById = useRef<globalThis.Map<number, RoadWeatherStation>>(new globalThis.Map());
+  const vehiclesById = useRef<globalThis.Map<number, MaintenanceVehicle>>(new globalThis.Map());
   const hoverPopupRef = useRef<maplibregl.Popup | null>(null);
   const clickPopupRef = useRef<maplibregl.Popup | null>(null);
 
@@ -760,6 +847,187 @@ const Map: React.FC<MapProps> = ({
       }
     };
 
+    const fetchRoadWeather = async () => {
+      try {
+        const res = await fetch('/api/tie/weather');
+        const stations: RoadWeatherStation[] = await res.json();
+
+        weatherById.current = new globalThis.Map(stations.map(s => [s.id, s]));
+        callbacksRef.current.onDataUpdate?.({ weather: stations });
+
+        const geojson = toRoadWeatherGeoJSON(stations);
+        const source = m.getSource(WEATHER_SOURCE) as maplibregl.GeoJSONSource | undefined;
+        if (source) {
+          source.setData(geojson);
+          return;
+        }
+
+        if (!styleReadyRef.current) return;
+
+        m.addSource(WEATHER_SOURCE, { type: 'geojson', data: geojson });
+        m.addLayer({
+          id: WEATHER_LAYER,
+          type: 'symbol',
+          source: WEATHER_SOURCE,
+          layout: {
+            'icon-image': ['get', 'icon'],
+            'icon-size': 0.7,
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+          },
+        });
+        setLayersVisible(m, LAYER_IDS.weather, visibilityRef.current.weather);
+
+        bindOnce(WEATHER_LAYER, () => {
+          m.on('mouseenter', WEATHER_LAYER, () => {
+            m.getCanvas().style.cursor = 'pointer';
+          });
+
+          m.on('mouseleave', WEATHER_LAYER, () => {
+            m.getCanvas().style.cursor = '';
+            hoverPopupRef.current?.remove();
+          });
+
+          if (HOVER_CAPABLE) m.on('mousemove', WEATHER_LAYER, e => {
+            const feature = e.features?.[0] as MapGeoJSONFeature | undefined;
+            if (!feature || feature.geometry.type !== 'Point') return;
+            const props = feature.properties as { id: number };
+            const station = weatherById.current.get(props.id);
+            if (!station) return;
+
+            hoverPopupRef.current
+              ?.setLngLat(feature.geometry.coordinates as [number, number])
+              .setHTML(
+                `<strong>${weatherStationName(station.name)}</strong><br/>` +
+                  `${roadWeatherSummary(station)}<br/>` +
+                  `<span class="popup-desc">${ROAD_WEATHER_LEVEL_LABELS[roadWeatherLevel(station)]}</span>`
+              )
+              .addTo(m);
+          });
+
+          m.on('click', WEATHER_LAYER, e => {
+            const feature = e.features?.[0] as MapGeoJSONFeature | undefined;
+            if (!feature) return;
+            const props = feature.properties as { id: number };
+            const station = weatherById.current.get(props.id);
+            if (!station) return;
+
+            callbacksRef.current.onSelectWeather(station);
+            m.flyTo({
+              center: [station.longitude, station.latitude],
+              zoom: 12,
+              essential: true,
+            });
+          });
+        });
+      } catch (err) {
+        console.error('Failed to fetch road weather data', err);
+      }
+    };
+
+    const fetchMaintenance = async () => {
+      try {
+        const res = await fetch('/api/tie/maintenance');
+        const snapshot: MaintenanceSnapshot = await res.json();
+        const now = Date.now();
+
+        vehiclesById.current = new globalThis.Map(snapshot.vehicles.map(v => [v.id, v]));
+
+        const vehicles = toVehiclesGeoJSON(snapshot.vehicles, now);
+        const trails = toTrailsGeoJSON(snapshot.routes, now);
+        const vehiclesSource = m.getSource(VEHICLES_SOURCE) as maplibregl.GeoJSONSource | undefined;
+        const trailsSource = m.getSource(TRAILS_SOURCE) as maplibregl.GeoJSONSource | undefined;
+        if (vehiclesSource && trailsSource) {
+          vehiclesSource.setData(vehicles);
+          trailsSource.setData(trails);
+          return;
+        }
+
+        if (!styleReadyRef.current) return;
+
+        const colors = maintenanceColors(themeRef.current);
+        m.addSource(TRAILS_SOURCE, { type: 'geojson', data: trails });
+        m.addSource(VEHICLES_SOURCE, { type: 'geojson', data: vehicles });
+        // Trails go under the station markers so a ploughed motorway doesn't
+        // bury the TMS discs along it.
+        m.addLayer(
+          {
+            id: TRAILS_LAYER,
+            type: 'line',
+            source: TRAILS_SOURCE,
+            layout: { 'line-cap': 'round', 'line-join': 'round' },
+            paint: {
+              'line-color': [
+                'match', ['get', 'category'],
+                'plough', colors.plough,
+                'grit', colors.grit,
+                colors.other,
+              ],
+              'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.5, 12, 4],
+              // The trail fades over its hour, so the road covered most
+              // recently reads strongest.
+              'line-opacity': ['interpolate', ['linear'], ['get', 'age'], 0, 0.8, 60, 0.2],
+            },
+          },
+          m.getLayer(STATIONS_LAYER) ? STATIONS_LAYER : undefined
+        );
+        m.addLayer({
+          id: VEHICLES_LAYER,
+          type: 'symbol',
+          source: VEHICLES_SOURCE,
+          layout: {
+            'icon-image': ['get', 'icon'],
+            'icon-size': 0.7,
+            // Arrow icons point up; the dot variant is symmetric, so rotating
+            // it by the 0 fallback is harmless.
+            'icon-rotate': ['get', 'direction'],
+            'icon-rotation-alignment': 'map',
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+          },
+          paint: {
+            // A vehicle that has gone quiet fades over the rest of the hour.
+            'icon-opacity': ['interpolate', ['linear'], ['get', 'age'], 15, 1, 60, 0.45],
+          },
+        });
+        setLayersVisible(m, LAYER_IDS.maintenance, visibilityRef.current.maintenance);
+
+        bindOnce(VEHICLES_LAYER, () => {
+          const vehicleAt = (e: maplibregl.MapLayerMouseEvent) => {
+            const feature = e.features?.[0] as MapGeoJSONFeature | undefined;
+            if (!feature || feature.geometry.type !== 'Point') return null;
+            const vehicle = vehiclesById.current.get((feature.properties as { id: number }).id);
+            return vehicle ? { vehicle, at: feature.geometry.coordinates as [number, number] } : null;
+          };
+
+          m.on('mouseenter', VEHICLES_LAYER, () => {
+            m.getCanvas().style.cursor = 'pointer';
+          });
+
+          m.on('mouseleave', VEHICLES_LAYER, () => {
+            m.getCanvas().style.cursor = '';
+            hoverPopupRef.current?.remove();
+          });
+
+          if (HOVER_CAPABLE) m.on('mousemove', VEHICLES_LAYER, e => {
+            const hit = vehicleAt(e);
+            if (!hit) return;
+            hoverPopupRef.current?.setLngLat(hit.at).setHTML(maintenancePopupHTML(hit.vehicle, Date.now())).addTo(m);
+          });
+
+          // There is no stable vehicle id to follow, so a tap opens the
+          // details in the closeable popup rather than selecting.
+          m.on('click', VEHICLES_LAYER, e => {
+            const hit = vehicleAt(e);
+            if (!hit) return;
+            clickPopupRef.current?.setLngLat(hit.at).setHTML(maintenancePopupHTML(hit.vehicle, Date.now())).addTo(m);
+          });
+        });
+      } catch (err) {
+        console.error('Failed to fetch maintenance tracking', err);
+      }
+    };
+
     const intervalIds: ReturnType<typeof setInterval>[] = [];
 
     const fetchRoadworks = () =>
@@ -780,6 +1048,8 @@ const Map: React.FC<MapProps> = ({
         fetchRoadworks();
         fetchIncidents();
         fetchSpeedLimits();
+        fetchRoadWeather();
+        fetchMaintenance();
         fetchParking();
         fetchWeathercams();
         fetchCharging();
@@ -798,6 +1068,9 @@ const Map: React.FC<MapProps> = ({
       // Variable limits change with conditions; the backend refreshes every
       // minute, so match that.
       intervalIds.push(setInterval(fetchSpeedLimits, 60000));
+      // Road weather refreshes on the backend every 3 min; vehicles every minute.
+      intervalIds.push(setInterval(fetchRoadWeather, 180000));
+      intervalIds.push(setInterval(fetchMaintenance, 60000));
       intervalIds.push(setInterval(fetchParking, 60000));
       // Weathercam stations/presets rarely change, so poll infrequently — the
       // camera images themselves are fetched fresh directly from

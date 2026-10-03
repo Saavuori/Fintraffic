@@ -58,3 +58,13 @@ func (h *Handlers) Charging(w http.ResponseWriter, r *http.Request) {
 	data, ok := h.store.GetChargingData(r.Context())
 	writeData(w, data, ok)
 }
+
+func (h *Handlers) RoadWeather(w http.ResponseWriter, r *http.Request) {
+	data, ok := h.store.GetRoadWeatherData(r.Context())
+	writeData(w, data, ok)
+}
+
+func (h *Handlers) Maintenance(w http.ResponseWriter, r *http.Request) {
+	data, ok := h.store.GetMaintenanceData(r.Context())
+	writeData(w, data, ok)
+}
