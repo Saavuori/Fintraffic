@@ -2,6 +2,13 @@ package ais
 
 import "fmt"
 
+// Position sources. Digitraffic is authoritative for every MMSI it reports;
+// aisstream.io only fills in the class B boats Digitraffic doesn't publish.
+const (
+	SourceDigitraffic = "digitraffic"
+	SourceAisstream   = "aisstream"
+)
+
 // VesselPosition is the merged position+metadata record stored in cache and
 // streamed to clients, keyed by MMSI.
 type VesselPosition struct {
@@ -13,7 +20,8 @@ type VesselPosition struct {
 	Hdg     *int    `json:"hdg,omitempty"` // nil when AIS reports 511 (unavailable)
 	NavStat int     `json:"navStat"`
 	Rot     float64 `json:"rot,omitempty"`
-	Ts      int64   `json:"ts"` // epoch seconds of the position fix
+	Ts      int64   `json:"ts"`     // epoch seconds of the position fix
+	Source  string  `json:"source"` // SourceDigitraffic or SourceAisstream: who sent the fix
 
 	// Merged metadata; empty until a metadata message or hydration fills it
 	Name     string  `json:"name,omitempty"`

@@ -42,13 +42,12 @@ type IngestionWorker struct {
 
 	// meta and lastPos are shared between MQTT callbacks and hydration;
 	// paho may run message handlers concurrently.
-	mu      sync.Mutex
-	meta    map[int]VesselMetadata
+	mu   sync.Mutex
+	meta map[int]VesselMetadata
+	// lastPos holds the newest fix per vessel; its Source says who sent it.
+	// Digitraffic takes over any MMSI it reports itself, so the two sources
+	// never interleave on one vessel.
 	lastPos map[int]VesselPosition
-	// external marks lastPos entries that came from a secondary position
-	// source (aisstream.io class B). Digitraffic takes over any MMSI it
-	// reports itself, so the two sources never interleave on one vessel.
-	external map[int]bool
 
 	// supplement, when set, looks up secondary metadata (aisstream.io) used to
 	// fill fields Digitraffic leaves empty. It is called with mu held, so it
@@ -58,11 +57,10 @@ type IngestionWorker struct {
 
 func NewIngestionWorker(broker string, cache cache.Cache) *IngestionWorker {
 	return &IngestionWorker{
-		broker:   broker,
-		cache:    cache,
-		meta:     make(map[int]VesselMetadata),
-		lastPos:  make(map[int]VesselPosition),
-		external: make(map[int]bool),
+		broker:  broker,
+		cache:   cache,
+		meta:    make(map[int]VesselMetadata),
+		lastPos: make(map[int]VesselPosition),
 	}
 }
 
@@ -124,8 +122,9 @@ func (w *IngestionWorker) HandleExternalPosition(pos VesselPosition) {
 	if !validCoords(pos.Lat, pos.Lng) {
 		return
 	}
+	pos.Source = SourceAisstream
 	w.mu.Lock()
-	if existing, ok := w.lastPos[pos.MMSI]; ok && (!w.external[pos.MMSI] || existing.Ts >= pos.Ts) {
+	if existing, ok := w.lastPos[pos.MMSI]; ok && (existing.Source != SourceAisstream || existing.Ts >= pos.Ts) {
 		w.mu.Unlock()
 		return
 	}
@@ -133,7 +132,6 @@ func (w *IngestionWorker) HandleExternalPosition(pos VesselPosition) {
 		pos.applyMeta(m)
 	}
 	w.lastPos[pos.MMSI] = pos
-	w.external[pos.MMSI] = true
 	w.mu.Unlock()
 
 	w.writePosition(pos)
@@ -239,6 +237,7 @@ func (w *IngestionWorker) handleLocation(mmsi int, payload []byte) {
 		NavStat: loc.NavStat,
 		Rot:     loc.Rot,
 		Ts:      loc.Time,
+		Source:  SourceDigitraffic,
 	}
 	if loc.Heading >= 0 && loc.Heading < 360 {
 		h := loc.Heading
@@ -254,7 +253,6 @@ func (w *IngestionWorker) handleLocation(mmsi int, payload []byte) {
 		pos.applyMeta(m)
 	}
 	w.lastPos[mmsi] = pos
-	delete(w.external, mmsi)
 	w.mu.Unlock()
 
 	w.writePosition(pos)

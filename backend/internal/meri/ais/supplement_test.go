@@ -61,7 +61,7 @@ func TestExternalPositionsNeverOverrideDigitraffic(t *testing.T) {
 
 	// A class B boat only aisstream knows: shown, with its static data.
 	w.HandleExternalPosition(VesselPosition{MMSI: 230111111, Lat: 60.1, Lng: 24.9, Ts: 100, NavStat: 15})
-	if p := get("230111111"); p.Name != "ARIEL" || p.Lat != 60.1 {
+	if p := get("230111111"); p.Name != "ARIEL" || p.Lat != 60.1 || p.Source != SourceAisstream {
 		t.Errorf("external fix not cached: %+v", p)
 	}
 	// Older external fix is ignored; newer one moves it.
@@ -80,7 +80,7 @@ func TestExternalPositionsNeverOverrideDigitraffic(t *testing.T) {
 
 	// ...and Digitraffic takes over an MMSI first seen via aisstream.
 	w.handleLocation(230111111, []byte(`{"time":105,"lat":61,"lon":25}`))
-	if p := get("230111111"); p.Lat != 61 {
+	if p := get("230111111"); p.Lat != 61 || p.Source != SourceDigitraffic {
 		t.Errorf("Digitraffic did not take over: %+v", p)
 	}
 	w.HandleExternalPosition(VesselPosition{MMSI: 230111111, Lat: 62, Lng: 26, Ts: 300})

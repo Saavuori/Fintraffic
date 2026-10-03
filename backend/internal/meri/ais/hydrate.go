@@ -110,6 +110,7 @@ func (w *IngestionWorker) hydrateLocations(ctx context.Context) (int, error) {
 			NavStat: f.Properties.NavStat,
 			Rot:     f.Properties.Rot,
 			Ts:      f.Properties.TimestampExternal / 1000,
+			Source:  SourceDigitraffic,
 		}
 		if f.Properties.Heading >= 0 && f.Properties.Heading < 360 {
 			h := f.Properties.Heading
@@ -118,7 +119,7 @@ func (w *IngestionWorker) hydrateLocations(ctx context.Context) (int, error) {
 
 		w.mu.Lock()
 		// Skip if MQTT already delivered a fresher fix for this vessel.
-		if existing, ok := w.lastPos[f.MMSI]; ok && !w.external[f.MMSI] && existing.Ts >= pos.Ts {
+		if existing, ok := w.lastPos[f.MMSI]; ok && existing.Source != SourceAisstream && existing.Ts >= pos.Ts {
 			w.mu.Unlock()
 			continue
 		}
@@ -126,7 +127,6 @@ func (w *IngestionWorker) hydrateLocations(ctx context.Context) (int, error) {
 			pos.applyMeta(m)
 		}
 		w.lastPos[f.MMSI] = pos
-		delete(w.external, f.MMSI)
 		w.mu.Unlock()
 
 		w.writePosition(pos)
