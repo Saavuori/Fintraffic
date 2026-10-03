@@ -6,38 +6,29 @@
    ordered by hand inside the desktop stylesheet. index.css is the desktop app;
    this file is the phone app.
 
-   The design language here is deliberately not the desktop's: a sheet on a phone
-   is an instrument panel, not a pane of glass. Opaque ground, hairline seams, a
-   seam of the mode's accent along the top edge, live values set in the mono
-   face, and every interactive row at a real thumb target.
+   The phone speaks the desktop's language — floating glass (see the tokens):
+   every surface stands off the screen edge on a blurred, see-through ground, the
+   tab bar included. What is the phone's own is the instrument detail inside the
+   glass: hairline seams, a seam of the mode's accent under a panel's title, live
+   values set in the mono face, and every interactive row at a real thumb target.
    --------------------------------------------------------------------------- */
 
 @media (max-width: 768px) {
-  /* The fleet transport is the one thing still floating over the map, so it
-     wears the sheet's surface rather than the desktop glass. */
   .replay-bar {
     bottom: calc(12px + env(safe-area-inset-bottom));
     width: 94vw;
     padding: 8px 10px;
-    background: var(--ink-900);
-    border-color: var(--seam-strong);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
   }
 
-  /* The selected ship's own transport is docked, not floating: it sits on the
-     tab bar edge to edge, so the scrubber — the thing you actually drag — runs
-     the full width of the screen instead of the slot left inside a card. */
+  /* The selected ship's own transport spans the screen, a hand's width above
+     the dock, so the scrubber — the thing you actually drag — runs nearly the
+     full width instead of the slot left inside a card. */
   .replay-bar--track {
-    left: 0;
-    right: 0;
+    left: var(--gap-sm);
+    right: var(--gap-sm);
     width: auto;
     transform: none;
     padding: var(--gap-sm) var(--gutter) var(--gap-md);
-    border-left: none;
-    border-right: none;
-    border-bottom: none;
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
   }
 
   /* A thumb, not a mouse pointer: a 14px handle on a 4px rail is hard to catch
@@ -67,11 +58,14 @@
   }
 }
 @media (max-width: 768px) {
-  /* Reserve the bottom band for the tab bar. Everything bottom-anchored below
-     adds this in, and the height here must match the rendered nav (its own
-     height is pinned to the same variable, so the two can't drift). */
+  /* Reserve the bottom band for the tab dock: the dock itself plus the gap it
+     floats at, which grows to the home-indicator inset where there is one.
+     Everything bottom-anchored below adds this in, and the dock is laid out
+     from the same two variables, so the two can't drift. */
   :root {
-    --tabbar-height: calc(64px + env(safe-area-inset-bottom));
+    --dock-height: 60px;
+    --dock-gap: max(var(--gap-md), env(safe-area-inset-bottom));
+    --tabbar-height: calc(var(--dock-height) + var(--dock-gap));
   }
 
   /* Raide's and Tie's summary pills are redundant on a phone — their detail
@@ -101,11 +95,8 @@
     box-sizing: border-box;
     /* The sheet's own insets: unfolding must not shift the row sideways. */
     padding: 0 var(--gap-md);
-    background: var(--ink-900);
-    border-color: var(--seam-strong);
-    border-radius: var(--radius-md);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+    /* A pill while folded; the sheet it unfolds into keeps the same corners. */
+    border-radius: calc(var(--tap-min) / 2);
   }
 
   .vessel-card-overlay--compact .vessel-card-row {
@@ -401,8 +392,11 @@
     bottom: calc(var(--tabbar-height) + 68px);
   }
 
-  /* Keep the required attribution clear of the tab bar. */
-  .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
+  /* Keep the required attribution clear of the tab dock. Two classes on the
+     control itself: MapLibre's own margin rule is equally specific and loads
+     after this file, so a single class lost to it and the credit sat behind
+     the dock. */
+  .maplibregl-ctrl-bottom-left .maplibregl-ctrl.maplibregl-ctrl-attrib {
     margin-bottom: calc(var(--tabbar-height) + 8px);
   }
 
@@ -416,9 +410,9 @@
     bottom: calc(var(--tabbar-height) + 12px);
   }
 
-  /* Docked flush on the tab bar, with nothing between them. */
+  /* Just above the dock, floating like it. */
   .replay-bar--track {
-    bottom: var(--tabbar-height);
+    bottom: calc(var(--tabbar-height) + var(--gap-sm));
   }
 
   /* The mode switcher's transformation into a bottom tab bar lives in its own
@@ -426,31 +420,25 @@
      must come later in source order to win. */
 }
 /* ---- Mobile: the switcher becomes the primary bottom navigation ----
-   A fixed, thumb-zone tab bar spanning the full width. Placed after the desktop
-   rules above so these equal-specificity overrides win on phones. A panel page
-   stops at its top edge (bottom: var(--tabbar-height)), so the nav is reachable
-   even with a panel up — you can read a train and still switch to the road. */
+   A floating glass dock in the thumb zone, inset from both edges and lifted off
+   the bottom one. Placed after the desktop rules above so these
+   equal-specificity overrides win on phones. A panel page stops above it
+   (bottom: var(--tabbar-height)), so the nav is reachable even with a panel up —
+   you can read a train and still switch to the road. */
 @media (max-width: 768px) {
   .mode-switcher {
     position: fixed;
     top: auto;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: var(--gap-md);
+    right: var(--gap-md);
+    bottom: var(--dock-gap);
     z-index: 20;
-    height: var(--tabbar-height);
+    height: var(--dock-height);
     box-sizing: border-box;
     gap: 0;
-    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
-    border: none;
-    border-top: 1px solid var(--border-glow);
-    border-radius: 0;
-    /* Opaque, and no backdrop blur: the bar is the one surface that must read
-       against both the map and a panel page ending flush on its top edge. */
-    background: var(--bg-bar);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    box-shadow: 0 -8px 28px -12px rgba(0, 0, 0, 0.55);
+    padding: 6px;
+    border-radius: var(--radius-pill);
+    box-shadow: var(--glass-shadow);
   }
 
   .mode-switcher__btn {
@@ -461,7 +449,7 @@
     justify-content: center;
     gap: 3px;
     padding: 4px 0;
-    border-radius: 12px;
+    border-radius: var(--radius-pill);
     font-size: 0.68rem;
   }
 
@@ -505,16 +493,13 @@
 }
 
 /* ===========================================================================
-   Instrument surfaces
+   Inside the glass
    ===========================================================================
-   A panel stops being a pane of glass on a phone. Blur over a moving map is a
-   full-screen composite every frame, and in daylight it washes the text out
-   against whatever the map happens to be showing underneath. So: opaque ground,
-   hairline seams, and a seam of the active mode's accent under the title — the
-   page reads as an instrument, and the map it covers stays the map. Desktop
-   keeps its glass rails. */
+   A panel on a phone is the desktop's pane of glass, floated off the screen
+   edges, with instrument detail inside it: hairline seams, a seam of the active
+   mode's accent under the title, and thumb-sized rows. */
 
-/* The page's own surface (opaque ground, accent seam, gutters) lives in
+/* The page's own surface (glass ground, accent seam, gutters) lives in
    Panel.css — that stylesheet is injected with the component, so it lands after
    this file and would otherwise win the tie. What follows is everything inside a
    panel, which is a class deeper and unambiguous. */
@@ -585,25 +570,12 @@
     font-size: var(--text-xs);
   }
 
-  /* Folded, the search pill and the filters launcher are the only chrome over
-     the map, so the pill wears the same instrument surface as a panel. */
   .vessel-search-overlay .vessel-search {
     min-height: var(--tap-min);
-    background: var(--ink-900);
-    border: 1px solid var(--seam-strong);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
   }
 
   .vessel-search-overlay .vessel-search-input {
     font-size: var(--text-sm);
-  }
-
-  .vessel-search-results {
-    background: var(--ink-900);
-    border-color: var(--seam-strong);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
   }
 }
 
@@ -620,22 +592,24 @@
   :root {
     /* No bottom band to reserve — the nav moved to the side. */
     --tabbar-height: 0px;
-    --tabrail-width: calc(60px + env(safe-area-inset-left));
+    /* The column, the gap it floats at, and the same gap again before a rail. */
+    --tabrail-width: calc(60px + var(--gap-sm) * 2 + env(safe-area-inset-left));
   }
 
+  /* The dock stands up as a floating column, centred on the left edge. */
   .mode-switcher {
-    top: 0;
-    bottom: 0;
-    left: 0;
+    top: 50%;
+    bottom: auto;
+    left: calc(var(--gap-sm) + env(safe-area-inset-left));
     right: auto;
-    width: var(--tabrail-width);
+    transform: translateY(-50%);
+    width: 60px;
     height: auto;
     flex-direction: column;
     justify-content: center;
     gap: 4px;
-    padding: 8px 6px 8px calc(6px + env(safe-area-inset-left));
-    border-top: none;
-    border-right: 1px solid var(--seam-strong);
+    padding: 8px 6px;
+    border-radius: var(--radius-xl);
   }
 
   .mode-switcher__btn {
@@ -655,14 +629,26 @@
     left: var(--tabrail-width);
     width: 232px;
     padding: 10px;
-    border-left: 1px solid var(--border-glow);
   }
 
   .detail-popup.rail--short {
     right: 8px;
     width: 296px;
     padding: 12px;
-    border-right: 1px solid var(--border-glow);
+  }
+
+  /* Folded, the filter rail leaves its 16px sliver just right of the nav
+     column — the rail's left inset less the gap between the two — and clips
+     away the rest, which the floating column no longer covers. The clip keeps
+     the shadow on the sliver's other three sides. */
+  .filter-panel.rail--short.collapsed {
+    transform: translateX(calc(16px - var(--gap-sm) - 100%)) !important;
+    clip-path: inset(-48px -48px -48px calc(100% - 16px));
+  }
+
+  /* The detail rail floats 8px in here, not --float-gap. */
+  .detail-popup.rail--short.collapsed {
+    transform: translateX(calc(100% + 8px - 16px)) !important;
   }
 
   /* The pill would sit on top of both rails; in this layout search belongs
@@ -820,9 +806,9 @@
     gap: 2px;
     padding: 2px;
     margin-bottom: var(--gap-sm);
-    background: var(--ink-800);
+    background: var(--bg-button);
     border: 1px solid var(--seam);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-pill);
   }
 
   .segmented-btn {
@@ -830,7 +816,7 @@
     min-height: var(--tap-min);
     background: none;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--radius-pill);
     color: var(--text-secondary);
     font: inherit;
     font-size: var(--text-xs);

@@ -143,19 +143,19 @@
 .mode-raide .train-card-overlay {
   position: absolute;
   z-index: 11;
-  top: 14px;
+  top: var(--float-gap);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 10px;
   background: var(--bg-panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-glow);
-  border-radius: 12px;
-  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
-  padding: 8px 12px;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--glass-shadow);
+  padding: 8px 16px;
   max-width: min(92vw, 560px);
   user-select: text;
   -webkit-user-select: text;
