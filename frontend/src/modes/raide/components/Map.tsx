@@ -40,6 +40,8 @@ const TRAINS_SOURCE = 'trains';
 const STATIONS_SOURCE = 'stations';
 const STATIONS_LAYER = 'stations-circles';
 const STATIONS_MAJOR_LAYER = 'stations-major';
+const STATIONS_LABEL_LAYER = 'stations-label';
+const STATIONS_MAJOR_LABEL_LAYER = 'stations-major-label';
 // The rail overlay reads from the CARTO basemap's own vector tiles (source id
 // "carto", OpenMapTiles "transportation" layer, class "rail") — no extra data.
 const BASEMAP_SOURCE = 'carto';
@@ -66,7 +68,7 @@ const LAYER_IDS: Record<LayerKey, string[]> = {
   commuter: Object.values(trainLayerIds('commuter')),
   cargo: Object.values(trainLayerIds('cargo')),
   other: Object.values(trainLayerIds('other')),
-  stations: [STATIONS_LAYER, STATIONS_MAJOR_LAYER],
+  stations: [STATIONS_LAYER, STATIONS_MAJOR_LAYER, STATIONS_LABEL_LAYER, STATIONS_MAJOR_LABEL_LAYER],
   tracks: [RAIL_LAYER],
 };
 
@@ -407,10 +409,54 @@ const Map: React.FC<MapProps> = ({
             'icon-halo-width': 1.2,
           },
         });
+        // Station names. Full stations are labelled from country-wide zoom and
+        // win collisions; stopping points only once there is room for them.
+        // The label sits beside the marker (pins stand above their point, so
+        // below or to the side keeps it clear) and slides to whichever side is
+        // free before giving up.
+        const labelPaint = {
+          'text-color': STATION_COLORS[themeRef.current],
+          'text-halo-color': themeRef.current === 'dark' ? '#000000' : '#ffffff',
+          'text-halo-width': 1.5,
+        };
+        m.addLayer({
+          id: STATIONS_LABEL_LAYER,
+          type: 'symbol',
+          source: STATIONS_SOURCE,
+          filter: ['==', ['get', 'major'], false],
+          minzoom: 10,
+          layout: {
+            'text-field': ['get', 'name'],
+            'text-font': ['Montserrat Regular'],
+            'text-size': ['interpolate', ['linear'], ['zoom'], 10, 11, 14, 13],
+            'text-variable-anchor': ['left', 'right', 'top', 'bottom'],
+            'text-radial-offset': 0.8,
+            'text-justify': 'auto',
+          },
+          paint: labelPaint,
+        });
+        m.addLayer({
+          id: STATIONS_MAJOR_LABEL_LAYER,
+          type: 'symbol',
+          source: STATIONS_SOURCE,
+          filter: ['==', ['get', 'major'], true],
+          minzoom: 5,
+          layout: {
+            'text-field': ['get', 'name'],
+            'text-font': ['Montserrat Medium'],
+            'text-size': ['interpolate', ['linear'], ['zoom'], 5, 10, 10, 13, 14, 15],
+            'text-variable-anchor': ['top', 'left', 'right'],
+            'text-radial-offset': 0.6,
+            'text-justify': 'auto',
+          },
+          paint: labelPaint,
+        });
         setLayersVisible(m, LAYER_IDS.stations, visibilityRef.current.stations);
 
         attachStationInteractions(STATIONS_LAYER);
         attachStationInteractions(STATIONS_MAJOR_LAYER);
+        attachStationInteractions(STATIONS_LABEL_LAYER);
+        attachStationInteractions(STATIONS_MAJOR_LABEL_LAYER);
       } catch (err) {
         console.error('Failed to fetch stations', err);
       }
@@ -529,6 +575,10 @@ const Map: React.FC<MapProps> = ({
           attachTrainInteractions(circle);
           setLayersVisible(m, LAYER_IDS[group], visibilityRef.current[group]);
         }
+        // Symbol placement runs top layer first, so without this the moving
+        // train-number labels would crowd out the names of exactly the busiest
+        // stations. Full-station names go on top; stopping points still yield.
+        if (m.getLayer(STATIONS_MAJOR_LABEL_LAYER)) m.moveLayer(STATIONS_MAJOR_LABEL_LAYER);
       } catch (err) {
         console.error('Failed to fetch trains', err);
       }
