@@ -4,3 +4,4 @@
 
 ### Fixed
 - **The map credit on phones sat behind the tab bar**: MapLibre's own margin rule outranked the phone override, so the ⓘ attribution was painted under the bottom bar, where the opaque bar hid it. It now sits above the dock.
+- **A stray "‹ ship name" button at the top of the desktop filter rail**: selecting anything on desktop (a ship, a train, a station or a road sensor) put the phone's back-to-selection row, unstyled, above the filters. That row undoes the phone's swap between filters and selection. Desktop shows both rails side by side and has no swap to undo, so the row now renders only on a phone.

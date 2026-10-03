@@ -124,8 +124,10 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       {!bodyCollapsed && (
         <div className="filter-content" onClick={stopPanelClick}>
           {/* The way back to what is selected. It sits in the peek row so a
-              minimized browse sheet still says what it is covering. */}
-          {selectionLabel && onBackToSelection && (
+              minimized browse sheet still says what it is covering. Phone
+              only: the swap it undoes is the phone's, and desktop shows the
+              selection in its own rail beside this one. */}
+          {isMobile && selectionLabel && onBackToSelection && (
             <BackToSelection label={selectionLabel} onClick={onBackToSelection} />
           )}
 
