@@ -85,13 +85,20 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
   }, []);
 
   const cat = categorize(vessel.shipType);
+  // Digitraffic's reference points first; aisstream.io's dimensions cover the
+  // class B craft (and any ship) Digitraffic has no static data for.
+  const md = details?.metadata;
+  const dtLength = (md?.referencePointA ?? 0) + (md?.referencePointB ?? 0);
   const dims =
-    details?.metadata?.referencePointA != null && details?.metadata?.referencePointB != null
-      ? {
-          length: (details.metadata.referencePointA ?? 0) + (details.metadata.referencePointB ?? 0),
-          beam: (details.metadata.referencePointC ?? 0) + (details.metadata.referencePointD ?? 0),
-        }
-      : null;
+    md && dtLength > 0
+      ? { length: dtLength, beam: (md.referencePointC ?? 0) + (md.referencePointD ?? 0) }
+      : details?.aisstream?.length
+        ? { length: details.aisstream.length, beam: details.aisstream.beam ?? 0 }
+        : null;
+  const classB = details?.aisstream?.classB ?? false;
+  // Class B position reports carry no navigational status at all; say so
+  // rather than showing AIS's "Undefined".
+  const statusText = classB && vessel.navStat === 15 ? 'Not reported (class B)' : navStatText(vessel.navStat);
 
   const etaText = formatEta(vessel.eta);
   const fixAge = Math.max(0, Math.round(nowMs / 1000 - vessel.ts));
@@ -113,6 +120,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
   facts.push({ label: 'MMSI', value: vessel.mmsi });
   if (vessel.imo) facts.push({ label: 'IMO', value: vessel.imo });
   if (vessel.callSign) facts.push({ label: 'Call sign', value: vessel.callSign });
+  if (classB) facts.push({ label: 'AIS', value: 'Class B' });
   if (dims && dims.length > 0) {
     facts.push({ label: 'Size', value: `${dims.length} × ${dims.beam} m` });
   }
@@ -226,7 +234,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
                aren't repeated. */
             <>
               <div className="vessel-trip">
-                <span className="vessel-trip-status">{navStatText(vessel.navStat)}</span>
+                <span className="vessel-trip-status">{statusText}</span>
                 {vessel.dest && <b className="vessel-trip-dest">→ {vessel.dest}</b>}
                 {etaText && <span className="vessel-trip-eta">ETA {etaText}</span>}
               </div>
@@ -333,7 +341,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
 
               <div className="status-callout">
                 <span className="status-label">Status</span>
-                <span className="status-value">{navStatText(vessel.navStat)}</span>
+                <span className="status-value">{statusText}</span>
               </div>
 
               {(vessel.dest || etaText) && (

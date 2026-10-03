@@ -19,6 +19,7 @@
 #   ./install.sh traffic.example.org    # custom domain as an argument
 #   DOMAIN=traffic.example.org ./install.sh          # ...or via env
 #   APP_DIR=/srv/fintraffic IMAGE=ghcr.io/you/fintraffic:latest ./install.sh
+#   AISSTREAM_API_KEY=... ./install.sh  # store the aisstream.io key in $APP_DIR/.env
 #
 # The domain is only used for the post-deploy health checks and must resolve to
 # the reverse proxy in front of this stack — remember to add the matching vhost
@@ -70,6 +71,10 @@ services:
       - TRAIL_DB_PATH=/data/trail.db
       - TRAIL_RETENTION_DAYS=60
       - TRAIL_INTERVAL_SEC=60
+      # aisstream.io key: adds class B boats to the map. A secret: compose reads
+      # it from the .env beside this file on the host; it is never committed.
+      # Unset/empty just turns that feed off.
+      - AISSTREAM_API_KEY=${AISSTREAM_API_KEY:-}
     volumes:
       # Persist trail history across container recreation. `:Z` relabels the
       # volume for SELinux (Oracle Linux enforces it). Without this mount the
@@ -152,6 +157,20 @@ if crontab -l 2>/dev/null | grep -qF "$APP_DIR/update.sh"; then
 else
   ( crontab -l 2>/dev/null || true; echo "*/5 * * * * $APP_DIR/update.sh" ) | crontab -
   echo "registered auto-update cron: */5 * * * * $APP_DIR/update.sh"
+fi
+
+# --- secrets: .env beside the compose file, owner-only, never in the repo ----
+# Compose reads it to fill ${AISSTREAM_API_KEY}. Pass the key once as
+#   AISSTREAM_API_KEY=... ./install.sh
+# and it is stored here; later runs (and the update cron) keep using it.
+( umask 077; touch .env ); chmod 600 .env
+if [ -n "${AISSTREAM_API_KEY:-}" ]; then
+  ( umask 077
+    { grep -v '^AISSTREAM_API_KEY=' .env || true; printf 'AISSTREAM_API_KEY=%s\n' "$AISSTREAM_API_KEY"; } > .env.tmp
+    mv .env.tmp .env )
+  echo "stored AISSTREAM_API_KEY in $APP_DIR/.env"
+elif ! grep -q '^AISSTREAM_API_KEY=.' .env; then
+  echo "note: no AISSTREAM_API_KEY in $APP_DIR/.env — aisstream.io class B feed stays off"
 fi
 
 # --- ensure the shared external proxy network exists ------------------------

@@ -12,6 +12,7 @@ import (
 	"fintraffic/internal/core/server"
 	"fintraffic/internal/core/upstream"
 	"fintraffic/internal/meri/ais"
+	"fintraffic/internal/meri/aisstream"
 	"fintraffic/internal/meri/fmi"
 	"fintraffic/internal/meri/trail"
 	"fintraffic/internal/meri/ws"
@@ -29,6 +30,7 @@ type Service struct {
 	cfg        *config.Config
 	cache      cache.Cache
 	worker     *ais.IngestionWorker
+	aisstream  *aisstream.Client // nil when AISSTREAM_API_KEY is unset; nil-safe
 	trail      *trail.Store
 	hub        *ws.Hub
 	handlers   *Handlers
@@ -56,6 +58,45 @@ func NewService(cfg *config.Config, liveCache cache.Cache) *Service {
 	worker := ais.NewIngestionWorker(cfg.MQTTBroker, liveCache)
 	worker.SetTrailStore(trailStore)
 
+	// aisstream.io adds the class B boats Digitraffic doesn't publish, and
+	// fills static fields Digitraffic leaves empty. Optional: without a key
+	// the client stays nil.
+	var static *aisstream.Client
+	if cfg.AISStreamAPIKey == "" {
+		log.Println("Meri: aisstream.io class B feed disabled (AISSTREAM_API_KEY is empty).")
+	} else {
+		static = aisstream.New(aisstream.DefaultURL, cfg.AISStreamAPIKey, aisstream.Callbacks{
+			OnStatic: worker.RefreshMeta,
+			OnPosition: func(p aisstream.Position) {
+				worker.HandleExternalPosition(ais.VesselPosition{
+					MMSI:    p.MMSI,
+					Lat:     p.Lat,
+					Lng:     p.Lng,
+					Sog:     p.Sog,
+					Cog:     p.Cog,
+					Hdg:     p.Hdg,
+					NavStat: 15, // class B reports carry no navigational status: "undefined"
+					Ts:      p.Ts,
+				})
+			},
+		})
+		worker.SetSupplement(func(mmsi int) (ais.VesselMetadata, bool) {
+			st, ok := static.Get(mmsi)
+			if !ok {
+				return ais.VesselMetadata{}, false
+			}
+			return ais.VesselMetadata{
+				Name:     st.Name,
+				CallSign: st.CallSign,
+				Dest:     st.Dest,
+				ShipType: st.ShipType,
+				IMO:      st.IMO,
+				Draught:  st.Draught,
+				ETA:      st.ETA,
+			}, true
+		})
+	}
+
 	proxy := upstream.NewCachedProxy(upstream.NewClient(digitrafficBase))
 
 	// Sea conditions come from FMI rather than Digitraffic, so they get their
@@ -67,9 +108,10 @@ func NewService(cfg *config.Config, liveCache cache.Cache) *Service {
 		cfg:        cfg,
 		cache:      liveCache,
 		worker:     worker,
+		aisstream:  static,
 		trail:      trailStore,
 		hub:        ws.NewHub(liveCache),
-		handlers:   NewHandlers(liveCache, proxy, worker, trailStore, conditions),
+		handlers:   NewHandlers(liveCache, proxy, worker, trailStore, conditions, static),
 		fmiClient:  fmiClient,
 		conditions: conditions,
 	}
@@ -88,6 +130,11 @@ func (s *Service) Start(ctx context.Context) error {
 	go s.worker.Hydrate(ctx)
 
 	go s.hub.Run(ctx)
+
+	if s.aisstream != nil {
+		log.Println("Meri: starting aisstream.io class B feed...")
+		go s.aisstream.Run(ctx)
+	}
 
 	// FMI marine observations (waves, wind, sea level) behind the sea
 	// conditions layer.

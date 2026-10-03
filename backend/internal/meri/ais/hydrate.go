@@ -118,14 +118,15 @@ func (w *IngestionWorker) hydrateLocations(ctx context.Context) (int, error) {
 
 		w.mu.Lock()
 		// Skip if MQTT already delivered a fresher fix for this vessel.
-		if existing, ok := w.lastPos[f.MMSI]; ok && existing.Ts >= pos.Ts {
+		if existing, ok := w.lastPos[f.MMSI]; ok && !w.external[f.MMSI] && existing.Ts >= pos.Ts {
 			w.mu.Unlock()
 			continue
 		}
-		if m, ok := w.meta[f.MMSI]; ok {
+		if m, ok := w.metaFor(f.MMSI); ok {
 			pos.applyMeta(m)
 		}
 		w.lastPos[f.MMSI] = pos
+		delete(w.external, f.MMSI)
 		w.mu.Unlock()
 
 		w.writePosition(pos)

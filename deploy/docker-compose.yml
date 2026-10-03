@@ -19,6 +19,10 @@ services:
       - TRAIL_DB_PATH=/data/trail.db
       - TRAIL_RETENTION_DAYS=60
       - TRAIL_INTERVAL_SEC=60
+      # aisstream.io key: adds class B boats to the map. A secret: compose reads
+      # it from the .env beside this file on the host; it is never committed.
+      # Unset/empty just turns that feed off.
+      - AISSTREAM_API_KEY=${AISSTREAM_API_KEY:-}
     volumes:
       # Persist trail history across container recreation. `:Z` relabels the
       # volume for SELinux (Oracle Linux enforces it). Without this mount the

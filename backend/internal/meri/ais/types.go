@@ -110,6 +110,34 @@ func validCoords(lat, lon float64) bool {
 	return lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180
 }
 
+// fillFrom returns m with every field it left empty taken from sup. Used to
+// let a secondary source (aisstream.io) fill gaps without overriding what
+// Digitraffic reports.
+func (m VesselMetadata) fillFrom(sup VesselMetadata) VesselMetadata {
+	if m.Name == "" {
+		m.Name = sup.Name
+	}
+	if m.CallSign == "" {
+		m.CallSign = sup.CallSign
+	}
+	if m.Dest == "" {
+		m.Dest = sup.Dest
+	}
+	if m.ShipType == 0 {
+		m.ShipType = sup.ShipType
+	}
+	if m.IMO == 0 {
+		m.IMO = sup.IMO
+	}
+	if m.Draught == 0 {
+		m.Draught = sup.Draught
+	}
+	if m.ETA == "" {
+		m.ETA = sup.ETA
+	}
+	return m
+}
+
 func (p *VesselPosition) applyMeta(m VesselMetadata) {
 	p.Name = m.Name
 	p.CallSign = m.CallSign
@@ -118,4 +146,10 @@ func (p *VesselPosition) applyMeta(m VesselMetadata) {
 	p.IMO = m.IMO
 	p.Draught = m.Draught
 	p.ETA = m.ETA
+}
+
+// sameMeta reports whether two positions carry identical metadata.
+func sameMeta(a, b VesselPosition) bool {
+	return a.Name == b.Name && a.CallSign == b.CallSign && a.Dest == b.Dest &&
+		a.ShipType == b.ShipType && a.IMO == b.IMO && a.Draught == b.Draught && a.ETA == b.ETA
 }

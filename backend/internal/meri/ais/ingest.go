@@ -45,14 +45,24 @@ type IngestionWorker struct {
 	mu      sync.Mutex
 	meta    map[int]VesselMetadata
 	lastPos map[int]VesselPosition
+	// external marks lastPos entries that came from a secondary position
+	// source (aisstream.io class B). Digitraffic takes over any MMSI it
+	// reports itself, so the two sources never interleave on one vessel.
+	external map[int]bool
+
+	// supplement, when set, looks up secondary metadata (aisstream.io) used to
+	// fill fields Digitraffic leaves empty. It is called with mu held, so it
+	// must not call back into the worker.
+	supplement func(mmsi int) (VesselMetadata, bool)
 }
 
 func NewIngestionWorker(broker string, cache cache.Cache) *IngestionWorker {
 	return &IngestionWorker{
-		broker:  broker,
-		cache:   cache,
-		meta:    make(map[int]VesselMetadata),
-		lastPos: make(map[int]VesselPosition),
+		broker:   broker,
+		cache:    cache,
+		meta:     make(map[int]VesselMetadata),
+		lastPos:  make(map[int]VesselPosition),
+		external: make(map[int]bool),
 	}
 }
 
@@ -60,6 +70,74 @@ func NewIngestionWorker(broker string, cache cache.Cache) *IngestionWorker {
 // history. Passing nil (or never calling this) leaves recording disabled.
 func (w *IngestionWorker) SetTrailStore(s *trail.Store) {
 	w.trail = s
+}
+
+// SetSupplement attaches a secondary metadata source. Digitraffic stays
+// authoritative; the supplement only fills empty fields.
+func (w *IngestionWorker) SetSupplement(f func(mmsi int) (VesselMetadata, bool)) {
+	w.mu.Lock()
+	w.supplement = f
+	w.mu.Unlock()
+}
+
+// metaFor returns the merged metadata for one vessel. Callers hold w.mu.
+func (w *IngestionWorker) metaFor(mmsi int) (VesselMetadata, bool) {
+	m, ok := w.meta[mmsi]
+	if w.supplement != nil {
+		if sup, has := w.supplement(mmsi); has {
+			return m.fillFrom(sup), true
+		}
+	}
+	return m, ok
+}
+
+// RefreshMeta re-merges one vessel's metadata into its cached position after
+// the supplement source learned something new, so a name appears without
+// waiting for the next position fix.
+func (w *IngestionWorker) RefreshMeta(mmsi int) {
+	w.mu.Lock()
+	pos, hasPos := w.lastPos[mmsi]
+	if !hasPos {
+		w.mu.Unlock()
+		return
+	}
+	updated := pos
+	if m, ok := w.metaFor(mmsi); ok {
+		updated.applyMeta(m)
+	}
+	changed := !sameMeta(pos, updated)
+	if changed {
+		w.lastPos[mmsi] = updated
+	}
+	w.mu.Unlock()
+
+	if changed {
+		w.writePosition(updated)
+	}
+}
+
+// HandleExternalPosition ingests a position fix from a secondary source
+// (aisstream.io class B reports): cached, broadcast and recorded to the trail
+// like a Digitraffic fix. It is dropped when Digitraffic already reports this
+// MMSI, or when it is older than the fix already held.
+func (w *IngestionWorker) HandleExternalPosition(pos VesselPosition) {
+	if !validCoords(pos.Lat, pos.Lng) {
+		return
+	}
+	w.mu.Lock()
+	if existing, ok := w.lastPos[pos.MMSI]; ok && (!w.external[pos.MMSI] || existing.Ts >= pos.Ts) {
+		w.mu.Unlock()
+		return
+	}
+	if m, ok := w.metaFor(pos.MMSI); ok {
+		pos.applyMeta(m)
+	}
+	w.lastPos[pos.MMSI] = pos
+	w.external[pos.MMSI] = true
+	w.mu.Unlock()
+
+	w.writePosition(pos)
+	w.trail.Add(pos.MMSI, pos.Ts, pos.Lat, pos.Lng, pos.Sog, pos.Cog)
 }
 
 func (w *IngestionWorker) Start(ctx context.Context) error {
@@ -172,10 +250,11 @@ func (w *IngestionWorker) handleLocation(mmsi int, payload []byte) {
 	}
 
 	w.mu.Lock()
-	if m, ok := w.meta[mmsi]; ok {
+	if m, ok := w.metaFor(mmsi); ok {
 		pos.applyMeta(m)
 	}
 	w.lastPos[mmsi] = pos
+	delete(w.external, mmsi)
 	w.mu.Unlock()
 
 	w.writePosition(pos)
@@ -191,12 +270,11 @@ func (w *IngestionWorker) handleMetadata(mmsi int, payload []byte) {
 		return
 	}
 
-	m := md.toMetadata()
-
 	w.mu.Lock()
-	w.meta[mmsi] = m
+	w.meta[mmsi] = md.toMetadata()
 	pos, hasPos := w.lastPos[mmsi]
 	if hasPos {
+		m, _ := w.metaFor(mmsi)
 		pos.applyMeta(m)
 		w.lastPos[mmsi] = pos
 	}

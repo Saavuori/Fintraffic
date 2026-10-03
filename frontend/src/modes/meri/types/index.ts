@@ -96,6 +96,30 @@ export interface VesselDetailsResponse {
     referencePointD?: number;
   } | null;
   position: Vessel | null;
+  /** Supplementary static data from aisstream.io; null when the feed is off or hasn't heard the vessel. */
+  aisstream: AisStreamStatic | null;
+}
+
+/**
+ * Static data aisstream.io reported for one vessel: everything known about the
+ * class B boats Digitraffic doesn't publish, and hull dimensions for any ship.
+ *
+ * Mirrors aisstream.Static in backend/internal/meri/aisstream — change one,
+ * change both.
+ */
+export interface AisStreamStatic {
+  mmsi: number;
+  name?: string;
+  callSign?: string;
+  imo?: number;
+  shipType?: number;
+  dest?: string;
+  draught?: number; // meters
+  eta?: string; // "MM-DD HH:MM" UTC
+  length?: number; // meters
+  beam?: number; // meters
+  classB?: boolean;
+  seen: number; // epoch seconds
 }
 
 export interface SeaStateFeature {

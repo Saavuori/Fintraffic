@@ -23,6 +23,11 @@ type Config struct {
 	TrailDBPath        string
 	TrailRetentionDays int
 	TrailIntervalSec   int64
+
+	// aisstream.io API key for supplementary vessel static data (class B
+	// names, hull dimensions). The feed is disabled when empty. A secret: set
+	// it in the deployment's .env, never in the repo.
+	AISStreamAPIKey string
 }
 
 // envInt reads an integer env var, falling back to def when unset or unparseable.
@@ -81,6 +86,8 @@ func LoadConfig() *Config {
 		RedisURL:   os.Getenv("REDIS_URL"),
 		MQTTBroker: os.Getenv("MQTT_BROKER"),
 		Port:       os.Getenv("PORT"),
+
+		AISStreamAPIKey: strings.TrimSpace(os.Getenv("AISSTREAM_API_KEY")),
 	}
 
 	if cfg.RedisURL == "" {
