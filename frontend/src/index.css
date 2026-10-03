@@ -12,9 +12,12 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Marine glass design tokens (structure shared with the ratikka sibling app) */
-  --bg-panel: hsla(210, 78%, 5%, 0.85);
-  --bg-panel-hover: hsla(210, 78%, 9%, 0.95);
+  /* Marine glass design tokens (structure shared with the ratikka sibling app).
+     --bg-panel is the ground of a panel you read: more see-through than it was,
+     because the blur under it (--glass-blur) is what keeps the text legible —
+     the map still shows through as colour and movement. */
+  --bg-panel: hsla(210, 70%, 6%, 0.74);
+  --bg-panel-hover: hsla(210, 70%, 9%, 0.86);
   --border-glow: hsla(200, 40%, 34%, 0.5);
   --border-focus: hsla(174, 72%, 46%, 0.6);
   --accent-teal: #2dd4bf;
@@ -40,11 +43,6 @@
   --scrollbar-thumb: rgba(255, 255, 255, 0.15);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
   --app-bg: #020b17;
-  /* Opaque sibling of --bg-panel-hover, for the mobile tab bar. The bar is the
-     one surface that must not be see-through: a minimized sheet's box extends
-     down behind it, so any transparency shows the sheet's edge bleeding into
-     the nav. */
-  --bg-bar: hsl(210, 78%, 9%);
 }
 
 [data-theme='light'] {
@@ -52,8 +50,8 @@
   color: #16323f;
   background-color: #f5f9fb;
 
-  --bg-panel: rgba(255, 255, 255, 0.88);
-  --bg-panel-hover: rgba(255, 255, 255, 0.96);
+  --bg-panel: rgba(255, 255, 255, 0.78);
+  --bg-panel-hover: rgba(255, 255, 255, 0.9);
   --border-glow: rgba(130, 165, 184, 0.35);
   --border-focus: rgba(20, 184, 166, 0.6);
   --bg-card: rgba(236, 244, 248, 0.6);
@@ -75,7 +73,6 @@
   --scrollbar-thumb: rgba(12, 36, 48, 0.2);
   --scrollbar-thumb-hover: rgba(12, 36, 48, 0.35);
   --app-bg: #f5f9fb;
-  --bg-bar: #ffffff;
 }
 
 body {
@@ -141,36 +138,39 @@ a,
 
 /* ---------- Glass panels ---------- */
 
+/* The rails float: inset from the screen edge and under the mode switcher,
+   rounded on every corner — a pane laid over the map, not a drawer bolted to
+   its side. */
 .glass-panel {
   position: absolute;
   z-index: 10;
   background: var(--bg-panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-glow);
-  border-radius: 16px;
-  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-shadow);
   color: var(--text-primary);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
 }
 
-/* Left filter panel */
+/* Left filter panel. Top: the switcher's 16px inset + its 38px + a 16px gap. */
 .filter-panel {
-  top: 80px;
-  left: 0;
+  top: 70px;
+  left: var(--float-gap);
   width: 210px;
-  height: calc(100vh - 160px);
-  height: calc(100dvh - 160px);
+  height: calc(100vh - 150px);
+  height: calc(100dvh - 150px);
   padding: 12px;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 0 12px 12px 0;
-  border-left: none;
 }
 
+/* Folded, a 16px sliver of the rail stays at the screen edge to pull it back:
+   it slides its own width plus the gap it floats at, less the sliver. */
 .filter-panel.collapsed {
-  transform: translateX(calc(-100% + 16px)) !important;
+  transform: translateX(calc(-100% - var(--float-gap) + 16px)) !important;
   cursor: pointer;
 }
 
@@ -308,12 +308,14 @@ a,
   left: 0;
   right: 0;
   z-index: 20;
-  background: var(--bg-panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-glow);
-  border-radius: 10px;
-  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
+  /* The denser ground: this list opens over the panel's own rows, and their
+     text must not ghost through the one being read. */
+  background: var(--bg-panel-hover);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--glass-shadow);
   max-height: 260px;
   overflow-y: auto;
   padding: 4px;
@@ -403,12 +405,12 @@ a,
      the folded state is, so folding changes the width and nothing else. */
   height: var(--tap-min, 44px);
   padding: 0 12px 0 0;
-  border-radius: 12px;
-  background: var(--bg-panel);
-  border-color: var(--border-glow);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 8px 28px -12px rgba(0, 0, 0, 0.7);
+  border-radius: var(--radius-pill);
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow-sm);
 }
 
 .vessel-search-overlay.is-collapsed .vessel-search {
@@ -688,19 +690,17 @@ a,
 /* ---------- Right detail panel ---------- */
 
 .detail-popup {
-  top: 80px;
-  right: 0;
+  top: 70px;
+  right: var(--float-gap);
   width: 320px;
-  max-height: calc(100vh - 96px);
-  max-height: calc(100dvh - 96px);
+  max-height: calc(100vh - 86px);
+  max-height: calc(100dvh - 86px);
   padding: 18px;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 12px 0 0 12px;
-  border-right: none;
 }
 
 .detail-popup.collapsed {
-  transform: translateX(calc(100% - 16px)) !important;
+  transform: translateX(calc(100% + var(--float-gap) - 16px)) !important;
   cursor: pointer;
   min-height: 120px;
 }
@@ -1038,18 +1038,18 @@ a,
 .vessel-card-overlay {
   position: absolute;
   z-index: 11;
-  top: 14px;
+  top: var(--float-gap);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   gap: 8px;
   background: var(--bg-panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-glow);
-  border-radius: 12px;
-  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-shadow);
   padding: 8px 12px;
   max-width: min(92vw, 560px);
 }
@@ -1167,22 +1167,24 @@ a,
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  background: var(--bg-panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-glow);
-  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-pill);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-sm);
   color: var(--text-primary);
   cursor: pointer;
   padding: 0;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background 0.2s, transform 0.2s;
 }
 
 .mode-meri .theme-toggle:hover {
+  background: var(--glass-bg-hover);
   border-color: var(--border-button-hover);
+  transform: translateY(-1px);
 }
 
 /* ---------- Replay launcher (desktop) ---------- */
@@ -1195,12 +1197,12 @@ a,
   left: 50%;
   bottom: calc(20px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
-  background: var(--bg-panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-glow);
-  border-radius: 12px;
-  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--glass-shadow);
   padding: 5px;
 }
 
@@ -1210,11 +1212,11 @@ a,
   gap: 8px;
   background: transparent;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-pill);
   color: var(--text-secondary);
   font-size: 0.78rem;
   font-weight: 600;
-  padding: 6px 12px;
+  padding: 6px 14px;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
@@ -1237,11 +1239,11 @@ a,
   flex-direction: column;
   gap: 8px;
   background: var(--bg-panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-glow);
-  border-radius: 12px;
-  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-shadow);
   padding: 10px 14px;
 }
 
@@ -1408,13 +1410,13 @@ a,
   font-size: 9px;
   color: var(--text-muted);
   text-decoration: none;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-faint);
-  border-radius: 6px;
-  padding: 4px 8px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow-sm);
   transition: opacity 0.2s, border-color 0.2s;
 }
 
@@ -1454,20 +1456,22 @@ a,
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 999px;
-  background: var(--bg-panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-glow);
-  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
+  border-radius: var(--radius-pill);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-sm);
   color: var(--text-primary);
   cursor: pointer;
   padding: 0;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background 0.2s, transform 0.2s;
 }
 
-.locate-control:hover {
+.locate-control:hover:not(:disabled) {
+  background: var(--glass-bg-hover);
   border-color: var(--border-button-hover);
+  transform: translateY(-1px);
 }
 
 .locate-control:disabled {
@@ -1495,11 +1499,11 @@ a,
   z-index: 11;
   max-width: 220px;
   background: var(--bg-panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-glow);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: 10px;
-  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
+  box-shadow: var(--glass-shadow);
   padding: 0.5rem 0.75rem;
   color: var(--text-primary);
   font-size: 0.8rem;
@@ -1529,8 +1533,11 @@ a,
 
 .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
   margin: 0 0 40px 8px;
-  background: var(--bg-panel);
-  border-radius: 6px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
   font-size: 10px;
   opacity: 0.75;
 }
@@ -1572,11 +1579,11 @@ a,
 
 .maplibregl-popup-content {
   background: var(--bg-panel) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-glow);
-  border-radius: 12px !important;
-  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--glass-shadow) !important;
   color: var(--text-primary);
   padding: 12px 14px !important;
   font-family: inherit;
@@ -1651,21 +1658,20 @@ a,
 .mode-switcher {
   position: absolute;
   z-index: 12;
-  top: 14px;
-  left: 14px;
+  top: var(--float-gap);
+  left: var(--float-gap);
   display: flex;
   gap: 2px;
-  padding: 3px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-glow);
-  border-radius: 10px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+  padding: 4px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow-sm);
   /* Active-tab accent, keyed to the current mode via data-mode. Each mode's own
      chrome (panel titles, markers) already uses these hues, so the tab agrees
-     with the mode it selects. Consumed by the mobile bottom bar; desktop keeps
-     its teal pill below. */
+     with the mode it selects — on the desktop pill and the phone dock alike. */
   --switch-accent: var(--accent-teal);
 }
 
@@ -1700,8 +1706,8 @@ a,
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.04em;
-  padding: 5px 12px;
-  border-radius: 8px;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
@@ -1712,9 +1718,9 @@ a,
 }
 
 .mode-switcher__btn--active {
-  background: var(--bg-card);
-  border-color: var(--border-focus);
-  color: var(--accent-teal);
+  background: color-mix(in srgb, var(--switch-accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--switch-accent) 45%, transparent);
+  color: var(--switch-accent);
 }
 
 .mode-switcher__btn:disabled {

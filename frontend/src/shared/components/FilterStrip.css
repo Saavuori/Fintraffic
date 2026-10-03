@@ -22,10 +22,12 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  border: 1px solid var(--seam-strong);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--ink-900) 82%, transparent);
-  box-shadow: 0 8px 28px -12px rgba(0, 0, 0, 0.7);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow-sm);
   color: var(--text-body);
   cursor: pointer;
   transition: color 0.15s, transform 0.15s;
@@ -41,7 +43,7 @@
 .filter-strip-btn--on {
   color: var(--accent);
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 16%, color-mix(in srgb, var(--ink-900) 82%, transparent));
+  background: color-mix(in srgb, var(--accent) 16%, var(--glass-bg));
 }
 
 /* Filtering is invisible on the map itself — the ships that aren't there don't
@@ -98,10 +100,12 @@
   min-height: 30px;
   padding: 0 9px;
   box-sizing: border-box;
-  background: color-mix(in srgb, var(--ink-900) 82%, transparent);
-  border: 1px solid var(--seam-strong);
-  border-radius: 999px;
-  box-shadow: 0 6px 20px -10px rgba(0, 0, 0, 0.7);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--glass-shadow-sm);
   color: var(--text-primary);
   font: inherit;
   font-size: var(--text-2xs);
@@ -112,7 +116,7 @@
 }
 
 .filter-chip:active {
-  background: color-mix(in srgb, var(--ink-700) 92%, transparent);
+  background: var(--glass-bg-hover);
 }
 
 /* Hidden kinds stay in the column, dimmed and hollow — the same reading as the

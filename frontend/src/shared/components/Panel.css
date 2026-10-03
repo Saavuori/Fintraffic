@@ -2,29 +2,37 @@
    above the breakpoint, the Panel component renders the desktop `.glass-panel`
    rail instead, so none of these rules apply.
 
-   The mobile panel is a full-screen page, not a bottom sheet. There is no drag,
-   no snap point and no resting height, which means nothing has to be published
-   back to the layout: while the page is up it owns the screen, and while it is
-   not the map has all of it. */
+   The mobile panel is a page, not a bottom sheet: a floating glass card that
+   fills the screen inside the edge gutters and above the tab dock. There is no
+   drag, no snap point and no resting height, which means nothing has to be
+   published back to the layout: while the page is up it owns the screen, and
+   while it is not the map has all of it. */
 
 @media (max-width: 768px) {
   .mobile-panel {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    /* Stops above the tab bar rather than covering it. Fintraffic still has
+    top: calc(env(safe-area-inset-top) + var(--gap-sm));
+    left: var(--gap-sm);
+    right: var(--gap-sm);
+    /* Stops above the tab dock rather than covering it. Fintraffic still has
        three modes to switch between, and switching one while reading a panel is
        a real thing to do — the page's own header is what closes it. */
-    bottom: var(--tabbar-height);
+    bottom: calc(var(--tabbar-height) + var(--gap-sm));
     z-index: 15;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    padding: calc(10px + env(safe-area-inset-top)) var(--gutter) var(--gap-sm);
-    /* Opaque, as the sheet was: a full-screen surface over a moving map is
-       unreadable through glass, and the blur would cost a composite a frame. */
-    background: var(--ink-900);
+    padding: 10px var(--gutter) var(--gap-sm);
+    /* The panel ground (--bg-panel) is the densest glass there is: the blur
+       under it keeps the text legible, the map still shows through as colour
+       and movement, so the page reads as laid over the map rather than as a
+       different screen. */
+    background: var(--bg-panel);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--glass-shadow);
     color: var(--text-primary);
     animation: mobile-panel-in 0.2s cubic-bezier(0.32, 0.72, 0, 1);
   }
@@ -40,24 +48,12 @@
      A selection's page takes the screen: it is the thing you asked for, and
      there is nothing behind it to keep. The filters are the opposite — you open
      them to change what the map is drawing, so the map has to stay in the room.
-     They drop from the top edge as a rounded glass panel, sized to what they
-     hold, leaving the bottom of the map visible and lit underneath. */
+     They drop from the top as a card sized to what they hold, leaving the bottom
+     of the map visible and lit underneath. */
   .mobile-panel--filter {
     bottom: auto;
-    left: var(--gap-sm);
-    right: var(--gap-sm);
     max-height: min(72dvh, calc(100dvh - var(--tabbar-height) - var(--gutter)));
     padding-bottom: var(--gap-md);
-    /* Glass here and nowhere else on the phone: this panel is deliberately not
-       the whole screen, so the composite it costs is bounded — and seeing the
-       map move under it is the point of the shape. */
-    background: var(--bg-panel);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    border: 1px solid var(--border-glow);
-    border-top: none;
-    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-    box-shadow: 0 18px 44px -18px rgba(0, 0, 0, 0.85);
     animation: mobile-panel-drop 0.22s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
@@ -93,9 +89,8 @@
       calc(100dvh - env(safe-area-inset-top) - var(--tabbar-height) - 170px)
     );
     padding: 0 var(--gap-md) var(--gap-md);
-    border: 1px solid var(--seam-strong);
-    border-radius: var(--radius-md);
-    box-shadow: 0 18px 44px -18px rgba(0, 0, 0, 0.85);
+    /* The folded bar's corners, kept as it unfolds. */
+    border-radius: calc(var(--tap-min) / 2);
     /* No entry animation: this is the bar it grew out of, still on screen at the
        same place — anything that flies in reads as a second window opening over
        the first. Only the body below the header is new. */
@@ -195,10 +190,12 @@
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    border: 1px solid var(--seam-strong);
-    border-radius: 12px;
-    background: var(--ink-900);
-    box-shadow: 0 8px 28px -12px rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-pill);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: var(--glass-shadow-sm);
     color: var(--text-body);
     cursor: pointer;
     transition: background 0.15s, color 0.15s, transform 0.15s;

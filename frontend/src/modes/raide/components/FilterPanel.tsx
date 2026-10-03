@@ -130,7 +130,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
       {!bodyCollapsed && (
         <div className="filter-content" onClick={stopPanelClick}>
-          {selectionLabel && onBackToSelection && (
+          {/* Phone only, as in Meri: desktop keeps the selection in its own
+              rail, so there is nothing to go back to. */}
+          {isMobile && selectionLabel && onBackToSelection && (
             <BackToSelection label={selectionLabel} onClick={onBackToSelection} />
           )}
 

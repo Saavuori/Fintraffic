@@ -2,9 +2,10 @@
    Design tokens.
 
    Loaded before index.css. The older `--bg-panel` / `--text-*` tokens in
-   index.css still drive the desktop rails and stay where they are; what lives
-   here is the layer the phone UI is built on, plus the two things that are
-   deliberately app-wide — the typefaces and the motion setting.
+   index.css still drive the panel ground and stay where they are; what lives
+   here is the layer the phone UI is built on, plus the things that are
+   deliberately app-wide — the typefaces, the floating glass and the motion
+   setting.
 
    Type: one app, one voice. Barlow Semi Condensed carries the interface (a
    signage face — and semi-condensed fits roughly a sixth more characters per
@@ -44,10 +45,29 @@
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
+  /* Floating panels: one step rounder than a card inside them. */
+  --radius-xl: 20px;
+  --radius-pill: 999px;
 
-  /* --- instrument surfaces (phone) ---
-     Opaque, not glass: a translucent blur over a moving map costs a full-screen
-     composite every frame and washes out in sunlight. */
+  /* --- floating glass ---
+     Everything over the map floats: inset from the screen edge by --float-gap,
+     rounded on every corner, on a blurred, see-through ground with a soft drop
+     shadow and a one-pixel top highlight that catches the light like a pane
+     edge. The same language as the ratikka sibling app. Two grounds: --glass-bg
+     for chrome that only carries a label or an icon (pills, buttons, the tab
+     dock), --bg-panel (index.css) for panels you read. */
+  --float-gap: 16px;
+  --glass-bg: hsla(210, 60%, 8%, 0.62);
+  --glass-bg-hover: hsla(210, 60%, 12%, 0.74);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-blur: blur(20px) saturate(160%);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --glass-shadow: var(--glass-highlight), 0 16px 40px -14px rgba(0, 0, 0, 0.7);
+  --glass-shadow-sm: var(--glass-highlight), 0 8px 24px -12px rgba(0, 0, 0, 0.65);
+
+  /* --- solid surfaces ---
+     The opaque ground the glass falls back to when the reader asks for less
+     transparency, or the browser cannot blur (see the end of this file). */
   --ink-900: #04101c;
   --ink-800: #0a1b2b;
   --ink-700: #102639;
@@ -67,6 +87,13 @@
 }
 
 [data-theme='light'] {
+  --glass-bg: rgba(255, 255, 255, 0.66);
+  --glass-bg-hover: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(12, 36, 48, 0.1);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  --glass-shadow: var(--glass-highlight), 0 16px 40px -16px rgba(12, 36, 48, 0.32);
+  --glass-shadow-sm: var(--glass-highlight), 0 8px 24px -12px rgba(12, 36, 48, 0.28);
+
   --ink-900: #ffffff;
   --ink-800: #f2f6f9;
   --ink-700: #e6eef3;
@@ -133,5 +160,29 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Glass is an enhancement too. A reader who asked for less transparency, or a
+   browser that cannot blur what is behind a box (where a see-through ground
+   over a busy map is just noise), gets the same shapes on a solid ground. The
+   doubled :root outranks both themes' values here and the --bg-panel ground set
+   in index.css, which loads after this file; the var() references resolve per
+   theme. */
+@media (prefers-reduced-transparency: reduce) {
+  :root:root {
+    --glass-bg: var(--ink-900);
+    --glass-bg-hover: var(--ink-800);
+    --bg-panel: var(--ink-900);
+    --bg-panel-hover: var(--ink-800);
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root:root {
+    --glass-bg: var(--ink-900);
+    --glass-bg-hover: var(--ink-800);
+    --bg-panel: var(--ink-900);
+    --bg-panel-hover: var(--ink-800);
   }
 }
