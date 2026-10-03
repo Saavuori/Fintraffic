@@ -13,6 +13,7 @@ import (
 	"fintraffic/internal/core/cache"
 	"fintraffic/internal/core/server"
 	"fintraffic/internal/core/upstream"
+	"fintraffic/internal/meri/aisstream"
 	"fintraffic/internal/meri/trail"
 )
 
@@ -25,15 +26,17 @@ type Handlers struct {
 	}
 	trail      *trail.Store // nil when trail recording is disabled; nil-safe
 	conditions *ConditionsStore
+	static     *aisstream.Client // nil when the aisstream.io feed is disabled; nil-safe
 }
 
-func NewHandlers(c cache.Cache, proxy *upstream.CachedProxy, mqtt interface{ IsConnected() bool }, tr *trail.Store, conditions *ConditionsStore) *Handlers {
+func NewHandlers(c cache.Cache, proxy *upstream.CachedProxy, mqtt interface{ IsConnected() bool }, tr *trail.Store, conditions *ConditionsStore, static *aisstream.Client) *Handlers {
 	return &Handlers{
 		cache:      c,
 		proxy:      proxy,
 		mqtt:       mqtt,
 		trail:      tr,
 		conditions: conditions,
+		static:     static,
 	}
 }
 
@@ -91,6 +94,12 @@ func (h *Handlers) Health(ctx context.Context) server.ModeHealth {
 			"trail_newest_ts_age_sec": trailAge, // seconds since newest point; -1 when none
 			"sea_conditions_stations": seaStations,
 			"sea_conditions_sources":  seaSources,
+			// aisstream.io only adds class B boats on top of Digitraffic's
+			// fleet, so like sea conditions it is reported but never degrades
+			// the mode.
+			"aisstream_enabled":   h.static != nil,
+			"aisstream_connected": h.static.IsConnected(),
+			"aisstream_vessels":   h.static.Len(),
 		},
 	}
 }
@@ -187,21 +196,34 @@ func (h *Handlers) PortCalls(w http.ResponseWriter, r *http.Request) {
 }
 
 // Vessel returns upstream metadata for one vessel merged with its live
-// position from the cache.
+// position from the cache, plus whatever static data aisstream.io has for it
+// (null when the feed is disabled or hasn't heard from the vessel).
 func (h *Handlers) Vessel(w http.ResponseWriter, r *http.Request) {
 	mmsiStr := r.PathValue("mmsi")
-	if _, err := strconv.Atoi(mmsiStr); err != nil {
+	mmsi, err := strconv.Atoi(mmsiStr)
+	if err != nil {
 		http.Error(w, `{"error":"invalid mmsi"}`, http.StatusBadRequest)
 		return
 	}
 
-	var metadata json.RawMessage
-	body, err := h.proxy.GetCached(r, "vessel:"+mmsiStr, "/api/ais/v1/vessels/"+mmsiStr, 10*time.Minute, nil)
-	if err != nil {
-		log.Printf("Vessel metadata error for %s: %v\n", mmsiStr, err)
-		metadata = json.RawMessage("null")
-	} else {
-		metadata = body
+	var static json.RawMessage = json.RawMessage("null")
+	st, hasStatic := h.static.Get(mmsi)
+	if hasStatic {
+		if b, err := json.Marshal(st); err == nil {
+			static = b
+		}
+	}
+
+	// Digitraffic carries class A only, so a class B boat would just be a
+	// guaranteed 404 upstream.
+	var metadata json.RawMessage = json.RawMessage("null")
+	if !st.ClassB {
+		body, err := h.proxy.GetCached(r, "vessel:"+mmsiStr, "/api/ais/v1/vessels/"+mmsiStr, 10*time.Minute, nil)
+		if err != nil {
+			log.Printf("Vessel metadata error for %s: %v\n", mmsiStr, err)
+		} else {
+			metadata = body
+		}
 	}
 
 	var position json.RawMessage = json.RawMessage("null")
@@ -212,7 +234,7 @@ func (h *Handlers) Vessel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, `{"metadata":%s,"position":%s}`, metadata, position)
+	fmt.Fprintf(w, `{"metadata":%s,"position":%s,"aisstream":%s}`, metadata, position, static)
 }
 
 // VesselTrail returns the recorded position history for one vessel as an array

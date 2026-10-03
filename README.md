@@ -23,7 +23,7 @@ Fintraffic/
 │       │   └── upstream/        # Digitraffic HTTP client + cached singleflight proxy
 │       ├── meri/                # marine mode: AIS ingest (MQTT), trail store (SQLite),
 │       │   │                    #   WebSocket hub, REST handlers
-│       │   ├── ais/  trail/  ws/
+│       │   ├── ais/  aisstream/  trail/  ws/
 │       ├── raide/               # railway mode: rata.digitraffic.fi polling,
 │       │                        #   GPS/timetable merge, station boards
 │       └── tie/                 # road mode: TMS/traffic-message/parking/AFIR
@@ -50,6 +50,7 @@ Modes implement the `server.Mode` interface (`Name`, `Register`, `Health`); the 
 ## ✨ Meri mode (marine traffic)
 
 * **Real-time AIS vessel tracking** streamed over MQTT from `wss://meri.digitraffic.fi:443/mqtt`, with REST hydration on boot and snapshot + delta WebSocket streaming to clients.
+* **Class B boats** (leisure craft, small work and fishing boats) from [aisstream.io](https://aisstream.io) when `AISSTREAM_API_KEY` is set — Digitraffic publishes class A only.
 * **Dead-reckoning animation** between sparse AIS fixes; follow (chase-cam) mode.
 * **Vessel trails** — every fix recorded to an on-disk SQLite store (60-day retention, 1 pt/min/vessel); selected vessels draw their dotted history track.
 * **Track replay** — rewind the selected vessel along its own recorded track, with the traffic around it wound back to the same moment; play/pause/restart/scrub/speed transport, and the detail panel reports the pose at the playhead.
@@ -77,7 +78,7 @@ Modes implement the `server.Mode` interface (`Name`, `Register`, `Health`); the 
 
 ## Data Sources
 
-All data comes from [Digitraffic](https://www.digitraffic.fi/en/) and other Fintraffic open APIs, plus the [Finnish Meteorological Institute's open data](https://en.ilmatieteenlaitos.fi/open-data) for marine observations — all public, keyless, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The backend identifies itself with a `Digitraffic-User` header per the API etiquette.
+All data comes from [Digitraffic](https://www.digitraffic.fi/en/) and other Fintraffic open APIs, plus the [Finnish Meteorological Institute's open data](https://en.ilmatieteenlaitos.fi/open-data) for marine observations — all public, keyless, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The backend identifies itself with a `Digitraffic-User` header per the API etiquette. The one optional, keyed exception is [aisstream.io](https://aisstream.io) for class B vessels (below).
 
 ### 🚢 Meri — `meri.digitraffic.fi`
 
@@ -89,6 +90,7 @@ All data comes from [Digitraffic](https://www.digitraffic.fi/en/) and other Fint
 | Sea state estimation | `/api/sse/v1/measurements` | Coarse smart-buoy sea-state class, drawn behind the FMI stations |
 | Aids to navigation | `/api/aton/v1/faults` | AtoN fault warnings layer |
 | Port of Helsinki webcams | YouTube live streams (portofhelsinki.fi), hardcoded — no upstream API | Länsisatama LT1/LT2 webcam markers |
+| aisstream.io (optional) | WebSocket `wss://stream.aisstream.io/v0/stream`, Baltic bounding box, needs `AISSTREAM_API_KEY` | Class B positions (types 18/19) + static data (types 5/24): the boats Digitraffic doesn't publish, and hull sizes. Digitraffic stays the only source for any MMSI it reports |
 
 Marine observations come from FMI rather than Digitraffic, over WFS at `opendata.fmi.fi/wfs`:
 
@@ -151,6 +153,7 @@ Set in `.env` or the environment. The backend auto-loads a `.env` file from the 
 | `TRAIL_DB_PATH` | SQLite trail DB path (empty string disables trail recording) | `/data/trail.db` |
 | `TRAIL_RETENTION_DAYS` | Trail history retention window | `60` |
 | `TRAIL_INTERVAL_SEC` | Per-vessel trail downsample interval | `60` |
+| `AISSTREAM_API_KEY` | [aisstream.io](https://aisstream.io) key; adds class B boats (leisure, small work/fishing craft) to the meri map. A secret — on the host it lives in `~/fintraffic/.env` (`AISSTREAM_API_KEY=… ./install.sh` stores it there), never in the repo. Empty disables it | _(empty)_ |
 
 ---
 
