@@ -19,6 +19,7 @@ import { type LayerKey, LAYER_ORDER, type LayerVisibility } from '../lib/layers'
 import { type Theme, BASEMAP_STYLES, MARKER_STROKE, TRACK_COLORS } from '../lib/theme';
 import { loadMapIcons, TRAIN_ICON_ID, STATION_PIN_ICON_ID, CANCELLED_BADGE_ICON_ID } from '../lib/mapIcons';
 import { LocateControl } from '../../../shared/components/LocateControl';
+import { CollapsedAttributionControl } from '../../../shared/lib/attribution';
 import { INITIAL_CENTER, INITIAL_ZOOM } from '../lib/mapView';
 
 interface MapProps {
@@ -213,7 +214,7 @@ const Map: React.FC<MapProps> = ({
       attributionControl: false,
     });
     map.current = m;
-    m.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+    m.addControl(new CollapsedAttributionControl(), 'bottom-left');
     // Dev-only escape hatch for driving the map from the console / test tools.
     if (import.meta.env.DEV) (window as unknown as { __map?: maplibregl.Map }).__map = m;
 

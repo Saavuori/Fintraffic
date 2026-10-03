@@ -16,6 +16,7 @@ import { type ChargingStation, chargingLevel, availabilityText } from '../lib/ch
 import { type LayerKey, LAYER_ORDER, type LayerVisibility, poiColors } from '../lib/layers';
 import { type Theme, BASEMAP_STYLES } from '../lib/theme';
 import { LocateControl } from '../../../shared/components/LocateControl';
+import { CollapsedAttributionControl } from '../../../shared/lib/attribution';
 
 /** The map's live feeds, handed up so the app can search them. */
 export interface TieData {
@@ -225,7 +226,7 @@ const Map: React.FC<MapProps> = ({
       attributionControl: false,
     });
     map.current = m;
-    m.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+    m.addControl(new CollapsedAttributionControl(), 'bottom-left');
 
     hoverPopupRef.current = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });
     clickPopupRef.current = new maplibregl.Popup({ closeButton: true, offset: 12, maxWidth: '280px' });
