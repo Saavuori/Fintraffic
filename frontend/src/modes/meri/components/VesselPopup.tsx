@@ -11,6 +11,7 @@ import {
 } from '../lib/shipTypes';
 import { fetchVesselDetails } from '../lib/api';
 import { VesselHeadline } from './VesselHeadline';
+import { ShareVesselButton } from './ShareVesselButton';
 import type { Vessel, VesselDetailsResponse } from '../types';
 
 interface VesselPopupProps {
@@ -213,6 +214,9 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
                 <ChevronRight size={16} />
               </button>
             )}
+            {/* The phone's header is the folded bar's headline and keeps its
+                width for the name; sharing is a row of the page there. */}
+            {!isMobile && <ShareVesselButton mmsi={vessel.mmsi} name={vessel.name} size={16} />}
             <button
               className="icon-btn"
               onClick={(e) => {
@@ -253,6 +257,12 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
                   {showTrail ? 'Hide track history' : 'Show track history'}
                 </button>
               )}
+
+              <ShareVesselButton
+                mmsi={vessel.mmsi}
+                name={vessel.name}
+                variant="row"
+              />
 
               <div className="vessel-stats">
                 <div className="vessel-stat">

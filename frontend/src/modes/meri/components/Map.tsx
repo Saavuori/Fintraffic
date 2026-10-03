@@ -269,6 +269,9 @@ interface MapProps {
   // Fires (on moveend) with the viewport centre, so the panel can list the
   // vessels nearest to what the user is currently looking at.
   onMoveEnd?: (center: { lng: number; lat: number }) => void;
+  // Somewhere to fly to once, e.g. the ship a shared link opened on. A new
+  // object is a new flight; null leaves the camera alone.
+  focusTarget?: { lng: number; lat: number } | null;
 }
 
 /** Draws a ship-arrow marker pointing north, returns ImageData for map.addImage. */
@@ -450,6 +453,7 @@ export function Map({
   replay,
   replayMeta,
   onMoveEnd,
+  focusTarget = null,
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -1504,6 +1508,17 @@ export function Map({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPortLocode]);
+
+  // Fly to a requested spot (a linked vessel's first known position)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !focusTarget) return;
+    map.flyTo({
+      center: [focusTarget.lng, focusTarget.lat],
+      zoom: Math.max(map.getZoom(), 11),
+      duration: 800,
+    });
+  }, [focusTarget]);
 
   return (
     <>
