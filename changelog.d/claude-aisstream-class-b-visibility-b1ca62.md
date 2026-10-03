@@ -1,2 +1,0 @@
-### Added
-- **Vessel panel shows where a ship's position comes from**: a new "Source" row reads "Digitraffic" or "aisstream.io", so a class B boat filled in from aisstream can be told apart from the class A traffic Digitraffic publishes. Each vessel in the `/api/meri/stream` snapshot and deltas now carries a `source` field (`digitraffic` or `aisstream`). Replayed positions don't carry it, so the row is hidden during fleet replay.

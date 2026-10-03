@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.22.0] - 2026-10-03
+
+### Added
+- **Vessel panel shows where a ship's position comes from**: a new "Source" row reads "Digitraffic" or "aisstream.io", so a class B boat filled in from aisstream can be told apart from the class A traffic Digitraffic publishes. Each vessel in the `/api/meri/stream` snapshot and deltas now carries a `source` field (`digitraffic` or `aisstream`). Replayed positions don't carry it, so the row is hidden during fleet replay.
+
+### Fixed
+- **The aisstream.io key now actually reaches the backend**: the compose file passed the key as `AISSTREAM_API_KEY=${AISSTREAM_API_KEY:-}`, relying on Compose to fill it from the `.env` file beside it. On the production host that left it empty, so the class B feed stayed off (`aisstream_enabled: false` in `/api/health`) even with the key stored. The backend now loads `.env` directly with `env_file`, and the interpolated entry is gone, since an empty `environment:` value would override `env_file` anyway. `install.sh` already creates `.env` (mode 600) before starting the stack, so it always exists.
+
 ## [v0.21.0] - 2026-10-03
 
 ### Added
