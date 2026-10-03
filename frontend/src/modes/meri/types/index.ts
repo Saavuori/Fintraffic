@@ -1,3 +1,5 @@
+export type VesselSource = 'digitraffic' | 'aisstream';
+
 export interface Vessel {
   mmsi: number;
   lat: number;
@@ -8,6 +10,9 @@ export interface Vessel {
   navStat: number;
   rot?: number;
   ts: number; // epoch seconds of the position fix
+  // Who sent the fix (ais.Source* in the backend). Absent on replayed
+  // positions and on records cached before the field existed.
+  source?: VesselSource;
   name?: string;
   callSign?: string;
   dest?: string;

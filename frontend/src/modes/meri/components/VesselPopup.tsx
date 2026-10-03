@@ -12,7 +12,12 @@ import {
 import { fetchVesselDetails } from '../lib/api';
 import { VesselHeadline } from './VesselHeadline';
 import { ShareVesselButton } from './ShareVesselButton';
-import type { Vessel, VesselDetailsResponse } from '../types';
+import type { Vessel, VesselDetailsResponse, VesselSource } from '../types';
+
+const SOURCE_LABELS: Record<VesselSource, string> = {
+  digitraffic: 'Digitraffic',
+  aisstream: 'aisstream.io',
+};
 
 interface VesselPopupProps {
   vessel: Vessel;
@@ -100,6 +105,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
   // Class B position reports carry no navigational status at all; say so
   // rather than showing AIS's "Undefined".
   const statusText = classB && vessel.navStat === 15 ? 'Not reported (class B)' : navStatText(vessel.navStat);
+  const sourceText = vessel.source ? (SOURCE_LABELS[vessel.source] ?? vessel.source) : null;
 
   const etaText = formatEta(vessel.eta);
   const fixAge = Math.max(0, Math.round(nowMs / 1000 - vessel.ts));
@@ -122,6 +128,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
   if (vessel.imo) facts.push({ label: 'IMO', value: vessel.imo });
   if (vessel.callSign) facts.push({ label: 'Call sign', value: vessel.callSign });
   if (classB) facts.push({ label: 'AIS', value: 'Class B' });
+  if (sourceText) facts.push({ label: 'Source', value: sourceText });
   if (dims && dims.length > 0) {
     facts.push({ label: 'Size', value: `${dims.length} × ${dims.beam} m` });
   }
@@ -296,6 +303,12 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({
                   <div className="ident-cell">
                     <span className="ident-label">IMO</span>
                     <span className="ident-value">{vessel.imo}</span>
+                  </div>
+                )}
+                {sourceText && (
+                  <div className="ident-cell">
+                    <span className="ident-label">Source</span>
+                    <span className="ident-value">{sourceText}</span>
                   </div>
                 )}
                 <div className="ident-cell ident-cell--wide">
