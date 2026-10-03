@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.20.0] - 2026-10-03
+
+### Changed
+- **Floating glass across the whole app, the same language as ratikka**: every surface over the map now floats. It sits inset from the screen edge, is rounded on every corner, and has a blurred, see-through background with a soft drop shadow and a one-pixel highlight along its top edge. On desktop the filter and detail rails no longer hang off the screen edges. The mode switcher, theme and locate buttons, replay launcher, version badge and selected-train/-road cards are pills. The active mode tab takes that mode's own colour (teal, green, blue) instead of always teal. On a phone the opaque "instrument" surfaces are gone: the tab bar is a floating glass dock lifted off the bottom edge. Pages, the filter drop-down, the vessel bar and the sheet it unfolds into are glass cards inset from the edges. The search pill, launchers, filter chips and the docked track-replay bar match them. The whole look is one shared token set (`--glass-*`, `--float-gap`, `--radius-xl`/`--radius-pill` in `tokens.css`), so a new surface picks it up by using those tokens.
+- **Readers who ask for less transparency get the same shapes on solid ground**: with `prefers-reduced-transparency`, or in a browser without `backdrop-filter`, the glass falls back to the opaque surfaces the phone used before. A see-through panel over a busy map is only readable when what is behind it is blurred.
+
+### Fixed
+- **The map credit on phones sat behind the tab bar**: MapLibre's own margin rule outranked the phone override, so the ⓘ attribution was painted under the bottom bar, where the opaque bar hid it. It now sits above the dock.
+- **A stray "‹ ship name" button at the top of the desktop filter rail**: selecting anything on desktop (a ship, a train, a station or a road sensor) put the phone's back-to-selection row, unstyled, above the filters. That row undoes the phone's swap between filters and selection. Desktop shows both rails side by side and has no swap to undo, so the row now renders only on a phone.
+
 ## [v0.19.1] - 2026-10-03
 
 ### Changed
