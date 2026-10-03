@@ -1,2 +1,0 @@
-### Added
-- **Direct links to a vessel**: Meri's address bar now follows the selected ship (`/?vessel=<MMSI>`), so the URL on screen is always a link to it. Opening such a link starts in Meri — whatever mode was last used — with the ship selected, and flies the map to it as soon as its first position arrives. A share button beside the vessel's name (and a "Share link to this vessel" row in the phone's details) copies the link, or opens the system share sheet on a phone.

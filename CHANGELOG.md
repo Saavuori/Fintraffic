@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Fintraffic consolidates the standalone Marinetraffic (Meri), railway (Raide) and tieliikenne (Tie) apps into one; entries up to v0.2.0 predate the consolidation and describe the marine app.
 
+## [v0.21.0] - 2026-10-03
+
+### Added
+- **Direct links to a vessel**: Meri's address bar now follows the selected ship (`/?vessel=<MMSI>`), so the URL on screen is always a link to it. Opening such a link starts in Meri — whatever mode was last used — with the ship selected, and flies the map to it as soon as its first position arrives. A share button beside the vessel's name (and a "Share link to this vessel" row in the phone's details) copies the link, or opens the system share sheet on a phone.
+
 ## [v0.20.0] - 2026-10-03
 
 ### Changed
