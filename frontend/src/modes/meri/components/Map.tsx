@@ -7,6 +7,7 @@ import { deadReckon } from '../lib/geo';
 import { INITIAL_CENTER, INITIAL_ZOOM } from '../lib/mapView';
 import { categorize, CATEGORY_COLORS, isStationary, ALL_CATEGORIES } from '../lib/shipTypes';
 import { LocateControl } from '../../../shared/components/LocateControl';
+import { CollapsedAttributionControl } from '../../../shared/lib/attribution';
 import { WAVE_RAMP, WIND_RAMP, headlineLabel, seaConditionsPopupHtml } from '../lib/seaConditions';
 import type {
   Vessel,
@@ -776,7 +777,7 @@ export function Map({
       (window as unknown as { __map?: maplibregl.Map }).__map = map;
     }
 
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+    map.addControl(new CollapsedAttributionControl(), 'bottom-left');
 
     const emitCenter = () => {
       const c = map.getCenter();
