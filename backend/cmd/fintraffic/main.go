@@ -13,6 +13,7 @@ import (
 	"fintraffic/internal/core/cache"
 	"fintraffic/internal/core/config"
 	"fintraffic/internal/core/server"
+	"fintraffic/internal/ilma"
 	"fintraffic/internal/meri"
 	"fintraffic/internal/raide"
 	"fintraffic/internal/tie"
@@ -65,8 +66,14 @@ func main() {
 	}
 	defer tieService.Stop()
 
+	ilmaService := ilma.NewService(liveCache)
+	if err := ilmaService.Start(ctx); err != nil {
+		log.Printf("ERROR starting ilma mode: %v\n", err)
+	}
+	defer ilmaService.Stop()
+
 	// 5. Assemble the shared router: global endpoints + each mode's routes.
-	handlers := server.NewHandlers(liveCache, meriService, raideService, tieService)
+	handlers := server.NewHandlers(liveCache, meriService, raideService, tieService, ilmaService)
 	router := server.NewRouter(handlers)
 
 	srv := &http.Server{

@@ -68,11 +68,12 @@
     --tabbar-height: calc(var(--dock-height) + var(--dock-gap));
   }
 
-  /* Raide's and Tie's summary pills are redundant on a phone — their detail
-     page is the single source of selection detail. Meri's vessel card is not:
-     it is the selection itself, kept on the map (see below). */
+  /* Raide's, Tie's and Ilma's summary pills are redundant on a phone — their
+     detail page is the single source of selection detail. Meri's vessel card is
+     not: it is the selection itself, kept on the map (see below). */
   .train-card-overlay,
-  .selected-card-overlay {
+  .selected-card-overlay,
+  .flight-card-overlay {
     display: none;
   }
 

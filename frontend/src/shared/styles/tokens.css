@@ -115,6 +115,10 @@
   --accent: #38bdf8;
 }
 
+.mode-ilma {
+  --accent: #fb923c;
+}
+
 /* The dark-theme accents are tuned for dark ground; on white they are too pale
    to read as text, and the accent is text as often as it is a seam. */
 [data-theme='light'] .mode-meri {
@@ -127,6 +131,10 @@
 
 [data-theme='light'] .mode-tie {
   --accent: #0369a1;
+}
+
+[data-theme='light'] .mode-ilma {
+  --accent: #c2410c;
 }
 
 /* Live values: measured numbers in the mono face, aligned in columns, never

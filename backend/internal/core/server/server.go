@@ -26,7 +26,7 @@ type ModeHealth struct {
 	Details map[string]any `json:"details,omitempty"`
 }
 
-// Mode is a traffic mode (meri, raide, tie) mounted into the shared server.
+// Mode is a traffic mode (meri, raide, tie, ilma) mounted into the shared server.
 // Each mode registers its routes under /api/<name>/ and reports its own health.
 type Mode interface {
 	Name() string
