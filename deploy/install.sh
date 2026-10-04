@@ -15,7 +15,7 @@
 # the backend on that network, not on a host port.
 #
 # Usage:
-#   ./install.sh                        # default domain (liikenne.duckdns.org)
+#   ./install.sh                        # default domain (liikenne.saavuori.live)
 #   ./install.sh traffic.example.org    # custom domain as an argument
 #   DOMAIN=traffic.example.org ./install.sh          # ...or via env
 #   APP_DIR=/srv/fintraffic IMAGE=ghcr.io/you/fintraffic:latest ./install.sh
@@ -30,7 +30,7 @@ set -euo pipefail
 
 # --- config (first argument or env, with defaults) --------------------------
 APP_DIR="${APP_DIR:-$HOME/fintraffic}"
-DOMAIN="${1:-${DOMAIN:-liikenne.duckdns.org}}"   # used for the post-deploy checks
+DOMAIN="${1:-${DOMAIN:-liikenne.saavuori.live}}"   # used for the post-deploy checks
 IMAGE="${IMAGE:-ghcr.io/saavuori/fintraffic:latest}"
 
 # --- pick a container engine + compose command ------------------------------

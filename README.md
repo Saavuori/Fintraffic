@@ -1,6 +1,6 @@
 # 🇫🇮 Fintraffic — Live Finnish Traffic Tracker (Meri · Raide · Tie · Ilma)
 
-[![Live Application](https://img.shields.io/badge/Live-liikenne.duckdns.org-2dd4bf?style=for-the-badge&logo=react)](https://liikenne.duckdns.org/)
+[![Live Application](https://img.shields.io/badge/Live-liikenne.saavuori.live-2dd4bf?style=for-the-badge&logo=react)](https://liikenne.saavuori.live/)
 [![Changelog](https://img.shields.io/badge/Changelog-GitHub%20Pages-38bdf8?style=for-the-badge&logo=github)](https://saavuori.github.io/Fintraffic/)
 
 One live map for **Finnish sea, rail, road and air traffic**, built on Digitraffic's open data plus community ADS-B feeds: a single Go backend + React frontend with four switchable modes — 🚢 **Meri** (vessels), 🚆 **Raide** (trains), 🚗 **Tie** (road traffic) and ✈️ **Ilma** (aircraft).
@@ -214,7 +214,7 @@ curl http://localhost:8080/api/health
 
 ### Production Deployment (RHEL & Podman)
 
-Deployed behind a single shared Caddy instance on an Oracle Cloud host. The backend publishes no ports and joins the external `web-proxy` Podman network; Caddy reverse-proxies `liikenne.duckdns.org` to it. This one stack replaces the standalone marinetraffic/railway/tieliikenne stacks (and their per-app Redis instances and domains).
+Deployed behind a single shared Caddy instance on an Oracle Cloud host. The backend publishes no ports and joins the external `web-proxy` Podman network; Caddy reverse-proxies `liikenne.saavuori.live` (and the older `liikenne.duckdns.org`, kept so existing links work) to it. This one stack replaces the standalone marinetraffic/railway/tieliikenne stacks (and their per-app Redis instances and domains).
 
 Install or update the stack on the host:
 
@@ -224,7 +224,7 @@ chmod +x install.sh
 ./install.sh
 ```
 
-The domain defaults to `liikenne.duckdns.org` and is used for the post-deploy health checks. To deploy under your own DNS name, pass it as an argument (or set `DOMAIN`):
+The domain defaults to `liikenne.saavuori.live` and is used for the post-deploy health checks. To deploy under your own DNS name, pass it as an argument (or set `DOMAIN`):
 
 ```bash
 ./install.sh traffic.example.org
