@@ -1603,7 +1603,7 @@ a,
 }
 
 
-/* ---------- Mode switcher (Meri / Raide / Tie) ---------- */
+/* ---------- Mode switcher (Meri / Raide / Tie / Ilma) ---------- */
 
 .mode-switcher {
   position: absolute;
@@ -1633,12 +1633,20 @@ a,
   --switch-accent: #38bdf8;
 }
 
+.mode-switcher[data-mode='ilma'] {
+  --switch-accent: #fb923c;
+}
+
 :root[data-theme='light'] .mode-switcher[data-mode='raide'] {
   --switch-accent: #0e8a48;
 }
 
 :root[data-theme='light'] .mode-switcher[data-mode='tie'] {
   --switch-accent: #0369a1;
+}
+
+:root[data-theme='light'] .mode-switcher[data-mode='ilma'] {
+  --switch-accent: #c2410c;
 }
 
 /* The per-mode glyph is a mobile-only affordance; the desktop switcher is a

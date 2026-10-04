@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import MeriApp from './modes/meri/MeriApp';
 import RaideApp from './modes/raide/RaideApp';
 import TieApp from './modes/tie/TieApp';
+import IlmaApp from './modes/ilma/IlmaApp';
 import { VersionBadge } from './shared/components/VersionBadge';
 import { initialLinkedVessel } from './modes/meri/lib/vesselLink';
 
-export type ModeId = 'meri' | 'raide' | 'tie';
+export type ModeId = 'meri' | 'raide' | 'tie' | 'ilma';
 export type Theme = 'dark' | 'light';
 
 // The traffic modes of the consolidated Fintraffic app.
@@ -13,6 +14,7 @@ const MODES: { id: ModeId; label: string; enabled: boolean }[] = [
   { id: 'meri', label: 'Meri', enabled: true },
   { id: 'raide', label: 'Raide', enabled: true },
   { id: 'tie', label: 'Tie', enabled: true },
+  { id: 'ilma', label: 'Ilma', enabled: true },
 ];
 
 // Per-mode glyphs for the mobile tab bar. Hidden on desktop (the switcher stays
@@ -33,6 +35,11 @@ const MODE_ICONS: Record<ModeId, ReactNode> = {
   tie: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M6 21 9 3M18 21 15 3M12 6v2m0 4v2m0 4v2" />
+    </svg>
+  ),
+  ilma: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
     </svg>
   ),
 };
@@ -91,6 +98,7 @@ function App() {
       {mode === 'meri' && <MeriApp theme={theme} setTheme={setTheme} />}
       {mode === 'raide' && <RaideApp theme={theme} onToggleTheme={toggleTheme} />}
       {mode === 'tie' && <TieApp theme={theme} onToggleTheme={toggleTheme} />}
+      {mode === 'ilma' && <IlmaApp theme={theme} onToggleTheme={toggleTheme} />}
 
       <VersionBadge />
     </>

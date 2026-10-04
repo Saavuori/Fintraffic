@@ -1,9 +1,9 @@
-# 🇫🇮 Fintraffic — Live Finnish Traffic Tracker (Meri · Raide · Tie)
+# 🇫🇮 Fintraffic — Live Finnish Traffic Tracker (Meri · Raide · Tie · Ilma)
 
 [![Live Application](https://img.shields.io/badge/Live-liikenne.duckdns.org-2dd4bf?style=for-the-badge&logo=react)](https://liikenne.duckdns.org/)
 [![Changelog](https://img.shields.io/badge/Changelog-GitHub%20Pages-38bdf8?style=for-the-badge&logo=github)](https://saavuori.github.io/Fintraffic/)
 
-One live map for **Finnish sea, rail and road traffic**, built on Digitraffic's open data: a single Go backend + React frontend with three switchable modes — 🚢 **Meri** (vessels), 🚆 **Raide** (trains) and 🚗 **Tie** (road traffic).
+One live map for **Finnish sea, rail, road and air traffic**, built on Digitraffic's open data plus community ADS-B feeds: a single Go backend + React frontend with four switchable modes — 🚢 **Meri** (vessels), 🚆 **Raide** (trains), 🚗 **Tie** (road traffic) and ✈️ **Ilma** (aircraft).
 
 ---
 
@@ -26,8 +26,10 @@ Fintraffic/
 │       │   ├── ais/  aisstream/  trail/  ws/
 │       ├── raide/               # railway mode: rata.digitraffic.fi polling,
 │       │                        #   GPS/timetable merge, station boards
-│       └── tie/                 # road mode: TMS/traffic-message/parking/AFIR
-│                                #   polling (7 feeds), Datex2 flattening
+│       ├── tie/                 # road mode: TMS/traffic-message/parking/AFIR
+│       │                        #   polling (7 feeds), Datex2 flattening
+│       └── ilma/                # air mode: ADS-B polling (adsb.fi, adsb.lol
+│                                #   fallback), in-memory trails, airport register
 ├── frontend/
 │   └── src/
 │       ├── App.tsx              # shell: mode switcher + shared theme
@@ -35,7 +37,8 @@ Fintraffic/
 │       └── modes/
 │           ├── meri/            # the marine map app
 │           ├── raide/           # the railway map app
-│           └── tie/             # the road map app
+│           ├── tie/             # the road map app
+│           └── ilma/            # the air traffic map app
 ├── changelog.d/                 # pending changelog entries, one file per PR
 ├── scripts/                     # changelog fold + CHANGELOG.md -> site generator
 ├── .github/workflows/           # Multi-arch image build + Pages deploy
@@ -73,6 +76,14 @@ Modes implement the `server.Mode` interface (`Name`, `Register`, `Health`); the 
 * **Road works & incidents** (2 min): deep Datex2 JSON flattened server-side to title/description/geometry, including work-zone speed limits.
 * **Variable speed-limit signs** (1 min), **parking availability** (2 min), **EV charging (AFIR)** locations with live per-EVSE availability (5 min), and **weather cameras** enriched with the nearest road-weather-station observations (3 min).
 * Locate-me control, per-layer toggles (7 layers), camera thumbnails loaded straight from `weathercam.digitraffic.fi`.
+
+## ✨ Ilma mode (air traffic)
+
+* **Every aircraft over Finland** from community ADS-B networks, polled every 10 s as two 250 NM circles (south and north) that together cover Hanko to Utsjoki, and trimmed to a box around Finland. [adsb.fi](https://adsb.fi) — run from Finland, so its receivers are densest here — is the primary; [adsb.lol](https://adsb.lol) serves the same readsb JSON and takes over per circle when adsb.fi fails.
+* **Top-down silhouettes rotated to the track**, coloured and shaped by kind — airline flights, general aviation, helicopters, military/state — and **dead-reckoned between polls** so jets glide instead of jumping 2 km every 10 s.
+* **Selected-aircraft trail**: the last 30 minutes, recorded server-side from successive polls and coloured by altitude; the detail panel shows altitude (ft + m), ground speed (kt + km/h), vertical rate, track, type, registration, operator, squawk and how the position was obtained (ADS-B or MLAT).
+* **Emergencies** (7500/7600/7700 squawks and the transponder's emergency state) get a red ring and a banner.
+* **Finnish airports** (scheduled airports and the main airfields): selecting one lists the traffic on the ground or low overhead within 25 km — arrivals on final, departures climbing out.
 
 ---
 
@@ -123,9 +134,21 @@ The station list is hand-maintained in `backend/internal/meri/fmi/sources.go`; i
 | Parking | `parking.fintraffic.fi/api/v1/facilities`, `/utilizations` (2 min) | Parking availability layer |
 | EV charging (AFIR) | `afir.digitraffic.fi/api/charging-network/v1/locations[/statuses]` (5 min) | EV charging layer with per-EVSE availability |
 
+### ✈️ Ilma — community ADS-B
+
+Fintraffic's air navigation services publish no open live-position feed, so Ilma is the one mode not on Digitraffic. Both networks are keyless, aggregate volunteer receivers, and cap a query at 250 NM and about one request per second; the backend makes two spaced requests per 10 s poll and nothing a visitor does reaches them.
+
+| Feed | Endpoint | Used for |
+|---|---|---|
+| adsb.fi open data | `opendata.adsb.fi/api/v2/lat/{lat}/lon/{lon}/dist/250` (10 s poll) | Aircraft positions, identity and type (primary) |
+| adsb.lol | `api.adsb.lol/v2/lat/{lat}/lon/{lon}/dist/250` | Same, when adsb.fi fails (data under [ODbL](https://opendatacommons.org/licenses/odbl/)) |
+| Airport register | Hardcoded in `backend/internal/ilma/airports.go`, positions from [OurAirports](https://ourairports.com/) (public domain) | Airports layer |
+
+adsb.fi's open data is for personal, non-commercial use; both networks are credited in the map attribution.
+
 ## HTTP API
 
-Global endpoints (`/api/health`, `/api/version`, `/metrics`) plus per-mode routes under `/api/meri/`, `/api/raide/` and `/api/tie/`. The full endpoint reference — paths, query parameters, response shapes and caching/poll cadences — lives in **[docs/API.md](docs/API.md)**.
+Global endpoints (`/api/health`, `/api/version`, `/metrics`) plus per-mode routes under `/api/meri/`, `/api/raide/`, `/api/tie/` and `/api/ilma/`. The full endpoint reference — paths, query parameters, response shapes and caching/poll cadences — lives in **[docs/API.md](docs/API.md)**.
 
 ---
 

@@ -1,7 +1,7 @@
 # Fintraffic HTTP API
 
 All endpoints are served by the Go backend. Global endpoints live under `/api/`;
-each traffic mode mounts its routes under `/api/<mode>/` (`meri`, `raide`, `tie`).
+each traffic mode mounts its routes under `/api/<mode>/` (`meri`, `raide`, `tie`, `ilma`).
 
 Conventions:
 
@@ -10,8 +10,9 @@ Conventions:
   (no upstream poll has succeeded yet). The frontend treats this as a loading
   state; clients should retry.
 * No authentication or API key — the backend only re-serves
-  [Digitraffic](https://www.digitraffic.fi/en/) open data from its cache, and
-  nothing a visitor requests ever triggers an upstream call.
+  [Digitraffic](https://www.digitraffic.fi/en/) open data (and, for Ilma,
+  community ADS-B data) from its cache, and nothing a visitor requests ever
+  triggers an upstream call.
 
 ## Global
 
@@ -38,7 +39,9 @@ primary feed has been failing for several poll cadences).
     "meri":  { "status": "healthy", "details": { "active_vessels": 856, "mqtt_connected": true,
                "trail_enabled": true, "trail_points": 1578, "trail_newest_ts_age_sec": 4 } },
     "raide": { "status": "healthy", "details": { "active_trains": 114, "locations_poll_age_sec": 3 } },
-    "tie":   { "status": "healthy", "details": { "active_stations": 517, "tms_poll_age_sec": 45 } }
+    "tie":   { "status": "healthy", "details": { "active_stations": 517, "tms_poll_age_sec": 45 } },
+    "ilma":  { "status": "healthy", "details": { "active_aircraft": 84, "aircraft_poll_age_sec": 6,
+               "source": "adsb.fi", "trails": 97 } }
   }
 }
 ```
@@ -151,3 +154,24 @@ TMS speed colouring context: stations carry `freeFlow1`/`freeFlow2` (the
 seasonal free-flow speed baselines) and `bearing`; the frontend colours by
 current speed ÷ baseline, never by a static speed limit — Digitraffic exposes
 none for TMS stations.
+
+## Ilma (`/api/ilma`) — air traffic
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/ilma/aircraft` | Every aircraft over Finland (10 s poll of adsb.fi, adsb.lol as fallback): identity, type, kind, position, altitude, speed, track, vertical rate, squawk, emergency state |
+| `GET` | `/api/ilma/aircraft/{hex}/trail` | The aircraft's last 30 min of positions, oldest first (`[]` for one that has only just appeared) |
+| `GET` | `/api/ilma/airports` | Static register of Finnish airports: ICAO/IATA codes, name, position, elevation, `scheduled` flag |
+
+`/aircraft` answers `{ "time": <server ms>, "aircraft": [...] }`. Each aircraft's
+`timestamp` is when its position was fixed (server clock, unix ms), so a client
+can project it forward by `groundSpeedKt` along `track` using `time` as "now"
+without trusting its own clock. Altitudes are feet and speeds knots, as
+transponders report them; `altitudeFt` is absent on the ground (`onGround`). `group` is
+`airline` (airline callsign, or a large aircraft sending none), `general`,
+`rotorcraft` (emitter category A7) or `military` (flagged in the aircraft
+database, or category A6). Surface vehicles, ground stations, positions older
+than 60 s and anything outside roughly 58.8–70.6°N, 18.5–32.5°E are dropped.
+
+Trails are recorded in process memory from successive polls rather than cached
+in Redis: they are short-lived and rebuild within 30 minutes of a restart.
