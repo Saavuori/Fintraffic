@@ -3,7 +3,9 @@
 // lib/. The shell owns the toggle and persistence; this module only maps the
 // theme to tie's map colors.
 
-export type Theme = 'dark' | 'light';
+import type { Theme } from '../../../shared/lib/theme';
+
+export type { Theme };
 
 export const BASEMAP_STYLES: Record<Theme, string> = {
   dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',

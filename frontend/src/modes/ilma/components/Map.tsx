@@ -12,7 +12,6 @@ import {
   ALTITUDE_STOPS,
   AIRPORT_COLORS,
   EMERGENCY_COLOR,
-  advance,
   aircraftTitle,
   altitudeShort,
   altitudeText,
@@ -20,6 +19,7 @@ import {
   speedText,
 } from '../lib/aircraft';
 import { type LayerVisibility } from '../lib/layers';
+import { deadReckon } from '../../../shared/lib/geo';
 import { type Theme, BASEMAP_STYLES, MARKER_HALO, SELECTION_COLORS } from '../lib/theme';
 import { loadMapIcons, AIRCRAFT_ICON_ID, AIRPORT_ICON_ID } from '../lib/mapIcons';
 import { LocateControl } from '../../../shared/components/LocateControl';
@@ -111,7 +111,7 @@ function livePosition(a: Aircraft, now: number): [number, number] {
     return [a.longitude, a.latitude];
   }
   const dt = Math.min(Math.max((now - a.timestamp) / 1000, 0), MAX_PROJECT_S);
-  const p = advance(a.latitude, a.longitude, a.groundSpeedKt, a.track, dt);
+  const p = deadReckon(a.latitude, a.longitude, a.groundSpeedKt, a.track, dt);
   return [p.lng, p.lat];
 }
 

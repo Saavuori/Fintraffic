@@ -15,13 +15,13 @@ import {
   altitudeMetres,
   altitudeShort,
   altitudeText,
-  formatDistanceKm,
   speedKmh,
   speedText,
   trackText,
   verticalText,
   verticalTrend,
 } from '../lib/aircraft';
+import { formatDistanceKm } from '../../../shared/lib/geo';
 
 interface DetailPanelProps {
   aircraft: Aircraft | null;

@@ -36,6 +36,7 @@ import {
 import { WEBCAMS } from './lib/webcams';
 import { initialLinkedVessel, syncVesselParam } from './lib/vesselLink';
 import type { Webcam } from './lib/webcams';
+import type { Theme } from '../../shared/lib/theme';
 import type {
   Port,
   SeaStateFeature,
@@ -45,8 +46,8 @@ import type {
 } from './types';
 
 interface MeriAppProps {
-  theme: 'light' | 'dark';
-  setTheme: (theme: 'light' | 'dark') => void;
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
 }
 
 function MeriApp({ theme: mapTheme, setTheme: setMapTheme }: MeriAppProps) {

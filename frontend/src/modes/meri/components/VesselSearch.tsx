@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { EntitySearch, type SearchItem } from '../../../shared/components/EntitySearch';
 import { CATEGORY_COLORS, categorize } from '../lib/shipTypes';
-import { nearestTo, formatDistanceKm } from '../lib/geo';
+import { nearestTo } from '../lib/geo';
+import { formatDistanceKm } from '../../../shared/lib/geo';
 import type { Vessel } from '../types';
 
 /** How many of the nearest to offer before anything is typed. */

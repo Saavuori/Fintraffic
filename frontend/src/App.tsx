@@ -4,10 +4,10 @@ import RaideApp from './modes/raide/RaideApp';
 import TieApp from './modes/tie/TieApp';
 import IlmaApp from './modes/ilma/IlmaApp';
 import { VersionBadge } from './shared/components/VersionBadge';
+import type { Theme } from './shared/lib/theme';
 import { initialLinkedVessel } from './modes/meri/lib/vesselLink';
 
 export type ModeId = 'meri' | 'raide' | 'tie' | 'ilma';
-export type Theme = 'dark' | 'light';
 
 // The traffic modes of the consolidated Fintraffic app.
 const MODES: { id: ModeId; label: string; enabled: boolean }[] = [

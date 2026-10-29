@@ -6,10 +6,9 @@ import {
   AIRPORT_COLORS,
   aircraftTitle,
   altitudeShort,
-  distanceKm,
-  formatDistanceKm,
   groupColors,
 } from '../lib/aircraft';
+import { distanceKm, formatDistanceKm } from '../../../shared/lib/geo';
 import type { Theme } from '../lib/theme';
 
 /** How many of the nearest to offer before anything is typed. */

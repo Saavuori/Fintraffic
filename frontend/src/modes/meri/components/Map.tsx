@@ -3,7 +3,8 @@ import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Feature } from 'geojson';
 import { lerpAngle } from '../lib/lerp';
-import { deadReckon } from '../lib/geo';
+import { deadReckon } from '../../../shared/lib/geo';
+import type { Theme } from '../../../shared/lib/theme';
 import { INITIAL_CENTER, INITIAL_ZOOM } from '../lib/mapView';
 import { categorize, CATEGORY_COLORS, isStationary, ALL_CATEGORIES } from '../lib/shipTypes';
 import { LocateControl } from '../../../shared/components/LocateControl';
@@ -261,7 +262,7 @@ interface MapProps {
   webcams: Webcam[];
   showWebcams: boolean;
   onSelectWebcam: (webcam: Webcam) => void;
-  mapTheme: 'light' | 'dark';
+  mapTheme: Theme;
   onBackgroundClick: () => void;
   replay: ReplayControl | null;
   // mmsi → live metadata used to colour/label replay markers. Built from the
