@@ -5,7 +5,7 @@
  * makes the plain browser URL shareable too.
  */
 
-export const VESSEL_PARAM = 'vessel';
+const VESSEL_PARAM = 'vessel';
 
 /** An MMSI is nine digits; anything else in the param is ignored. */
 export function parseVesselParam(search: string): number | null {

@@ -39,7 +39,7 @@ export const DAY_TYPE_LABELS: Record<string, string> = {
 export type ParkingLevel = 'plenty' | 'limited' | 'full' | 'unknown';
 
 /** Fraction of spaces still free (1.0 = empty, 0 = full), or null with no live data. */
-export function occupancyRatio(facility: ParkingFacility): number | null {
+function occupancyRatio(facility: ParkingFacility): number | null {
   if (facility.spacesAvailable == null || facility.capacity <= 0) return null;
   return facility.spacesAvailable / facility.capacity;
 }
@@ -53,7 +53,7 @@ export function parkingLevel(facility: ParkingFacility): ParkingLevel {
   return 'full';
 }
 
-export const PARKING_COLORS: Record<ParkingLevel, string> = {
+const PARKING_COLORS: Record<ParkingLevel, string> = {
   plenty: '#2ecc71',
   limited: '#f1c40f',
   full: '#e74c3c',

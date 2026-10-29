@@ -71,7 +71,7 @@ export interface TrackReplay {
  * span keeps every window the same length to watch; the speed control then
  * stretches or compresses that.
  */
-export const TRACK_PLAYBACK_SECONDS = 30;
+const TRACK_PLAYBACK_SECONDS = 30;
 
 /** Speed multipliers applied to TRACK_PLAYBACK_SECONDS. */
 export const TRACK_REPLAY_SPEEDS = [0.5, 1, 2, 4];
