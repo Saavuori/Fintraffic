@@ -34,7 +34,7 @@ export function chargingLevel(station: ChargingStation): ChargingLevel {
   return 'limited';
 }
 
-export const CHARGING_COLORS: Record<ChargingLevel, string> = {
+const CHARGING_COLORS: Record<ChargingLevel, string> = {
   available: '#27ae60',
   limited: '#e67e22',
   full: '#c0392b',

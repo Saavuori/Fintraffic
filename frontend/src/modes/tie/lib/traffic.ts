@@ -32,7 +32,7 @@ const VOLUME_SENSOR_IDS = [5116, 5119]; // OHITUKSET_5MIN_LIUKUVA_SUUNTA1/2
 export type CongestionLevel = 'free' | 'moderate' | 'heavy' | 'unknown';
 export const CONGESTION_LEVELS: CongestionLevel[] = ['free', 'moderate', 'heavy', 'unknown'];
 
-export function sensorValue(data: SensorValue[], id: number): number | null {
+function sensorValue(data: SensorValue[], id: number): number | null {
   const s = data.find(d => d.id === id);
   return s ? s.value : null;
 }
@@ -79,7 +79,7 @@ export function stationVolume(station: Station): number {
     .reduce((sum, v) => sum + v, 0);
 }
 
-export const CONGESTION_COLORS: Record<CongestionLevel, string> = {
+const CONGESTION_COLORS: Record<CongestionLevel, string> = {
   free: '#2ecc71',
   moderate: '#f1c40f',
   heavy: '#e74c3c',

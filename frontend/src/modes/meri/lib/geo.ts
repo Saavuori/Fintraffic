@@ -31,7 +31,7 @@ export interface LatLng {
  * accurate to a fraction of a percent at the ranges we rank on (tens of km) and
  * far cheaper than haversine when scoring a whole fleet on every map move.
  */
-export function distanceKm(a: LatLng, b: LatLng): number {
+function distanceKm(a: LatLng, b: LatLng): number {
   const meanLat = ((a.lat + b.lat) / 2) / DEG;
   const dx = (a.lng - b.lng) * Math.cos(meanLat);
   const dy = a.lat - b.lat;

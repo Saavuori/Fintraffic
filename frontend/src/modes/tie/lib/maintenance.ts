@@ -53,7 +53,7 @@ export function maintenanceCategory(tasks: string[]): MaintenanceCategory {
   return 'other';
 }
 
-export const MAINTENANCE_CATEGORY_LABELS: Record<MaintenanceCategory, string> = {
+const MAINTENANCE_CATEGORY_LABELS: Record<MaintenanceCategory, string> = {
   plough: 'Snow ploughing',
   grit: 'Salting / sanding',
   other: 'Other maintenance',

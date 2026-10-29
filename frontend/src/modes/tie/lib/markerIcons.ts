@@ -259,7 +259,7 @@ function stationIcon(dir1Color: string, dir2Color: string, stroke: string): Icon
 
 /** MapLibre image id for a station's two-direction icon; pairs with the
  *  icon-image concat expression in the stations layer. */
-export function stationIconId(dir1: CongestionLevel, dir2: CongestionLevel): string {
+function stationIconId(dir1: CongestionLevel, dir2: CongestionLevel): string {
   return `station-${dir1}-${dir2}-icon`;
 }
 
@@ -290,7 +290,7 @@ function speedSignIcon(limit: number): IconImage {
 
 /** MapLibre image id for a given displayed limit; pairs with the icon-image
  *  concat expression in the speed-limit layer. */
-export function speedLimitIconId(limit: number): string {
+function speedLimitIconId(limit: number): string {
   return `speedlimit-${limit}-icon`;
 }
 

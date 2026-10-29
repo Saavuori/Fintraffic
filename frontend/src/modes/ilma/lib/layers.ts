@@ -4,15 +4,6 @@
 
 export type LayerKey = 'airline' | 'general' | 'rotorcraft' | 'military' | 'airports' | 'labels';
 
-export const LAYER_ORDER: LayerKey[] = [
-  'airline',
-  'general',
-  'rotorcraft',
-  'military',
-  'airports',
-  'labels',
-];
-
 export type LayerVisibility = Record<LayerKey, boolean>;
 
 export const DEFAULT_LAYER_VISIBILITY: LayerVisibility = {

@@ -99,7 +99,7 @@ export function compass(degrees: number): string {
 }
 
 /** "5 min ago" / "2 h ago" — station reports are minutes old, not seconds. */
-export function observedAge(iso: string): string {
+function observedAge(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   if (!Number.isFinite(ms) || ms < 0) return '';
   const minutes = Math.round(ms / 60000);

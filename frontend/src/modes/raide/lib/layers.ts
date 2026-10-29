@@ -14,15 +14,6 @@ export const LAYER_ORDER: LayerKey[] = [
   'tracks',
 ];
 
-export const LAYER_LABELS: Record<LayerKey, string> = {
-  longDistance: 'Long-distance trains',
-  commuter: 'Commuter trains',
-  cargo: 'Cargo trains',
-  other: 'Other trains',
-  stations: 'Stations',
-  tracks: 'Railway tracks',
-};
-
 export type LayerVisibility = Record<LayerKey, boolean>;
 
 export const DEFAULT_LAYER_VISIBILITY: LayerVisibility = {

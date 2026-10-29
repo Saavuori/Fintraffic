@@ -33,7 +33,7 @@ export interface WeathercamStation {
   weather?: WeatherObservation;
 }
 
-export const WEATHERCAM_COLOR = '#00bcd4';
+const WEATHERCAM_COLOR = '#00bcd4';
 
 /** Cyan is bright enough to vanish on the light basemap — deepen it there. */
 export function weathercamColor(theme: Theme): string {
