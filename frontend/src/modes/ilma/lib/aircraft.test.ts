@@ -1,16 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import {
   type Aircraft,
-  advance,
   aircraftAround,
   aircraftTitle,
   altitudeShort,
   altitudeText,
-  distanceKm,
   trackText,
   verticalText,
   verticalTrend,
 } from './aircraft';
+import { distanceKm } from '../../../shared/lib/geo';
 
 const base: Aircraft = {
   hex: '461e18',
@@ -64,21 +63,6 @@ describe('trackText', () => {
     expect(trackText(80)).toBe('80° E');
     expect(trackText(359.6)).toBe('0° N');
     expect(trackText(225)).toBe('225° SW');
-  });
-});
-
-describe('advance', () => {
-  it('moves due north by speed × time', () => {
-    // 360 kt for 10 s is one nautical mile: 1/60 of a degree of latitude.
-    const p = advance(60, 25, 360, 0, 10);
-    expect(p.lat - 60).toBeCloseTo(1 / 60, 3);
-    expect(p.lng).toBeCloseTo(25, 6);
-  });
-
-  it('stretches longitude by latitude when moving east', () => {
-    const p = advance(60, 25, 360, 90, 10);
-    // At 60°N a degree of longitude is half as long, so the same mile is twice the degrees.
-    expect(p.lng - 25).toBeCloseTo(2 / 60, 3);
   });
 });
 

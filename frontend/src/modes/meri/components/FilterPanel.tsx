@@ -14,6 +14,7 @@ import {
 } from '../lib/shipTypes';
 import type { ConnectionStatus } from '../hooks/useWebSocket';
 import type { AtonFaultFeature, Vessel } from '../types';
+import type { Theme } from '../../../shared/lib/theme';
 
 interface FilterPanelProps {
   vessels: Record<string, Vessel>;
@@ -40,8 +41,8 @@ interface FilterPanelProps {
   selectionLabel?: string | null;
   onBackToSelection?: () => void;
   mapCenter: { lng: number; lat: number } | null;
-  mapTheme: 'light' | 'dark';
-  setMapTheme: (theme: 'light' | 'dark') => void;
+  mapTheme: Theme;
+  setMapTheme: (theme: Theme) => void;
   showPorts: boolean;
   setShowPorts: (v: boolean) => void;
   showSeaConditions: boolean;

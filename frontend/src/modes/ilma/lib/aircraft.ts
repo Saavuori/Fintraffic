@@ -1,3 +1,4 @@
+import { distanceKm } from '../../../shared/lib/geo';
 import type { Theme } from './theme';
 
 // Types mirror backend/internal/ilma/models.go — change one, change both.
@@ -180,46 +181,6 @@ export const SOURCE_LABELS: Record<Aircraft['source'], string> = {
   tisb: 'TIS-B',
   other: 'Other',
 };
-
-const EARTH_RADIUS_M = 6371000;
-const KT_TO_MS = 0.514444;
-const DEG = Math.PI / 180;
-
-/**
- * Where an aircraft is `dtSeconds` after its fix, flying straight on at its
- * ground speed and track. Equirectangular — plenty accurate for the couple of
- * kilometres a jet covers between polls.
- */
-export function advance(
-  lat: number,
-  lng: number,
-  speedKt: number,
-  trackDeg: number,
-  dtSeconds: number
-): { lat: number; lng: number } {
-  const dist = speedKt * KT_TO_MS * dtSeconds;
-  const bearing = trackDeg * DEG;
-  const dLat = (dist * Math.cos(bearing)) / EARTH_RADIUS_M / DEG;
-  const dLng = (dist * Math.sin(bearing)) / (EARTH_RADIUS_M * Math.cos(lat * DEG)) / DEG;
-  return { lat: lat + dLat, lng: lng + dLng };
-}
-
-/** Equirectangular distance in km — accurate at the tens of km we rank on. */
-export function distanceKm(
-  a: { lat: number; lng: number },
-  b: { lat: number; lng: number }
-): number {
-  const meanLat = ((a.lat + b.lat) / 2) * DEG;
-  const dx = (a.lng - b.lng) * Math.cos(meanLat);
-  const dy = a.lat - b.lat;
-  return (Math.sqrt(dx * dx + dy * dy) * DEG * EARTH_RADIUS_M) / 1000;
-}
-
-export function formatDistanceKm(km: number): string {
-  if (km < 1) return `${Math.round(km * 1000)} m`;
-  if (km < 10) return `${km.toFixed(1)} km`;
-  return `${Math.round(km)} km`;
-}
 
 /** How far out, and how low, counts as "at the airport" — the final approach and the climb-out. */
 const AIRPORT_RADIUS_KM = 25;

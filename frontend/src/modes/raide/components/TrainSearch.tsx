@@ -10,10 +10,10 @@ import {
   STATION_COLORS,
 } from '../lib/trains';
 import type { Theme } from '../lib/theme';
+import { distanceKm, formatDistanceKm } from '../../../shared/lib/geo';
 
 /** How many of the nearest to offer before anything is typed. */
 const NEAREST_COUNT = 5;
-const DEG = Math.PI / 180;
 
 /** Trains closest to `center`, each with an equirectangular distance in km. */
 function nearestTrains(
@@ -23,20 +23,9 @@ function nearestTrains(
 ): Array<{ train: Train; km: number }> {
   return trains
     .filter((t) => Number.isFinite(t.latitude) && Number.isFinite(t.longitude))
-    .map((train) => {
-      const meanLat = ((center.lat + train.latitude) / 2) * DEG;
-      const dx = (center.lng - train.longitude) * Math.cos(meanLat);
-      const dy = center.lat - train.latitude;
-      return { train, km: Math.sqrt(dx * dx + dy * dy) * DEG * 6371 };
-    })
+    .map((train) => ({ train, km: distanceKm(center, { lat: train.latitude, lng: train.longitude }) }))
     .sort((a, b) => a.km - b.km)
     .slice(0, count);
-}
-
-function formatDistanceKm(km: number): string {
-  if (km < 1) return `${Math.round(km * 1000)} m`;
-  if (km < 10) return `${km.toFixed(1)} km`;
-  return `${Math.round(km)} km`;
 }
 
 interface TrainSearchProps {
